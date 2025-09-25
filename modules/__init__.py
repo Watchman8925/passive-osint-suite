@@ -45,10 +45,10 @@ from .pattern_matching import PatternMatchingEngine
 import importlib
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.conspiracy_analyzer', package=__package__)
+    module = importlib.import_module('conspiracy_analyzer')
     ConspiracyTheoryAnalyzer = getattr(module, 'ConspiracyTheoryAnalyzer', None)
     if ConspiracyTheoryAnalyzer is None:
-        raise ImportError("ConspiracyTheoryAnalyzer not found in .conspiracy_analyzer")
+        raise ImportError("ConspiracyTheoryAnalyzer not found in conspiracy_analyzer")
 except Exception as e:
     print(f"Warning: Could not import ConspiracyTheoryAnalyzer: {e}")
     ConspiracyTheoryAnalyzer = None
@@ -56,59 +56,59 @@ except Exception as e:
 # Import additional specialized modules from root directory
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.hidden_pattern_detector', package=__package__)
+    module = importlib.import_module('hidden_pattern_detector')
     HiddenPatternDetector = getattr(module, 'HiddenPatternDetector', None)
     if HiddenPatternDetector is None:
-        raise ImportError("HiddenPatternDetector not found in .hidden_pattern_detector")
+        raise ImportError("HiddenPatternDetector not found in hidden_pattern_detector")
 except Exception as e:
     print(f"Warning: Could not import HiddenPatternDetector: {e}")
     HiddenPatternDetector = None
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.reporting_engine', package=__package__)
+    module = importlib.import_module('reporting.reporting_engine')
     EnhancedReportingEngine = getattr(module, 'EnhancedReportingEngine', None)
     if EnhancedReportingEngine is None:
-        raise ImportError("EnhancedReportingEngine not found in .reporting_engine")
+        raise ImportError("EnhancedReportingEngine not found in reporting.reporting_engine")
 except Exception as e:
     print(f"Warning: Could not import EnhancedReportingEngine: {e}")
     EnhancedReportingEngine = None
 
 try:
-    module = importlib.import_module('.realtime_feeds', package=__package__)
+    module = importlib.import_module('realtime.realtime_feeds')
     RealTimeIntelligenceFeed = getattr(module, 'RealTimeIntelligenceFeed', None)
     if RealTimeIntelligenceFeed is None:
-        raise ImportError("RealTimeIntelligenceFeed not found in .realtime_feeds")
+        raise ImportError("RealTimeIntelligenceFeed not found in realtime.realtime_feeds")
 except Exception as e:
     print(f"Warning: Could not import RealTimeIntelligenceFeed: {e}")
     RealTimeIntelligenceFeed = None
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.cross_reference_engine', package=__package__)
+    module = importlib.import_module('cross_reference_engine')
     CrossReferenceEngine = getattr(module, 'CrossReferenceEngine', None)
     if CrossReferenceEngine is None:
-        raise ImportError("CrossReferenceEngine not found in .cross_reference_engine")
+        raise ImportError("CrossReferenceEngine not found in cross_reference_engine")
 except Exception as e:
     print(f"Warning: Could not import CrossReferenceEngine: {e}")
     CrossReferenceEngine = None
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.blackbox_patterns', package=__package__)
+    module = importlib.import_module('blackbox_patterns')
     BlackboxPatternEngine = getattr(module, 'BlackboxPatternEngine', None)
     if BlackboxPatternEngine is None:
-        raise ImportError("BlackboxPatternEngine not found in .blackbox_patterns")
+        raise ImportError("BlackboxPatternEngine not found in blackbox_patterns")
 except Exception as e:
     print(f"Warning: Could not import BlackboxPatternEngine: {e}")
     BlackboxPatternEngine = None
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.bellingcat_toolkit', package=__package__)
+    module = importlib.import_module('bellingcat_toolkit')
     BellingcatToolkit = getattr(module, 'BellingcatToolkit', None)
     if BellingcatToolkit is None:
-        raise ImportError("BellingcatToolkit not found in .bellingcat_toolkit")
+        raise ImportError("BellingcatToolkit not found in bellingcat_toolkit")
 except Exception as e:
     print(f"Warning: Could not import BellingcatToolkit: {e}")
     BellingcatToolkit = None
@@ -116,28 +116,28 @@ except Exception as e:
 # Import local analysis tools (no API dependencies)
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('.metadata_extractor', package=__package__)
+    module = importlib.import_module('metadata_extractor')
     MetadataExtractor = getattr(module, 'MetadataExtractor', None)
     if MetadataExtractor is None:
-        raise ImportError("MetadataExtractor not found in .metadata_extractor")
+        raise ImportError("MetadataExtractor not found in metadata_extractor")
 except Exception as e:
     print(f"Warning: Could not import MetadataExtractor: {e}")
     MetadataExtractor = None
 
 try:
-    module = importlib.import_module('.local_dns_enumerator', package=__package__)
+    module = importlib.import_module('local_dns_enumerator')
     LocalDNSEnumerator = getattr(module, 'LocalDNSEnumerator', None)
     if LocalDNSEnumerator is None:
-        raise ImportError("LocalDNSEnumerator not found in .local_dns_enumerator")
+        raise ImportError("LocalDNSEnumerator not found in local_dns_enumerator")
 except Exception as e:
     print(f"Warning: Could not import LocalDNSEnumerator: {e}")
     LocalDNSEnumerator = None
 
 try:
-    module = importlib.import_module('.local_network_analyzer', package=__package__)
+    module = importlib.import_module('local_network_analyzer')
     LocalNetworkAnalyzer = getattr(module, 'LocalNetworkAnalyzer', None)
     if LocalNetworkAnalyzer is None:
-        raise ImportError("LocalNetworkAnalyzer not found in .local_network_analyzer")
+        raise ImportError("LocalNetworkAnalyzer not found in local_network_analyzer")
 except Exception as e:
     print(f"Warning: Could not import LocalNetworkAnalyzer: {e}")
     LocalNetworkAnalyzer = None

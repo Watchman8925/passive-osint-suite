@@ -84,10 +84,11 @@ class AuditTrail:
         
         # Load or generate signing keys
         self.key_file = key_file or self.audit_dir / "audit_signing_key.pem"
+        self.private_key: ed25519.Ed25519PrivateKey = None  # type: ignore
         self._load_or_generate_keys()
         
         # Current log file and state
-        self._current_log_file = None
+        self._current_log_file: Optional[Path] = None
         self._current_entries_count = 0
         self._last_hash = None
         
@@ -102,11 +103,32 @@ class AuditTrail:
             if Path(self.key_file).exists():
                 # Load existing private key
                 with open(self.key_file, 'rb') as f:
-                    self.private_key = serialization.load_pem_private_key(
+                    loaded_key = serialization.load_pem_private_key(
                         f.read(),
                         password=None
                     )
-                logger.info("Loaded existing audit signing key")
+                # Ensure it's an Ed25519 key
+                if not isinstance(loaded_key, ed25519.Ed25519PrivateKey):
+                    logger.warning("Loaded key is not Ed25519, regenerating")
+                    self.private_key = ed25519.Ed25519PrivateKey.generate()
+                    # Save the new key
+                    with open(self.key_file, 'wb') as f:
+                        f.write(self.private_key.private_bytes(
+                            encoding=Encoding.PEM,
+                            format=PrivateFormat.PKCS8,
+                            encryption_algorithm=NoEncryption()
+                        ))
+                    # Save public key for verification
+                    public_key_file = self.audit_dir / "audit_public_key.pem"
+                    with open(public_key_file, 'wb') as f:
+                        f.write(self.private_key.public_key().public_bytes(
+                            encoding=Encoding.PEM,
+                            format=PublicFormat.SubjectPublicKeyInfo
+                        ))
+                    logger.info("Regenerated audit signing key pair")
+                else:
+                    self.private_key = loaded_key  # type: ignore
+                    logger.info("Loaded existing audit signing key")
             else:
                 # Generate new ED25519 key pair
                 self.private_key = ed25519.Ed25519PrivateKey.generate()
@@ -235,6 +257,8 @@ class AuditTrail:
             entry.signature = self._sign_entry(entry)
             
             # Write to log file
+            if self._current_log_file is None:
+                raise RuntimeError("Audit log file not initialized")
             with open(self._current_log_file, 'a') as f:
                 f.write(json.dumps(entry.to_dict()) + '\n')
             
@@ -287,6 +311,9 @@ class AuditTrail:
         """
         if log_file is None:
             log_file = self._current_log_file
+        
+        if log_file is None:
+            raise RuntimeError("No log file available for verification")
         
         results = {
             'file': str(log_file),
@@ -544,3 +571,7 @@ if __name__ == "__main__":
     # Search entries
     entries = trail.search_entries(operation="domain_lookup")
     print(f"Found {len(entries)} domain lookup entries")
+
+
+# Global audit trail instance
+audit_trail = AuditTrail()

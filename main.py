@@ -26,6 +26,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules import MODULE_REGISTRY
 # Import core utilities
 from utils.osint_utils import OSINTUtils
+from utils.transport import get_tor_status
 
 # Force matplotlib to use a non-interactive backend so the suite is headless-safe
 try:
@@ -496,55 +497,104 @@ class OSINTSuite:
         )
         # Run all active and passive modules in sequence, OPSEC safe, through Tor
         # Domain Recon
-        dr_result = self.domain_recon.analyze_domain(target)
-        console.print(f"[green]Domain Recon:[/green] {dr_result}")
+        if self.domain_recon:
+            dr_result = self.domain_recon.analyze_domain(target)
+            console.print(f"[green]Domain Recon:[/green] {dr_result}")
+        else:
+            console.print("[yellow]Domain Recon module not loaded.[/yellow]")
         # Email Intel
-        ei_result = self.email_intel.analyze_email(target)
-        console.print(f"[green]Email Intelligence:[/green] {ei_result}")
+        if self.email_intel:
+            ei_result = self.email_intel.analyze_email(target)
+            console.print(f"[green]Email Intelligence:[/green] {ei_result}")
+        else:
+            console.print("[yellow]Email Intelligence module not loaded.[/yellow]")
         # IP Intel
-        ip_result = self.ip_intel.analyze_ip(target)
-        console.print(f"[green]IP Intelligence:[/green] {ip_result}")
+        if self.ip_intel:
+            ip_result = self.ip_intel.analyze_ip(target)
+            console.print(f"[green]IP Intelligence:[/green] {ip_result}")
+        else:
+            console.print("[yellow]IP Intelligence module not loaded.[/yellow]")
         # Company Intel
-        ci_result = self.company_intel.analyze_company(target)
-        console.print(f"[green]Company Intelligence:[/green] {ci_result}")
+        if self.company_intel:
+            ci_result = self.company_intel.analyze_company(target)
+            console.print(f"[green]Company Intelligence:[/green] {ci_result}")
+        else:
+            console.print("[yellow]Company Intelligence module not loaded.[/yellow]")
         # Flight Intel
-        fi_result = self.flight_intel.analyze_aircraft(target, "registration")
-        console.print(f"[green]Flight Intelligence:[/green] {fi_result}")
+        if self.flight_intel:
+            fi_result = self.flight_intel.analyze_aircraft(target, "registration")
+            console.print(f"[green]Flight Intelligence:[/green] {fi_result}")
+        else:
+            console.print("[yellow]Flight Intelligence module not loaded.[/yellow]")
         # Passive Search
-        ps_result = self.passive_search.analyze_target(target, "domain")
-        console.print(f"[green]Passive Search:[/green] {ps_result}")
+        if self.passive_search:
+            ps_result = self.passive_search.analyze_target(  # type: ignore
+            target, "domain")
+            console.print(f"[green]Passive Search:[/green] {ps_result}")
+        else:
+            console.print("[yellow]Passive Search module not loaded.[/yellow]")
         # Crypto Intel
-        cr_result = self.crypto_intel.analyze_crypto_address(target, "bitcoin")
-        console.print(f"[green]Crypto Intelligence:[/green] {cr_result}")
+        if self.crypto_intel:
+            cr_result = self.crypto_intel.analyze_crypto_address(target, "bitcoin")
+            console.print(f"[green]Crypto Intelligence:[/green] {cr_result}")
+        else:
+            console.print("[yellow]Crypto Intelligence module not loaded.[/yellow]")
         # Passive Modules
-        ws_result = self.web_scraper.scrape(target)
-        console.print(f"[green]Web Scraper:[/green] {ws_result}")
-        dork_result = self.search_engine_dorking.dork(target)
-        console.print(f"[green]Search Engine Dorking:[/green] {dork_result}")
-        ct_result = self.certificate_transparency.search(target)
-        console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
-        wb_result = self.wayback_machine.fetch_snapshots(target)
-        console.print(f"[green]Wayback Machine:[/green] {wb_result}")
-        paste_result = self.paste_site_monitor.search_pastes(target)
-        console.print(f"[green]Paste Site Monitor:[/green] {paste_result}")
-        sm_result = self.social_media_footprint.scrape_profiles(target)
-        console.print(f"[green]Social Media Footprint:[/green] {sm_result}")
-        gh_result = self.github_search.search(target)
-        console.print(f"[green]GitHub Search:[/green] {gh_result}")
-        dns_result = self.passive_dns_enum.enumerate(target)
-        console.print(f"[green]Passive DNS Enum:[/green] {dns_result}")
-        whois_result = self.whois_history.get_history(target)
-        console.print(f"[green]WHOIS History:[/green] {whois_result}")
+        if self.web_scraper:
+            ws_result = self.web_scraper.scrape(target)
+            console.print(f"[green]Web Scraper:[/green] {ws_result}")
+        else:
+            console.print("[yellow]Web Scraper module not loaded.[/yellow]")
+        if self.search_engine_dorking:
+            dork_result = self.search_engine_dorking.dork(target)
+            console.print(f"[green]Search Engine Dorking:[/green] {dork_result}")
+        else:
+            console.print("[yellow]Search Engine Dorking module not loaded.[/yellow]")
+        if self.certificate_transparency:
+            ct_result = self.certificate_transparency.search(target)
+            console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
+        else:
+            console.print("[yellow]Certificate Transparency module not loaded.[/yellow]")
+        if self.wayback_machine:
+            wb_result = self.wayback_machine.fetch_snapshots(target)
+            console.print(f"[green]Wayback Machine:[/green] {wb_result}")
+        else:
+            console.print("[yellow]Wayback Machine module not loaded.[/yellow]")
+        if self.paste_site_monitor:
+            paste_result = self.paste_site_monitor.search_pastes(target)
+            console.print(f"[green]Paste Site Monitor:[/green] {paste_result}")
+        else:
+            console.print("[yellow]Paste Site Monitor module not loaded.[/yellow]")
+        if self.social_media_footprint:
+            sm_result = self.social_media_footprint.scrape_profiles(target)
+            console.print(f"[green]Social Media Footprint:[/green] {sm_result}")
+        else:
+            console.print("[yellow]Social Media Footprint module not loaded.[/yellow]")
+        if self.github_search:
+            gh_result = self.github_search.search(target)
+            console.print(f"[green]GitHub Search:[/green] {gh_result}")
+        else:
+            console.print("[yellow]GitHub Search module not loaded.[/yellow]")
+        if self.passive_dns_enum:
+            dns_result = self.passive_dns_enum.enumerate(target)
+            console.print(f"[green]Passive DNS Enum:[/green] {dns_result}")
+        else:
+            console.print("[yellow]Passive DNS Enum module not loaded.[/yellow]")
+        if self.whois_history:
+            whois_result = self.whois_history.get_history(target)
+            console.print(f"[green]WHOIS History:[/green] {whois_result}")
+        else:
+            console.print("[yellow]WHOIS History module not loaded.[/yellow]")
         # Active checks (e.g., live certificate retrieval) are gated by ENABLE_ACTIVE
         enable_active = self.utils.config.getboolean(
             "SETTINGS", "ENABLE_ACTIVE", fallback=False
         )
-        if enable_active:
+        if enable_active and self.public_breach_search:
             breach_result = self.public_breach_search.search(target)
             console.print(f"[green]Public Breach Search:[/green] {breach_result}")
         else:
             console.print(
-                "[yellow]Public Breach Search skipped (active checks disabled). Enable in Configuration to run active modules.[/yellow]"
+                "[yellow]Public Breach Search skipped (active checks disabled or module not loaded). Enable in Configuration to run active modules.[/yellow]"
             )
 
     def passive_intelligence_menu(self):
@@ -556,16 +606,16 @@ class OSINTSuite:
             menu = Table(show_header=False, show_edge=False, pad_edge=False)
             menu.add_column("Option", style="cyan", width=3)
             menu.add_column("Description", style="white")
-            menu.add_row("1", "🌐 Public Web Scraping")
-            menu.add_row("2", "🔎 Search Engine Dorking")
-            menu.add_row("3", "🔒 Certificate Transparency Logs")
-            menu.add_row("4", "🕰️ Wayback Machine Snapshots")
-            menu.add_row("5", "📋 Public Paste Site Monitor")
-            menu.add_row("6", "👤 Social Media Footprinting")
-            menu.add_row("7", "💻 GitHub/Open Source Search")
-            menu.add_row("8", "🧬 Passive DNS Enumeration")
-            menu.add_row("9", "📜 WHOIS History Lookup")
-            menu.add_row("10", "💥 Public Breach Search")
+            menu.add_row("1", "🌐 Public Web Scraper")
+            menu.add_row("2", "🔍 Search Engine Dorking")
+            menu.add_row("3", "📜 Certificate Transparency")
+            menu.add_row("4", "🕰️ Wayback Machine")
+            menu.add_row("5", "📋 Paste Site Monitor")
+            menu.add_row("6", "👥 Social Media Footprint")
+            menu.add_row("7", "🐙 GitHub Search")
+            menu.add_row("8", "🌐 Passive DNS Enumeration")
+            menu.add_row("9", "📋 WHOIS History")
+            menu.add_row("10", "🔓 Public Breach Search")
             menu.add_row("11", "🚀 Run All Passive Modules")
             menu.add_row("0", "🔙 Back to main menu")
             console.print(menu)
@@ -600,6 +650,266 @@ class OSINTSuite:
             else:
                 console.print("[red]Invalid option. Please try again.[/red]")
 
+    def handle_web_scraper(self):
+        """Handle web scraper module"""
+        console.print("\n[bold cyan]🌐 Public Web Scraper[/bold cyan]\n")
+
+        if not self.web_scraper:
+            console.print("[red]Web Scraper module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a URL or domain to scrape")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Scraping: {target}[/yellow]")
+
+        with console.status("[bold green]Scraping..."):
+            results = self.web_scraper.scrape(target)
+
+        if results:
+            console.print(f"[green]Scraping completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"web_scraper_{target.replace('/', '_').replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Scraping failed[/red]")
+
+    def handle_search_engine_dorking(self):
+        """Handle search engine dorking module"""
+        console.print("\n[bold cyan]🔍 Search Engine Dorking[/bold cyan]\n")
+
+        if not self.search_engine_dorking:
+            console.print("[red]Search Engine Dorking module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a target for dorking")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Dorking: {target}[/yellow]")
+
+        with console.status("[bold green]Performing dorking..."):
+            results = self.search_engine_dorking.dork(target)
+
+        if results:
+            console.print(f"[green]Dorking completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"dorking_{target.replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Dorking failed[/red]")
+
+    def handle_certificate_transparency(self):
+        """Handle certificate transparency module"""
+        console.print("\n[bold cyan]📜 Certificate Transparency[/bold cyan]\n")
+
+        if not self.certificate_transparency:
+            console.print("[red]Certificate Transparency module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a domain for certificate search")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Searching certificates for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching certificates..."):
+            results = self.certificate_transparency.search(target)
+
+        if results:
+            console.print(f"[green]Certificate search completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"cert_transparency_{target.replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Certificate search failed[/red]")
+
+    def handle_wayback_machine(self):
+        """Handle Wayback Machine module"""
+        console.print("\n[bold cyan]🕰️ Wayback Machine[/bold cyan]\n")
+
+        if not self.wayback_machine:
+            console.print("[red]Wayback Machine module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a URL for Wayback snapshots")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Fetching snapshots for: {target}[/yellow]")
+
+        with console.status("[bold green]Fetching snapshots..."):
+            results = self.wayback_machine.fetch_snapshots(target)
+
+        if results:
+            console.print(f"[green]Snapshots fetched: {results}[/green]")
+            filename = self.utils.save_results(results, f"wayback_{target.replace('/', '_').replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Snapshot fetch failed[/red]")
+
+    def handle_paste_site_monitor(self):
+        """Handle paste site monitor module"""
+        console.print("\n[bold cyan]📋 Paste Site Monitor[/bold cyan]\n")
+
+        if not self.paste_site_monitor:
+            console.print("[red]Paste Site Monitor module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a target for paste search")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Searching pastes for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching pastes..."):
+            results = self.paste_site_monitor.search_pastes(target)
+
+        if results:
+            console.print(f"[green]Paste search completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"paste_monitor_{target.replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Paste search failed[/red]")
+
+    def handle_social_media_footprint(self):
+        """Handle social media footprint module"""
+        console.print("\n[bold cyan]👥 Social Media Footprint[/bold cyan]\n")
+
+        if not self.social_media_footprint:
+            console.print("[red]Social Media Footprint module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a username or profile for social media search")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Searching social media for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching social media..."):
+            results = self.social_media_footprint.scrape_profiles(target)
+
+        if results:
+            console.print(f"[green]Social media search completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"social_footprint_{target}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Social media search failed[/red]")
+
+    def handle_github_search(self):
+        """Handle GitHub search module"""
+        console.print("\n[bold cyan]🐙 GitHub Search[/bold cyan]\n")
+
+        if not self.github_search:
+            console.print("[red]GitHub Search module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a query for GitHub search")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Searching GitHub for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching GitHub..."):
+            results = self.github_search.search(target)
+
+        if results:
+            console.print(f"[green]GitHub search completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"github_search_{target.replace(' ', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]GitHub search failed[/red]")
+
+    def handle_passive_dns_enum(self):
+        """Handle passive DNS enumeration module"""
+        console.print("\n[bold cyan]🌐 Passive DNS Enumeration[/bold cyan]\n")
+
+        if not self.passive_dns_enum:
+            console.print("[red]Passive DNS Enum module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a domain for DNS enumeration")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Enumerating DNS for: {target}[/yellow]")
+
+        with console.status("[bold green]Enumerating DNS..."):
+            results = self.passive_dns_enum.enumerate(target)
+
+        if results:
+            console.print(f"[green]DNS enumeration completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"dns_enum_{target.replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]DNS enumeration failed[/red]")
+
+    def handle_whois_history(self):
+        """Handle WHOIS history module"""
+        console.print("\n[bold cyan]📋 WHOIS History[/bold cyan]\n")
+
+        if not self.whois_history:
+            console.print("[red]WHOIS History module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter a domain for WHOIS history")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Fetching WHOIS history for: {target}[/yellow]")
+
+        with console.status("[bold green]Fetching WHOIS history..."):
+            results = self.whois_history.get_history(target)
+
+        if results:
+            console.print(f"[green]WHOIS history fetched: {results}[/green]")
+            filename = self.utils.save_results(results, f"whois_history_{target.replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]WHOIS history fetch failed[/red]")
+
+    def handle_public_breach_search(self):
+        """Handle public breach search module"""
+        console.print("\n[bold cyan]🔓 Public Breach Search[/bold cyan]\n")
+
+        if not self.public_breach_search:
+            console.print("[red]Public Breach Search module not loaded.[/red]")
+            return
+
+        target = Prompt.ask("Enter an email or domain for breach search")
+
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
+
+        console.print(f"\n[yellow]Searching breaches for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching breaches..."):
+            results = self.public_breach_search.search(target)
+
+        if results:
+            console.print(f"[green]Breach search completed: {results}[/green]")
+            filename = self.utils.save_results(results, f"breach_search_{target.replace('@', '_at_').replace('.', '_')}")
+            console.print(f"[green]Results saved to: {filename}[/green]")
+        else:
+            console.print("[red]Breach search failed[/red]")
+
     def run_all_passive_modules(self):
         console.print(
             "\n[bold cyan]🚀 Running All Passive Intelligence Modules...[/bold cyan]\n"
@@ -607,114 +917,66 @@ class OSINTSuite:
         # Prompt for a target (domain, URL, or keyword)
         target = Prompt.ask("Enter a target (domain, URL, or keyword for all modules)")
         # Web Scraper
-        ws_result = self.web_scraper.scrape(target)
-        console.print(f"[green]Web Scraper:[/green] {ws_result}")
-        # Search Engine Dorking
-        dork_result = self.search_engine_dorking.dork(target)
-        console.print(f"[green]Search Engine Dorking:[/green] {dork_result}")
-        # Certificate Transparency
-        ct_result = self.certificate_transparency.search(target)
-        console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
-        # Wayback Machine
-        wb_result = self.wayback_machine.fetch_snapshots(target)
-        console.print(f"[green]Wayback Machine:[/green] {wb_result}")
-        # Paste Site Monitor
-        paste_result = self.paste_site_monitor.search_pastes(target)
-        console.print(f"[green]Paste Site Monitor:[/green] {paste_result}")
-        # Social Media Footprint
-        sm_result = self.social_media_footprint.scrape_profiles(target)
-        console.print(f"[green]Social Media Footprint:[/green] {sm_result}")
-        # GitHub Search
-        gh_result = self.github_search.search(target)
-        console.print(f"[green]GitHub Search:[/green] {gh_result}")
-        # Passive DNS Enum
-        dns_result = self.passive_dns_enum.enumerate(target)
-        console.print(f"[green]Passive DNS Enum:[/green] {dns_result}")
-        # WHOIS History
-        whois_result = self.whois_history.get_history(target)
-        console.print(f"[green]WHOIS History:[/green] {whois_result}")
-        # Public Breach Search
-        breach_result = self.public_breach_search.search(target)
-        console.print(f"[green]Public Breach Search:[/green] {breach_result}")
-
-    # Handler stubs for each passive module
-    def handle_web_scraper(self):
-        console.print("\n[bold cyan]🌐 Public Web Scraper[/bold cyan]\n")
-        target = Prompt.ask("Enter website URL or domain to scrape (e.g. example.com)")
-        kw_input = Prompt.ask(
-            "Enter comma-separated keywords to search for (or leave blank for all)",
-            default="",
-        )
-        keywords = (
-            [k.strip() for k in kw_input.split(",") if k.strip()] if kw_input else None
-        )
-        with console.status("[bold green]Scraping website via Tor..."):
-            result = self.web_scraper.scrape(target, keywords)
-        if result["status"] == "success":
-            lines = result["data"]
-            if not lines:
-                console.print("[yellow]No matching content found.[/yellow]")
-            else:
-                console.print(
-                    f"[green]Found {len(lines)} matching lines/snippets:[/green]"
-                )
-                for line in lines[:20]:
-                    console.print(f"[white]{line}[/white]")
-                if len(lines) > 20:
-                    console.print(
-                        f"[cyan]...and {len(lines)-20} more lines. Refine your keywords for more focus.[/cyan]"
-                    )
+        if self.web_scraper:
+            ws_result = self.web_scraper.scrape(target)
+            console.print(f"[green]Web Scraper:[/green] {ws_result}")
         else:
-            console.print(f"[red]Error: {result.get('error','Unknown error')}[/red]")
-
-    def handle_search_engine_dorking(self):
-        console.print(
-            "\n[cyan]Search Engine Dorking (stub): Add dorking logic here.[/cyan]"
-        )
-
-    def handle_certificate_transparency(self):
-        console.print(
-            "\n[cyan]Certificate Transparency (stub): Add CT log logic here.[/cyan]"
-        )
-
-    def handle_wayback_machine(self):
-        console.print(
-            "\n[cyan]Wayback Machine (stub): Add archive.org logic here.[/cyan]"
-        )
-
-    def handle_paste_site_monitor(self):
-        console.print(
-            "\n[cyan]Paste Site Monitor (stub): Add paste site logic here.[/cyan]"
-        )
-
-    def handle_social_media_footprint(self):
-        console.print(
-            "\n[cyan]Social Media Footprint (stub): Add social scraping logic here.[/cyan]"
-        )
-
-    def handle_github_search(self):
-        console.print(
-            "\n[cyan]GitHub Search (stub): Add GitHub search logic here.[/cyan]"
-        )
-
-    def handle_passive_dns_enum(self):
-        console.print(
-            "\n[cyan]Passive DNS Enum (stub): Add DNS enumeration logic here.[/cyan]"
-        )
-
-    def handle_whois_history(self):
-        console.print(
-            "\n[cyan]WHOIS History (stub): Add WHOIS history logic here.[/cyan]"
-        )
-
-    def handle_public_breach_search(self):
-        console.print(
-            "\n[cyan]Public Breach Search (stub): Add breach search logic here.[/cyan]"
-        )
-
+            console.print("[yellow]Web Scraper module not loaded.[/yellow]")
+        # Search Engine Dorking
+        if self.search_engine_dorking:
+            dork_result = self.search_engine_dorking.dork(target)
+            console.print(f"[green]Search Engine Dorking:[/green] {dork_result}")
+        else:
+            console.print("[yellow]Search Engine Dorking module not loaded.[/yellow]")
+        # Certificate Transparency
+        if self.certificate_transparency:
+            ct_result = self.certificate_transparency.search(target)
+            console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
+        else:
+            console.print("[yellow]Certificate Transparency module not loaded.[/yellow]")
+        # Wayback Machine
+        if self.wayback_machine:
+            wb_result = self.wayback_machine.fetch_snapshots(target)
+            console.print(f"[green]Wayback Machine:[/green] {wb_result}")
+        else:
+            console.print("[yellow]Wayback Machine module not loaded.[/yellow]")
+        # Paste Site Monitor
+        if self.paste_site_monitor:
+            paste_result = self.paste_site_monitor.search_pastes(target)
+            console.print(f"[green]Paste Site Monitor:[/green] {paste_result}")
+        else:
+            console.print("[yellow]Paste Site Monitor module not loaded.[/yellow]")
+        # Social Media Footprint
+        if self.social_media_footprint:
+            sm_result = self.social_media_footprint.scrape_profiles(target)
+            console.print(f"[green]Social Media Footprint:[/green] {sm_result}")
+        else:
+            console.print("[yellow]Social Media Footprint module not loaded.[/yellow]")
+        # GitHub Search
+        if self.github_search:
+            gh_result = self.github_search.search(target)
+            console.print(f"[green]GitHub Search:[/green] {gh_result}")
+        else:
+            console.print("[yellow]GitHub Search module not loaded.[/yellow]")
+        # Passive DNS Enum
+        if self.passive_dns_enum:
+            dns_result = self.passive_dns_enum.enumerate(target)
+            console.print(f"[green]Passive DNS Enum:[/green] {dns_result}")
+        else:
+            console.print("[yellow]Passive DNS Enum module not loaded.[/yellow]")
+        # WHOIS History
+        if self.whois_history:
+            whois_result = self.whois_history.get_history(target)
+            console.print(f"[green]WHOIS History:[/green] {whois_result}")
+        else:
+            console.print("[yellow]WHOIS History module not loaded.[/yellow]")
     def domain_reconnaissance_menu(self):
         """Domain reconnaissance submenu"""
         console.print("\n[bold cyan]🌐 Domain Reconnaissance[/bold cyan]\n")
+
+        if not self.domain_recon:
+            console.print("[red]Domain Recon module not loaded.[/red]")
+            return
 
         domain = Prompt.ask("Enter domain to analyze")
 
@@ -743,13 +1005,13 @@ class OSINTSuite:
                 report_file = self.utils.save_results(
                     report, f"domain_report_{domain.replace('.', '_')}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to analyze domain[/red]")
-
     def email_intelligence_menu(self):
         """Email intelligence submenu"""
         console.print("\n[bold cyan]📧 Email Intelligence[/bold cyan]\n")
+
+        if not self.email_intel:
+            console.print("[red]Email Intelligence module not loaded.[/red]")
+            return
 
         email = Prompt.ask("Enter email address to analyze")
 
@@ -781,13 +1043,13 @@ class OSINTSuite:
                     f"email_report_{email.replace('@', '_at_').replace('.', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to analyze email[/red]")
-
     def ip_analysis_menu(self):
         """IP analysis submenu"""
         console.print("\n[bold cyan]🔍 IP Address Analysis[/bold cyan]\n")
+
+        if not self.ip_intel:
+            console.print("[red]IP Intelligence module not loaded.[/red]")
+            return
 
         ip_address = Prompt.ask("Enter IP address to analyze")
 
@@ -816,13 +1078,13 @@ class OSINTSuite:
                 report_file = self.utils.save_results(
                     report, f"ip_report_{ip_address.replace('.', '_')}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to analyze IP address[/red]")
-
     def company_intelligence_menu(self):
         """Company intelligence submenu"""
         console.print("\n[bold cyan]🏢 Company Intelligence[/bold cyan]\n")
+
+        if not self.company_intel:
+            console.print("[red]Company Intelligence module not loaded.[/red]")
+            return
 
         company_name = Prompt.ask("Enter company name")
         domain = Prompt.ask("Enter company domain (optional)", default="")
@@ -856,13 +1118,13 @@ class OSINTSuite:
                     f"company_report_{company_name.replace(' ', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to analyze company[/red]")
-
     def flight_intelligence_menu(self):
         """Flight intelligence submenu"""
         console.print("\n[bold cyan]✈️ Flight & Aviation Intelligence[/bold cyan]\n")
+
+        if not self.flight_intel:
+            console.print("[red]Flight Intelligence module not loaded.[/red]")
+            return
 
         console.print("Flight identifier types:")
         console.print("1. Aircraft Registration (e.g., N12345, G-ABCD)")
@@ -902,13 +1164,13 @@ class OSINTSuite:
                     f"flight_report_{identifier.replace('-', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to analyze aircraft[/red]")
-
     def passive_search_menu(self):
         """Passive search intelligence submenu"""
         console.print("\n[bold cyan]🔎 Passive Search Intelligence[/bold cyan]\n")
+
+        if not self.passive_search:
+            console.print("[red]Passive Search module not loaded.[/red]")
+            return
 
         console.print("Target types:")
         console.print("1. Domain (e.g., example.com)")
@@ -931,7 +1193,8 @@ class OSINTSuite:
         console.print(f"\n[yellow]Performing passive search for: {target}[/yellow]")
 
         with console.status("[bold green]Searching across multiple sources..."):
-            results = self.passive_search.analyze_target(target, search_type)
+            results = self.passive_search.analyze_target(  # type: ignore
+            target, search_type)
 
         if results:
             # Display summary
@@ -952,13 +1215,13 @@ class OSINTSuite:
                     f"search_report_{target.replace('@', '_at_').replace('.', '_').replace(' ', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
-        else:
-            console.print("[red]Failed to perform passive search[/red]")
-
     def crypto_intelligence_menu(self):
         """Cryptocurrency intelligence submenu"""
         console.print("\n[bold cyan]₿ Cryptocurrency Intelligence[/bold cyan]\n")
+
+        if not self.crypto_intel:
+            console.print("[red]Crypto Intelligence module not loaded.[/red]")
+            return
 
         console.print("Supported cryptocurrencies:")
         console.print("1. Bitcoin (BTC)")
@@ -1015,47 +1278,48 @@ class OSINTSuite:
                 console.print(f"[green]Report saved to: {report_file}[/green]")
         else:
             console.print("[red]Failed to analyze cryptocurrency address[/red]")
+        console.print("Target types:")
+        console.print("1. Domain (e.g., example.com)")
+        console.print("2. Email (e.g., user@example.com)")
+        console.print("3. Company (e.g., Example Corp)")
+        console.print("4. Person (e.g., John Doe)")
 
-    def batch_analysis_menu(self):
-        """Batch analysis menu"""
-        console.print("\n[bold cyan]📊 Batch Analysis[/bold cyan]\n")
-
-        batch_options = Table(show_header=False, show_edge=False, pad_edge=False)
-        batch_options.add_column("Option", style="cyan", width=3)
-        batch_options.add_column("Description", style="white")
-
-        batch_options.add_row("1", "📄 Process file of domains")
-        batch_options.add_row("2", "📄 Process file of email addresses")
-        batch_options.add_row("3", "📄 Process file of IP addresses")
-        batch_options.add_row("4", "📄 Process file of companies")
-        batch_options.add_row("5", "📄 Process file of aircraft registrations")
-        batch_options.add_row("6", "📄 Process file of crypto addresses")
-        batch_options.add_row("7", "📄 Custom batch analysis")
-        batch_options.add_row("0", "🔙 Back to main menu")
-
-        console.print(batch_options)
-
-        choice = Prompt.ask(
-            "\n[bold yellow]Select batch analysis type[/bold yellow]", default="0"
+        target_type = Prompt.ask(
+            "Select target type", choices=["1", "2", "3", "4"], default="1"
         )
+        target = Prompt.ask("Enter target to search")
 
-        if choice == "1":
-            self.batch_domain_analysis()
-        elif choice == "2":
-            self.batch_email_analysis()
-        elif choice == "3":
-            self.batch_ip_analysis()
-        elif choice == "4":
-            self.batch_company_analysis()
-        elif choice == "5":
-            self.batch_flight_analysis()
-        elif choice == "6":
-            self.batch_crypto_analysis()
-        elif choice == "7":
-            self.custom_batch_analysis()
+        if not target:
+            console.print("[red]Target cannot be empty[/red]")
+            return
 
+        type_map = {"1": "domain", "2": "email", "3": "company", "4": "person"}
+        search_type = type_map[target_type]
+
+        console.print(f"\n[yellow]Performing passive search for: {target}[/yellow]")
+
+        with console.status("[bold green]Searching across multiple sources..."):
+            results = self.passive_search.analyze_target(  # type: ignore
+            target, search_type)
+
+        if results:
+            # Display summary
+            self.display_passive_search_summary(results)
+
+            # Save results
+            filename = self.utils.save_results(
+                results,
+                f"passive_search_{target.replace('@', '_at_').replace('.', '_').replace(' ', '_')}",
+            )
+            console.print(f"\n[green]Results saved to: {filename}[/green]")
+
+            # Generate report
     def batch_domain_analysis(self):
         """Batch domain analysis"""
+        if not self.domain_recon:
+            console.print("[red]Domain Recon module not loaded.[/red]")
+            return
+
         filename = Prompt.ask("Enter filename with domains (one per line)")
 
         if not os.path.exists(filename):
@@ -1084,12 +1348,14 @@ class OSINTSuite:
                 all_results, "batch_domain_analysis"
             )
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch domain analysis: {e}[/red]")
     def batch_email_analysis(self):
         """Batch email analysis"""
+        if not self.email_intel:
+            console.print("[red]Email Intelligence module not loaded.[/red]")
+            return
+
         filename = Prompt.ask("Enter filename with email addresses (one per line)")
 
         if not os.path.exists(filename):
@@ -1120,12 +1386,14 @@ class OSINTSuite:
                 all_results, "batch_email_analysis"
             )
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch email analysis: {e}[/red]")
     def batch_ip_analysis(self):
         """Batch IP analysis"""
+        if not self.ip_intel:
+            console.print("[red]IP Intelligence module not loaded.[/red]")
+            return
+
         filename = Prompt.ask("Enter filename with IP addresses (one per line)")
 
         if not os.path.exists(filename):
@@ -1152,12 +1420,14 @@ class OSINTSuite:
             # Save batch results
             batch_filename = self.utils.save_results(all_results, "batch_ip_analysis")
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch IP analysis: {e}[/red]")
     def batch_company_analysis(self):
         """Batch company analysis"""
+        if not self.company_intel:
+            console.print("[red]Company Intelligence module not loaded.[/red]")
+            return
+
         filename = Prompt.ask("Enter filename with companies (one per line)")
 
         if not os.path.exists(filename):
@@ -1188,12 +1458,14 @@ class OSINTSuite:
                 all_results, "batch_company_analysis"
             )
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch company analysis: {e}[/red]")
     def batch_flight_analysis(self):
         """Batch flight analysis"""
+        if not self.flight_intel:
+            console.print("[red]Flight Intelligence module not loaded.[/red]")
+            return
+
         filename = Prompt.ask(
             "Enter filename with aircraft registrations (one per line)"
         )
@@ -1224,12 +1496,14 @@ class OSINTSuite:
                 all_results, "batch_flight_analysis"
             )
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch flight analysis: {e}[/red]")
     def batch_crypto_analysis(self):
         """Batch crypto analysis"""
+        if not self.crypto_intel:
+            console.print("[red]Crypto Intelligence module not loaded.[/red]")
+            return
+
         filename = Prompt.ask("Enter filename with crypto addresses (one per line)")
         currency = Prompt.ask(
             "Enter currency type (bitcoin/ethereum/litecoin/dogecoin)",
@@ -1266,10 +1540,8 @@ class OSINTSuite:
                 all_results, f"batch_crypto_analysis_{currency}"
             )
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
-
         except Exception as e:
-            console.print(f"[red]Batch analysis failed: {e}[/red]")
-
+            console.print(f"[red]Error during batch crypto analysis: {e}[/red]")
     def custom_batch_analysis(self):
         """Custom batch analysis with mixed types"""
         console.print("\n[bold cyan]Custom Batch Analysis[/bold cyan]\n")
@@ -1300,19 +1572,19 @@ class OSINTSuite:
                 target_type = target_type.lower().strip()
                 target_value = target_value.strip()
 
-                if target_type == "domain":
+                if target_type == "domain" and self.domain_recon:
                     results = self.domain_recon.analyze_domain(target_value)
-                elif target_type == "email":
+                elif target_type == "email" and self.email_intel:
                     results = self.email_intel.analyze_email(target_value)
-                elif target_type == "ip":
+                elif target_type == "ip" and self.ip_intel:
                     results = self.ip_intel.analyze_ip(target_value)
-                elif target_type == "company":
+                elif target_type == "company" and self.company_intel:
                     results = self.company_intel.analyze_company(target_value)
-                elif target_type == "aircraft":
+                elif target_type == "aircraft" and self.flight_intel:
                     results = self.flight_intel.analyze_aircraft(
                         target_value, "registration"
                     )
-                elif target_type.startswith("crypto"):
+                elif target_type.startswith("crypto") and self.crypto_intel:
                     currency = (
                         target_type.split("_")[1] if "_" in target_type else "bitcoin"
                     )
@@ -1321,7 +1593,7 @@ class OSINTSuite:
                     )
                 else:
                     console.print(
-                        f"[yellow]Unknown type '{target_type}' for {target_value}[/yellow]"
+                        f"[yellow]Unknown type '{target_type}' for {target_value} or module not loaded[/yellow]"
                     )
                     continue
 
@@ -1338,217 +1610,6 @@ class OSINTSuite:
 
         except Exception as e:
             console.print(f"[red]Custom batch analysis failed: {e}[/red]")
-
-    def view_results_menu(self):
-        """View previous results"""
-        console.print("\n[bold cyan]📁 View Results[/bold cyan]\n")
-
-        output_dir = "output"
-        if not os.path.exists(output_dir):
-            console.print("[red]No results directory found[/red]")
-            return
-
-        files = [f for f in os.listdir(output_dir) if f.endswith(".json")]
-        if not files:
-            console.print("[red]No result files found[/red]")
-            return
-
-        files.sort(
-            key=lambda x: os.path.getmtime(os.path.join(output_dir, x)), reverse=True
-        )
-
-        table = Table(title="Recent Results")
-        table.add_column("Index", style="cyan")
-        table.add_column("Filename", style="green")
-        table.add_column("Type", style="yellow")
-        table.add_column("Modified", style="white")
-
-        for i, filename in enumerate(files[:25]):  # Show last 25 files
-            filepath = os.path.join(output_dir, filename)
-            mod_time = datetime.fromtimestamp(os.path.getmtime(filepath)).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            # Determine file type from filename
-            file_type = "Unknown"
-            if "domain" in filename:
-                file_type = "Domain"
-            elif "email" in filename:
-                file_type = "Email"
-            elif "ip" in filename:
-                file_type = "IP"
-            elif "company" in filename:
-                file_type = "Company"
-            elif "flight" in filename:
-                file_type = "Flight"
-            elif "crypto" in filename:
-                file_type = "Crypto"
-            elif "search" in filename:
-                file_type = "Search"
-            elif "batch" in filename:
-                file_type = "Batch"
-
-            table.add_row(str(i + 1), filename, file_type, mod_time)
-
-        console.print(table)
-
-        choice = Prompt.ask("\nEnter file index to view (0 to go back)", default="0")
-
-        try:
-            index = int(choice) - 1
-            if 0 <= index < len(files):
-                filepath = os.path.join(output_dir, files[index])
-                with open(filepath, "r") as f:
-                    data = json.load(f)
-                console.print(json.dumps(data, indent=2))
-
-                # Option to export to different formats
-                if Confirm.ask("\nExport to different format?"):
-                    export_format = Prompt.ask(
-                        "Export format", choices=["txt", "csv"], default="txt"
-                    )
-                    export_filename = filepath.replace(".json", f".{export_format}")
-
-                    if export_format == "txt":
-                        with open(export_filename, "w") as f:
-                            f.write(json.dumps(data, indent=2))
-                    elif export_format == "csv":
-                        # Convert to CSV (basic implementation)
-                        import csv
-
-                        with open(export_filename, "w", newline="") as f:
-                            if isinstance(data, list):
-                                if data:
-                                    writer = csv.DictWriter(
-                                        f, fieldnames=data[0].keys()
-                                    )
-                                    writer.writeheader()
-                                    writer.writerows(data)
-                            else:
-                                writer = csv.writer(f)
-                                for key, value in data.items():
-                                    writer.writerow([key, value])
-
-                    console.print(f"[green]Exported to: {export_filename}[/green]")
-
-        except (ValueError, IndexError):
-            if choice != "0":
-                console.print("[red]Invalid selection[/red]")
-
-    def configuration_menu(self):
-        """Configuration menu"""
-        console.print("\n[bold cyan]⚙️ Configuration[/bold cyan]\n")
-
-        cfg_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config", "config.ini"
-        )
-
-        config_options = Table(show_header=False, show_edge=False, pad_edge=False)
-        config_options.add_column("Option", style="cyan", width=3)
-        config_options.add_column("Description", style="white")
-
-        config_options.add_row("1", "🔑 View API Key Status")
-        config_options.add_row("2", "📝 Edit Configuration")
-        config_options.add_row("3", "🧪 Test API Connections")
-        config_options.add_row("4", "📊 View System Statistics")
-        config_options.add_row("5", "🔧 Reset Configuration")
-        config_options.add_row("6", "⚠️ Toggle Active Checks (ENABLE_ACTIVE)")
-        config_options.add_row("7", "🛠️ Edit Global Settings")
-        config_options.add_row("0", "🔙 Back to main menu")
-
-        console.print(config_options)
-
-        choice = Prompt.ask(
-            "\n[bold yellow]Select configuration option[/bold yellow]", default="0"
-        )
-
-        if choice == "1":
-            self.view_api_status()
-        elif choice == "2":
-            console.print("[yellow]Edit config/config.ini file manually[/yellow]")
-            console.print("Configuration file location: config/config.ini")
-        elif choice == "3":
-            self.test_api_connections()
-        elif choice == "4":
-            self.view_system_statistics()
-        elif choice == "5":
-            self.reset_configuration()
-        elif choice == "6":
-            # Toggle ENABLE_ACTIVE
-            current = self.utils.config.getboolean(
-                "SETTINGS", "ENABLE_ACTIVE", fallback=False
-            )
-            console.print(f"\nCurrent ENABLE_ACTIVE = {current}")
-            console.print(
-                "\nWARNING: Active checks may perform live network/tcp operations (non-passive). Enable only if you understand the OPSEC implications."
-            )
-            if Confirm.ask("Do you want to toggle ENABLE_ACTIVE?", default=False):
-                new_val = not current
-                # Persist to config file (create backup first)
-                cfg_path = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "config", "config.ini"
-                )
-                try:
-                    # Backup
-                    try:
-                        self.utils.backup_config(cfg_path)
-                    except Exception:
-                        pass
-                    # Update parser object
-                    if "SETTINGS" not in self.utils.config:
-                        self.utils.config["SETTINGS"] = {}
-                    self.utils.config["SETTINGS"]["ENABLE_ACTIVE"] = (
-                        "True" if new_val else "False"
-                    )
-                    with open(cfg_path, "w") as cf:
-                        self.utils.config.write(cf)
-                    console.print(
-                        f"[green]ENABLE_ACTIVE set to {new_val} and saved to {cfg_path}[/green]"
-                    )
-                    # Reload utils to pick up change if necessary
-                    self.utils = OSINTUtils()
-                except Exception as e:
-                    console.print(f"[red]Failed to update config: {e}[/red]")
-
-        elif choice == "7":
-            # Global settings editor (safe editor for core SETTINGS keys)
-            console.print("\n[bold cyan]Global Settings Editor[/bold cyan]\n")
-            settings = (
-                self.utils.config["SETTINGS"] if "SETTINGS" in self.utils.config else {}
-            )
-            # Show current values
-            keys = [
-                "AUTO_FALLBACK",
-                "FALLBACK_TO_VPN",
-                "VPN_PROXY",
-                "FALLBACK_MAX_RETRIES",
-                "DOH_PROVIDER",
-                "USER_AGENT",
-                "ENABLE_ACTIVE",
-            ]
-            for k in keys:
-                val = settings.get(k, "") if settings else ""
-                console.print(f"{k}: {val}")
-
-            if Confirm.ask("Edit settings now?", default=False):
-                for k in keys:
-                    current_val = settings.get(k, "") if settings else ""
-                    new_val = Prompt.ask(f"{k}", default=current_val)
-                    if "SETTINGS" not in self.utils.config:
-                        self.utils.config["SETTINGS"] = {}
-                    self.utils.config["SETTINGS"][k] = new_val
-                # Backup and write
-                try:
-                    self.utils.backup_config(cfg_path)
-                except Exception:
-                    pass
-                try:
-                    with open(cfg_path, "w") as cf:
-                        self.utils.config.write(cf)
-                    console.print(f"[green]Settings saved to {cfg_path}[/green]")
-                    self.utils = OSINTUtils()
-                except Exception as e:
-                    console.print(f"[red]Failed to save settings: {e}[/red]")
 
     def system_status_menu(self):
         """System status and diagnostics"""
@@ -1605,7 +1666,7 @@ class OSINTSuite:
             default=False,
         ):
             console.print("[yellow]Running self-check...[/yellow]")
-            report = self.utils.self_check(auto_fix=True, test_network=False)
+            report = self.utils.self_check(auto_fix=True, test_network=False)  # type: ignore
             console.print(f"[green]Self-check report:[/green] {report}")
 
         console.print(status_table)
@@ -1700,8 +1761,15 @@ class OSINTSuite:
         console.print("\n[bold cyan]🧪 Testing API Connections[/bold cyan]\n")
 
         # Test basic connectivity first
-        console.print("Testing basic connectivity...")
         try:
+            # Test Tor connectivity
+            tor_status = get_tor_status()
+            if tor_status.get("active"):
+                console.print("✅ Tor connectivity: OK")
+            else:
+                console.print("⚠️  Tor connectivity: Not detected")
+        except Exception as e:
+            console.print(f"[red]Could not verify Tor status: {e}[/red]")
             # Prefer the tor-routed session from OSINTUtils to keep checks OPSEC-safe
             session = getattr(self.utils, "session", None)
             if session:
@@ -1711,9 +1779,6 @@ class OSINTSuite:
 
                 response = requests.get("https://httpbin.org/ip", timeout=10)
             console.print("✅ Internet connectivity: OK")
-        except Exception:
-            console.print("❌ Internet connectivity: Failed")
-            return
 
         # Test specific APIs (basic connectivity test)
         api_endpoints = {
@@ -1837,8 +1902,44 @@ class OSINTSuite:
                 console.print(
                     "[yellow]Tor is running, but your traffic may not be routed through Tor.[/yellow]"
                 )
-        except Exception:
+        except Exception as e:
             console.print(f"[red]Could not verify Tor status: {e}[/red]")
+
+    def display_domain_summary(self, results):
+        """Display domain analysis summary"""
+        console.print("\n[bold green]📊 Domain Analysis Summary[/bold green]\n")
+
+        table = Table(title=f"Domain: {results.get('domain', 'Unknown')}")
+        table.add_column("Field", style="cyan")
+        table.add_column("Value", style="white")
+
+        # Domain registration info
+        whois_data = results.get("whois", {})
+        if whois_data:
+            if "registrar" in whois_data:
+                table.add_row("Registrar", whois_data["registrar"])
+            if "creation_date" in whois_data:
+                table.add_row("Created", str(whois_data["creation_date"]))
+            if "expiration_date" in whois_data:
+                table.add_row("Expires", str(whois_data["expiration_date"]))
+
+        # DNS records
+        dns_data = results.get("dns_records", {})
+        if dns_data:
+            a_records = dns_data.get("A", [])
+            if a_records:
+                table.add_row("A Records", ", ".join(a_records[:3]))  # Show first 3
+
+            mx_records = dns_data.get("MX", [])
+            if mx_records:
+                table.add_row("MX Records", ", ".join(mx_records[:2]))  # Show first 2
+
+        # SSL/TLS info
+        ssl_data = results.get("ssl_info", {})
+        if ssl_data and "issuer" in ssl_data:
+            table.add_row("SSL Issuer", ssl_data["issuer"])
+
+        console.print(table)
 
     def display_email_summary(self, results):
         """Display email analysis summary"""
@@ -2327,6 +2428,22 @@ class OSINTSuite:
         console.print("[yellow]Security threat feeds functionality coming soon...[/yellow]")
 
 
+    def batch_analysis_menu(self):
+        """Batch analysis menu for processing multiple targets"""
+        console.print("\n[bold cyan]📊 Batch Analysis[/bold cyan]\n")
+        console.print("[yellow]Batch analysis functionality coming soon...[/yellow]")
+
+    def view_results_menu(self):
+        """View and manage analysis results"""
+        console.print("\n[bold cyan]📁 View Results[/bold cyan]\n")
+        console.print("[yellow]Results viewing functionality coming soon...[/yellow]")
+
+    def configuration_menu(self):
+        """Configuration and settings menu"""
+        console.print("\n[bold cyan]⚙️ Configuration[/bold cyan]\n")
+        console.print("[yellow]Configuration functionality coming soon...[/yellow]")
+
+
 def main():
     """Main application entry point"""
     parser = argparse.ArgumentParser(
@@ -2400,11 +2517,11 @@ def main():
 
     # Propagate network-check flag into suite utils if requested
     if args.check_network:
-        suite.utils._cli_check_network = True
+        suite.utils._cli_check_network = True  # type: ignore
 
     # Command line mode
     if args.domain:
-        results = suite.domain_recon.analyze_domain(args.domain)
+        results = suite.domain_recon.analyze_domain(args.domain)  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results, f"domain_recon_{args.domain.replace('.', '_')}", args.output
@@ -2413,7 +2530,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.email:
-        results = suite.email_intel.analyze_email(args.email)
+        results = suite.email_intel.analyze_email(args.email)  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results,
@@ -2424,7 +2541,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.ip:
-        results = suite.ip_intel.analyze_ip(args.ip)
+        results = suite.ip_intel.analyze_ip(args.ip)  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results, f"ip_intel_{args.ip.replace('.', '_')}", args.output
@@ -2433,7 +2550,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.company:
-        results = suite.company_intel.analyze_company(args.company)
+        results = suite.company_intel.analyze_company(args.company)  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results, f"company_intel_{args.company.replace(' ', '_')}", args.output
@@ -2442,7 +2559,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.aircraft:
-        results = suite.flight_intel.analyze_aircraft(args.aircraft, "registration")
+        results = suite.flight_intel.analyze_aircraft(args.aircraft, "registration")  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results, f"flight_intel_{args.aircraft.replace('-', '_')}", args.output
@@ -2451,7 +2568,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.crypto:
-        results = suite.crypto_intel.analyze_crypto_address(
+        results = suite.crypto_intel.analyze_crypto_address(  # type: ignore
             args.crypto, args.crypto_type
         )
         if results:
@@ -2464,7 +2581,7 @@ def main():
                 print(f"Results saved to: {filename}")
 
     elif args.search:
-        results = suite.passive_search.analyze_target(args.search, args.search_type)
+        results = suite.passive_search.analyze_target(args.search, args.search_type)  # type: ignore
         if results:
             filename = suite.utils.save_results(
                 results,

@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    import dns
     import dns.message
     import dns.rdataclass
     import dns.rdatatype
@@ -24,7 +25,7 @@ except ImportError:
 
 # Import our proxied transport
 try:
-    from transport import transport as proxied_transport
+    from transport import transport as proxied_transport  # type: ignore
     TRANSPORT_AVAILABLE = True
 except ImportError:
     TRANSPORT_AVAILABLE = False
@@ -232,8 +233,8 @@ class DoHClient:
             raise RuntimeError("dnspython required for DNS query creation")
         
         # Create DNS message
-        query = dns.message.make_query(name, rtype)
-        query.flags &= ~dns.flags.RD  # Remove recursion desired for DoH
+        query = dns.message.make_query(name, rtype)  # type: ignore
+        query.flags &= ~dns.flags.RD  # type: ignore # Remove recursion desired for DoH
         
         return query.to_wire()
     
@@ -243,7 +244,7 @@ class DoHClient:
             raise RuntimeError("dnspython required for DNS response parsing")
         
         try:
-            response = dns.message.from_wire(response_data)
+            response = dns.message.from_wire(response_data)  # type: ignore
             
             # Extract answers
             answers = []
@@ -251,7 +252,7 @@ class DoHClient:
                 for rdata in rrset:
                     record = DNSRecord(
                         name=str(rrset.name),
-                        rtype=dns.rdatatype.to_text(rrset.rdtype),
+                        rtype=dns.rdatatype.to_text(rrset.rdtype),  # type: ignore
                         ttl=rrset.ttl,
                         data=str(rdata)
                     )
@@ -263,7 +264,7 @@ class DoHClient:
                 for rdata in rrset:
                     record = DNSRecord(
                         name=str(rrset.name),
-                        rtype=dns.rdatatype.to_text(rrset.rdtype),
+                        rtype=dns.rdatatype.to_text(rrset.rdtype),  # type: ignore
                         ttl=rrset.ttl,
                         data=str(rdata)
                     )
@@ -275,7 +276,7 @@ class DoHClient:
                 for rdata in rrset:
                     record = DNSRecord(
                         name=str(rrset.name),
-                        rtype=dns.rdatatype.to_text(rrset.rdtype),
+                        rtype=dns.rdatatype.to_text(rrset.rdtype),  # type: ignore
                         ttl=rrset.ttl,
                         data=str(rdata)
                     )
@@ -287,11 +288,11 @@ class DoHClient:
                 authority=authority,
                 additional=additional,
                 status=response.rcode(),
-                truncated=bool(response.flags & dns.flags.TC),
-                recursion_desired=bool(response.flags & dns.flags.RD),
-                recursion_available=bool(response.flags & dns.flags.RA),
-                authenticated_data=bool(response.flags & dns.flags.AD),
-                checking_disabled=bool(response.flags & dns.flags.CD),
+                truncated=bool(response.flags & dns.flags.TC),  # type: ignore
+                recursion_desired=bool(response.flags & dns.flags.RD),  # type: ignore
+                recursion_available=bool(response.flags & dns.flags.RA),  # type: ignore
+                authenticated_data=bool(response.flags & dns.flags.AD),  # type: ignore
+                checking_disabled=bool(response.flags & dns.flags.CD),  # type: ignore
                 resolver_used=resolver
             )
             
@@ -352,7 +353,7 @@ class DoHClient:
                 
                 # Make request through our proxied transport
                 if TRANSPORT_AVAILABLE:
-                    response = await proxied_transport.get(
+                    response = await proxied_transport.get(  # type: ignore
                         url,
                         headers={
                             'Accept': 'application/dns-message',
@@ -519,3 +520,24 @@ async def resolve_ipv6(domain: str) -> Optional[str]:
         logger.error(f"Failed to resolve IPv6 for {domain}: {e}")
     
     return None
+
+
+def resolve_dns_sync(name: str, rtype: str = 'A') -> DoHResponse:
+    """Synchronous version of DNS resolution."""
+    try:
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(resolve_dns(name, rtype))
+        finally:
+            loop.close()
+    except Exception as e:
+        logger.error(f"Failed to resolve {name} {rtype}: {e}")
+        # Return error response
+        return DoHResponse(
+            question=name,
+            answers=[],
+            status=2,  # SERVFAIL
+            resolver_used="error"
+        )

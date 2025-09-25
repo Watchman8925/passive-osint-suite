@@ -247,7 +247,7 @@ class AppConfig:
     DATABASE_URL = "postgresql://osint_user:password@localhost/osint_db"
     REDIS_URL = "redis://localhost:6379"
     ELASTICSEARCH_URL = "http://localhost:9200"
-    AI_MODEL_API_KEY = "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"
+    AI_MODEL_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
     AI_MODEL_URL = "https://api.perplexity.ai"
     AI_MODEL_PROVIDER = "perplexity"
     AI_MODEL_NAME = "llama-3.1-sonar-large-128k-online"

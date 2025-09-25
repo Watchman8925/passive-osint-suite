@@ -22,7 +22,7 @@ def test_tor_status():
     print("🧪 Testing Tor status detection...")
 
     try:
-        status = get_tor_status()
+        status = get_tor_status()  # type: ignore
         print(f"   Tor active: {status.get('active', False)}")
         print(f"   Circuits: {len(status.get('circuits', []))}")
         print(f"   Exit nodes: {status.get('exit_nodes', 0)}")
@@ -39,7 +39,7 @@ def test_tor_connection():
     print("🧪 Testing Tor connection validation...")
 
     try:
-        is_tor = sync_validate_tor_connection()
+        is_tor = sync_validate_tor_connection()  # type: ignore
         print(f"   Connection through Tor: {is_tor}")
         if not is_tor:
             print("   ℹ️  Note: Tor not running or not properly configured")

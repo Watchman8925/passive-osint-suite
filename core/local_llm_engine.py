@@ -184,7 +184,7 @@ class LocalLLMEngine:
     def _check_mcp(self) -> bool:
         """Check if Perplexity API is available (direct access)."""
         # Check if we have the API key
-        api_key = "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"
+        api_key = os.getenv("PERPLEXITY_API_KEY", "")
         if not api_key:
             return False
 
@@ -700,7 +700,7 @@ class LocalLLMEngine:
     async def _query_mcp(self, prompt: str, model: Optional[str] = None) -> str:
         """Query Perplexity API directly."""
         try:
-            api_key = "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"
+            api_key = os.getenv("PERPLEXITY_API_KEY", "")
 
             # Map model names
             if model == "perplexity" or model is None:

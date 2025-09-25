@@ -112,7 +112,7 @@ class AnonymityGrid:
     - Result aggregation and delivery
     """
     
-    def __init__(self, node_id: str = None, role: GridNodeRole = GridNodeRole.CONSUMER):
+    def __init__(self, node_id: Optional[str] = None, role: GridNodeRole = GridNodeRole.CONSUMER):
         """
         Initialize anonymity grid node.
         
@@ -226,8 +226,8 @@ class AnonymityGrid:
         
         logger.info(f"Grid services stopped for node {self.node_id}")
     
-    def submit_query(self, operation_type: str, target: str, 
-                    parameters: Dict[str, Any] = None,
+    def submit_query(self, operation_type: str, target: str,
+                    parameters: Optional[Dict[str, Any]] = None,
                     priority: QueryPriority = QueryPriority.NORMAL,
                     anonymous: bool = True) -> str:
         """
@@ -605,8 +605,8 @@ class AnonymityGrid:
             }
         }
     
-    def add_grid_node(self, node_id: str, role: GridNodeRole, 
-                     capabilities: Set[str] = None):
+    def add_grid_node(self, node_id: str, role: GridNodeRole,
+                     capabilities: Optional[Set[str]] = None):
         """Add a node to the known nodes list."""
         node = GridNode(
             node_id=node_id,
@@ -628,7 +628,7 @@ anonymity_grid = None
 
 
 def initialize_anonymity_grid(
-    node_id: str = None, 
+    node_id: Optional[str] = None,
     role: GridNodeRole = GridNodeRole.CONSUMER
 ) -> AnonymityGrid:
     """
@@ -651,7 +651,7 @@ def initialize_anonymity_grid(
 
 
 def anonymous_query(operation_type: str, target: str, 
-                   parameters: Dict[str, Any] = None,
+                   parameters: Optional[Dict[str, Any]] = None,
                    priority: QueryPriority = QueryPriority.NORMAL,
                    timeout: float = 60.0) -> Optional[QueryResult]:
     """

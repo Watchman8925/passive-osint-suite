@@ -4,21 +4,26 @@ Complete OSINT Suite Demonstration
 Shows all major components working together.
 """
 
+import sys
+import os
+# Add parent directory to path so we can import modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import time
 from datetime import datetime
 
-from query_obfuscation import query_obfuscator
-from result_encryption import result_encryption
-from secrets_manager import secrets_manager
+from tools.query_obfuscation import query_obfuscator
+from security.result_encryption import result_encryption
+from security.secrets_manager import secrets_manager
 
-from anonymity_grid import (GridNodeRole, anonymous_query,
+from utils.anonymity_grid import (GridNodeRole, anonymous_query,
                             initialize_anonymity_grid)
-from audit_trail import audit_trail
-from doh_client import resolve_dns
-from opsec_policy import enforce_policy, policy_engine
-from osint_utils import OSINTUtils
+from security.audit_trail import audit_trail
+from utils.doh_client import resolve_dns_sync
+from security.opsec_policy import enforce_policy, policy_engine
+from utils.osint_utils import OSINTUtils
 # Import all major components
-from transport import sync_get
+from utils.transport import sync_get
 
 
 def print_banner():
@@ -61,9 +66,9 @@ def demonstrate_basic_security():
     # Test DoH
     print("\n2. Testing DNS over HTTPS...")
     try:
-        result = resolve_dns("example.com", "A")
-        if result:
-            print(f"   ✓ DoH resolution successful: {result}")
+        result = resolve_dns_sync("example.com", "A")
+        if result and result.answers:
+            print(f"   ✓ DoH resolution successful: {result.answers[0].data}")
         else:
             print("   ❌ DoH resolution failed")
     except Exception as e:
@@ -73,8 +78,9 @@ def demonstrate_basic_security():
     print("\n3. Testing query obfuscation...")
     try:
         stats = query_obfuscator.get_statistics()
-        print(f"   ✓ Obfuscator active: {stats['active']}")
-        print(f"   ✓ Decoy pool size: {stats['decoy_pool_size']}")
+        print(f"   ✓ Obfuscator active: {query_obfuscator.is_running}")
+        print(f"   ✓ Total queries: {stats['total_queries']}")
+        print(f"   ✓ Completed queries: {stats['completed_queries']}")
     except Exception as e:
         print(f"   ❌ Error: {e}")
     
@@ -108,9 +114,8 @@ def demonstrate_secrets_management():
             secrets_list = secrets_manager.list_secrets()
             print(f"   ✓ Total secrets stored: {len(secrets_list)}")
             
-            # Clean up
-            secrets_manager.delete_secret("demo_service")
-            print("   ✓ Test secret cleaned up")
+            # Note: Cleanup not implemented in this demo
+            print("   ✓ Test secret stored (cleanup skipped in demo)")
         else:
             print("   ❌ Failed to store secret")
     
@@ -362,8 +367,9 @@ def demonstrate_integrated_workflow():
             if hasattr(utils, 'save_results_encrypted'):
                 encrypted_id = utils.save_results_encrypted(
                     intelligence_data,
-                    f"Intelligence report for {target_domain}",
-                    expires_hours=48
+                    operation="http_intelligence",
+                    target=target_domain,
+                    expires_in_hours=48
                 )
                 if encrypted_id:
                     print(f"   ✓ Results encrypted and stored: {encrypted_id}")
@@ -451,7 +457,7 @@ def show_final_statistics():
         # Query obfuscation stats
         obfuscation_stats = query_obfuscator.get_statistics()
         print(f"Obfuscated Queries: {obfuscation_stats.get('total_queries', 0)}")
-        print(f"Decoy Queries: {obfuscation_stats.get('decoy_queries', 0)}")
+        print(f"Completed Queries: {obfuscation_stats.get('completed_queries', 0)}")
         
         # Encryption stats
         encrypted_results = result_encryption.list_encrypted_results()
