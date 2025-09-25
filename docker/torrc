@@ -1,0 +1,39 @@
+# Tor configuration for OSINT Suite
+# Basic Tor configuration optimized for OSINT operations
+
+# Disable Tor's control port authentication for local access
+ControlPort 9051
+CookieAuthentication 1
+
+# SOCKS proxy port
+SocksPort 9050
+
+# Allow connections from localhost only
+SocksPolicy accept 127.0.0.1/32
+ControlPolicy accept 127.0.0.1/32
+
+# Disable logging to reduce disk I/O
+Log notice file /dev/null
+Log info file /dev/null
+
+# Performance optimizations
+NumCPUs 2
+DisableDebuggerAttachment 0
+
+# Circuit building options
+NewCircuitPeriod 60
+MaxCircuitDirtiness 600
+
+# Exit policy - reject all exits (relay-only mode for better anonymity)
+ExitPolicy reject *:*
+
+# Bridge configuration (uncomment if needed)
+# UseBridges 1
+# Bridge obfs4 ...
+
+# Data directory
+DataDirectory /var/lib/tor
+
+# Hidden service configuration (if needed)
+# HiddenServiceDir /var/lib/tor/hidden_service/
+# HiddenServicePort 80 127.0.0.1:80

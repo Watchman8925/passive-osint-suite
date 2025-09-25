@@ -1,0 +1,88 @@
+# OSINT Suite alerting rules
+groups:
+- name: osint_suite_alerts
+  rules:
+  
+  # Security Alerts
+  - alert: HighFailedAuthAttempts
+    expr: increase(osint_auth_failures_total[5m]) > 10
+    for: 1m
+    labels:
+      severity: critical
+      service: osint-suite
+    annotations:
+      summary: "High number of authentication failures"
+      description: "{{ $value }} authentication failures in the last 5 minutes"
+
+  - alert: SuspiciousQueryPattern
+    expr: increase(osint_suspicious_queries_total[1m]) > 5
+    for: 0m
+    labels:
+      severity: warning
+      service: osint-suite
+    annotations:
+      summary: "Suspicious query pattern detected"
+      description: "Potential automated scanning or attack detected"
+
+  # Performance Alerts
+  - alert: HighMemoryUsage
+    expr: (osint_memory_usage_bytes / osint_memory_limit_bytes) > 0.9
+    for: 2m
+    labels:
+      severity: warning
+      service: osint-suite
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage is above 90% for more than 2 minutes"
+
+  - alert: TorConnectionDown
+    expr: up{job="tor-proxy"} == 0
+    for: 30s
+    labels:
+      severity: critical
+      service: tor-proxy
+    annotations:
+      summary: "Tor proxy is down"
+      description: "Tor proxy service is not responding"
+
+  # Data Quality Alerts
+  - alert: AuditTrailIntegrityFailure
+    expr: osint_audit_integrity_failures_total > 0
+    for: 0m
+    labels:
+      severity: critical
+      service: audit-trail
+    annotations:
+      summary: "Audit trail integrity failure"
+      description: "Audit trail integrity check failed - potential tampering"
+
+  - alert: EncryptionFailureRate
+    expr: rate(osint_encryption_failures_total[5m]) > 0.01
+    for: 1m
+    labels:
+      severity: warning
+      service: encryption
+    annotations:
+      summary: "High encryption failure rate"
+      description: "Encryption failure rate is {{ $value }} per second"
+
+  # Operational Alerts
+  - alert: LowDiskSpace
+    expr: (osint_disk_free_bytes / osint_disk_total_bytes) < 0.1
+    for: 5m
+    labels:
+      severity: warning
+      service: osint-suite
+    annotations:
+      summary: "Low disk space"
+      description: "Less than 10% disk space remaining"
+
+  - alert: OldEncryptedResults
+    expr: osint_encrypted_results_age_days > 90
+    for: 1h
+    labels:
+      severity: info
+      service: result-encryption
+    annotations:
+      summary: "Old encrypted results detected"
+      description: "Encrypted results older than 90 days should be reviewed"

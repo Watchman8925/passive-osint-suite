@@ -1,0 +1,21 @@
+# Advanced Visualizations Requirements
+# Dependencies for interactive intelligence visualizations
+
+# Core visualization libraries
+plotly>=5.15.0
+dash>=2.9.0
+dash-bootstrap-components>=1.4.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Network graph visualization
+networkx>=3.1
+
+# Optional: Enhanced features
+# kaleido>=0.2.1  # For static image export
+# dash-table>=5.0.0  # For advanced table features
+
+# Development dependencies
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0

@@ -1,0 +1,38 @@
+[API_KEYS]
+# Put your API keys here. Keep this file private and do NOT commit keys to source control.
+# Example:
+# SHODAN_API_KEY = your_shodan_key_here
+
+[SETTINGS]
+# User agent used for HTTP requests
+USER_AGENT = Passive-OSINT-Suite/1.0
+
+# Logging level: DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL = INFO
+
+# Fallback behavior - conservative defaults (disabled). Enable ONLY if you understand OPSEC tradeoffs.
+# AUTO_FALLBACK: When True, requests in modules that opt into fallback will automatically try
+#                Tor first, then VPN proxy (if configured), then direct (no-proxy) as a last resort.
+AUTO_FALLBACK = False
+
+# FALLBACK_TO_VPN: When True and AUTO_FALLBACK is True, the suite will attempt the VPN proxy defined
+#                  in VPN_PROXY if Tor fails for a request.
+FALLBACK_TO_VPN = False
+
+# VPN_PROXY: Set this to a proxy address (e.g., http://10.0.0.2:3128 or socks5h://10.0.0.2:1080) to
+#            route fallback traffic through your VPN/proxy. Leave blank to skip VPN step.
+VPN_PROXY = 
+
+# Number of retries per transport during fallback attempts
+FALLBACK_MAX_RETRIES = 1
+
+# Important: Do NOT enable AUTO_FALLBACK unless you explicitly accept that some requests may leave
+# the Tor network. Fallback is provided to improve reliability where Tor exit nodes are blocked by
+# remote services, but using it may reduce anonymity for those requests.
+
+# DNS-over-HTTPS provider (used for passive DoH queries). Default: Cloudflare
+DOH_PROVIDER = https://cloudflare-dns.com/dns-query
+
+# ENABLE_ACTIVE: When False (default) active network operations that open raw sockets (TLS cert
+# fetches, raw DNS/socket probing) are disabled. Set to True only for authorized, non-OPSEC runs.
+ENABLE_ACTIVE = False

@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # OSINT Suite main application
+  osint-suite:
+    build: .
+    container_name: osint-suite
+    ports:
+      - "8000:8000"
+    environment:
+      - OSINT_USE_KEYRING=false
+      - OSINT_TEST_MODE=false
+      - OSINT_MASTER_KEY=${OSINT_MASTER_KEY}
+      - TOR_CONTROL_PORT=9051
+      - TOR_SOCKS_PORT=9050
+    volumes:
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./policies:/app/policies
+    networks:
+      - osint-network
+    depends_on:
+      - tor-proxy
+      - monitoring
+    restart: unless-stopped
+
+  # Tor proxy for anonymization
+  tor-proxy:
+    image: peterdavehello/tor-socks-proxy:latest
+    container_name: osint-tor
+    ports:
+      - "9050:9050"  # SOCKS proxy
+      - "9051:9051"  # Control port
+    networks:
+      - osint-network
+    restart: unless-stopped
+
+  # Monitoring stack
+  monitoring:
+    image: prom/prometheus:latest
+    container_name: osint-monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/osint_rules.yml:/etc/prometheus/osint_rules.yml
+      - prometheus_data:/prometheus
+    networks:
+      - osint-network
+    restart: unless-stopped
+
+  # Log aggregation
+  log-aggregator:
+    image: grafana/loki:latest
+    container_name: osint-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/loki
+    networks:
+      - osint-network
+    restart: unless-stopped
+
+  # Visualization dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: osint-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - osint-network
+    depends_on:
+      - monitoring
+      - log-aggregator
+    restart: unless-stopped
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: osint-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - osint-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for audit trail storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: osint-postgres
+    environment:
+      - POSTGRES_DB=osint_audit
+      - POSTGRES_USER=osint_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-audit-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - osint-network
+    restart: unless-stopped
+
+  # (Optional) Static web frontend container - enable once frontend build pipeline outputs to /dist
+  # web:
+  #   image: nginx:alpine
+  #   container_name: osint-web
+  #   depends_on:
+  #     - osint-suite
+  #   volumes:
+  #     - ./web/dist:/usr/share/nginx/html:ro
+  #   ports:
+  #     - "3000:80"
+  #   networks:
+  #     - osint-network
+  #   restart: unless-stopped
+
+networks:
+  osint-network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  redis_data:
+  postgres_data:
