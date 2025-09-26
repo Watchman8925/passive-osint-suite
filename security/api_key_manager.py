@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 # Import our existing modules
-from secrets_manager import SecretsManager
+from .secrets_manager import SecretsManager
 
 from transport import ProxiedTransport
 
@@ -81,10 +81,10 @@ class APIConfigurationManager:
         self.secrets_manager = SecretsManager()
         self.transport = ProxiedTransport()
         self.config_file = Path(
-            "/workspaces/passive_osint_suite/config/api_config.json"
+            "/workspaces/passive-osint-suite/config/api_config.json"
         )
         self.status_file = Path(
-            "/workspaces/passive_osint_suite/config/api_status.json"
+            "/workspaces/passive-osint-suite/config/api_status.json"
         )
 
         # Initialize configuration
@@ -625,13 +625,43 @@ class APIConfigurationManager:
             if api_key:
                 return api_key
 
-            # Try secrets manager
+            # Try secrets manager with multiple key formats
             try:
+                # Try the environment variable name format (e.g., openai_api_key)
                 api_key = self.secrets_manager.get_secret(
                     service.api_key_env_var.lower()
                 )
                 if api_key:
                     return api_key
+
+                # Try the setup script format (e.g., api_key_openai)
+                # Map service names to the simple names used in setup script
+                service_name_map = {
+                    "OpenAI API": "openai",
+                    "Google Custom Search": "google",
+                    "Bing Web Search": "bing",
+                    "Shodan": "shodan",
+                    "VirusTotal": "virustotal",
+                    "Have I Been Pwned": "hibp",
+                    "Pipl": "pipl",
+                    "Clearbit": "clearbit",
+                    "Hunter.io": "hunterio",
+                    "Spyse": "spyse",
+                    "Censys": "censys",
+                    "SecurityTrails": "securitytrails",
+                    "WhoisXML API": "whoisxml",
+                    "URLVoid": "urlvoid",
+                    "IPInfo": "ipinfo",
+                    "MaxMind GeoIP2": "maxmind",
+                    "Twitter API v2": "twitter",
+                    "Telegram Bot API": "telegram",
+                }
+
+                simple_name = service_name_map.get(service.service_name, service.service_name.lower().replace(" ", "").replace(".", ""))
+                api_key = self.secrets_manager.get_secret(f"api_key_{simple_name}")
+                if api_key:
+                    return api_key
+
             except Exception as e:
                 logger.debug(
                     f"Secrets manager lookup failed for {service.service_name}: {e}"
@@ -844,7 +874,7 @@ class APIConfigurationManager:
         """Check for API keys in alternative locations."""
         try:
             # Check config.ini file
-            config_ini = Path("/workspaces/passive_osint_suite/config.ini")
+            config_ini = Path("/workspaces/passive-osint-suite/config.ini")
             if config_ini.exists():
                 import configparser
 
@@ -901,7 +931,7 @@ class APIConfigurationManager:
         """Generate comprehensive validation report."""
         try:
             report_file = Path(
-                "/workspaces/passive_osint_suite/logs/api_validation_report.txt"
+                "/workspaces/passive-osint-suite/logs/api_validation_report.txt"
             )
             report_file.parent.mkdir(parents=True, exist_ok=True)
 

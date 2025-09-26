@@ -23,6 +23,7 @@ web/dist/
 *.log
 *.enc
 secrets.enc
+encryption.key
 .sfdx/
 *.shoo
 nohup.out

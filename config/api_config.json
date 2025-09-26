@@ -2,109 +2,109 @@
   "google_custom_search": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:19.044497"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:37.010743"
   },
   "bing_search": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:19.545388"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:37.511575"
   },
   "shodan": {
-    "is_active": false,
+    "is_active": true,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:20.046255"
+    "error_count": 0,
+    "last_tested": "2025-09-25T23:51:38.130139"
   },
   "virustotal": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:20.547108"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:38.777433"
   },
   "hibp": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:21.047916"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:39.278235"
   },
   "pipl": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:21.548747"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:39.779054"
   },
   "clearbit": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:22.049555"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:41.905826"
   },
   "hunter_io": {
-    "is_active": false,
+    "is_active": true,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:22.550388"
+    "error_count": 0,
+    "last_tested": "2025-09-25T23:51:43.122506"
   },
   "spyse": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:23.051203"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:43.769249"
   },
   "censys": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:23.552038"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:44.422611"
   },
   "securitytrails": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:24.052877"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:45.032579"
   },
   "whoisxml": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:24.553726"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:45.533362"
   },
   "urlvoid": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:25.054575"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:46.034179"
   },
   "ipinfo": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:25.555399"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:46.581329"
   },
   "maxmind": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:26.056229"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:47.082154"
   },
   "twitter_api": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:26.557023"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:47.582580"
   },
   "telegram_api": {
     "is_active": false,
     "daily_usage": 0,
-    "error_count": 1,
-    "last_tested": "2025-09-23T06:07:27.057825"
+    "error_count": 8,
+    "last_tested": "2025-09-25T23:51:48.083434"
   },
   "openai": {
     "is_active": true,
     "daily_usage": 0,
     "error_count": 0,
-    "last_tested": "2025-09-23T06:07:27.960605"
+    "last_tested": "2025-09-25T23:51:48.918288"
   }
 }
