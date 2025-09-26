@@ -243,14 +243,14 @@ _ = CATEGORIES, MODULE_REGISTRY, get_module, get_modules_by_category, RealTimeIn
 class AppConfig:
     """Application configuration"""
 
-    SECRET_KEY = "osint-suite-secret-key-change-in-production"
-    DATABASE_URL = "postgresql://osint_user:password@localhost/osint_db"
-    REDIS_URL = "redis://localhost:6379"
-    ELASTICSEARCH_URL = "http://localhost:9200"
+    SECRET_KEY = os.getenv("OSINT_SECRET_KEY", "change-this-secret-key-in-production-environment")
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/osint_db")
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+    ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
     AI_MODEL_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
-    AI_MODEL_URL = "https://api.perplexity.ai"
-    AI_MODEL_PROVIDER = "perplexity"
-    AI_MODEL_NAME = "llama-3.1-sonar-large-128k-online"
+    AI_MODEL_URL = os.getenv("AI_MODEL_URL", "https://api.perplexity.ai")
+    AI_MODEL_PROVIDER = os.getenv("AI_MODEL_PROVIDER", "perplexity")
+    AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "llama-3.1-sonar-large-128k-online")
     CORS_ORIGINS = ["http://localhost:3000", "http://localhost:8000"]  # Added for CORS
 
 
@@ -519,7 +519,7 @@ async def lifespan(app: FastAPI):
     try:
         graph_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
         graph_user = os.getenv("NEO4J_USER", "neo4j")
-        graph_password = os.getenv("NEO4J_PASSWORD", "password")
+        graph_password = os.getenv("NEO4J_PASSWORD", "change-this-default-password")
 
         app.state.graph_db = GraphDatabaseAdapter(graph_uri, graph_user, graph_password)
         graph_connected = await app.state.graph_db.connect()
