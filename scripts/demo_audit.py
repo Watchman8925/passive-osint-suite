@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from audit_trail import AuditTrail, audit_operation
+from security.audit_trail import AuditTrail, audit_operation
 
 
 async def demo_basic_audit():

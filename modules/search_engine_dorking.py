@@ -292,7 +292,7 @@ class SearchEngineDorking(OSINTUtils):
                                 subdomain = parsed.netloc.replace('.' + domain, '').replace(domain, '')
                                 if subdomain and '.' not in subdomain:  # Avoid false positives
                                     subdomains.add(subdomain)
-                        except:
+                        except Exception:
                             continue
 
             time.sleep(random.uniform(1, 3))
@@ -303,7 +303,7 @@ class SearchEngineDorking(OSINTUtils):
         """
         Search for commonly exposed files and directories
         """
-        exposed_files = {
+        exposed_files: Dict[str, List[str]] = {
             'admin_panels': [],
             'backups': [],
             'logs': [],

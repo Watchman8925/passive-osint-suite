@@ -3,7 +3,7 @@ Investigation Planner
 Creates and manages investigation plans
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -24,14 +24,12 @@ class PlannedTask:
     module: str
     parameters: Dict[str, Any]
     priority: int = 1
-    dependencies: List[str] = None
+    dependencies: List[str] = field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
     def __post_init__(self):
-        if self.dependencies is None:
-            self.dependencies = []
         if self.created_at is None:
             self.created_at = datetime.now()
 
@@ -42,7 +40,7 @@ class Plan:
     name: str
     description: str
     tasks: List[PlannedTask]
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
     status: str = "draft"
 
     def __post_init__(self):

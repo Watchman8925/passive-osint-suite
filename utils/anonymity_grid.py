@@ -154,7 +154,7 @@ class AnonymityGrid:
         
         # Background tasks
         self._running = False
-        self._background_tasks = []
+        self._background_tasks: List[threading.Thread] = []
         
         # Register this node
         self.register_node()
@@ -327,7 +327,7 @@ class AnonymityGrid:
         
         try:
             # Import OSINT utilities for execution
-            from osint_utils import OSINTUtils
+            from utils.osint_utils import OSINTUtils
             utils = OSINTUtils()
             
             # Execute based on operation type

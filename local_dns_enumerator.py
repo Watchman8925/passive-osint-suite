@@ -47,7 +47,7 @@ class LocalDNSEnumerator:
     def enumerate_domain(self, domain: str) -> Dict[str, Any]:
         """Enumerate DNS records for domain"""
         try:
-            results = {
+            results: Dict[str, Any] = {
                 "domain": domain,
                 "records": {},
                 "subdomains": [],
@@ -145,7 +145,7 @@ class LocalDNSEnumerator:
 
     def _analyze_dns_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze DNS enumeration results"""
-        analysis = {
+        analysis: Dict[str, Any] = {
             "record_count": sum(len(records) for records in results.get("records", {}).values()),
             "subdomain_count": len(results.get("subdomains", [])),
             "has_mx": bool(results.get("records", {}).get("MX")),
@@ -213,7 +213,7 @@ class LocalDNSEnumerator:
     def scan_network(self, network: str) -> Dict[str, Any]:
         """Scan network for DNS servers and analyze DNS infrastructure"""
         try:
-            results = {
+            results: Dict[str, Any] = {
                 "network": network,
                 "dns_servers": [],
                 "scanned": True,
@@ -230,7 +230,7 @@ class LocalDNSEnumerator:
             dns_ports = [53, 5353]  # Standard DNS and mDNS
 
             # Scan for DNS servers (basic implementation)
-            potential_dns_servers = []
+            potential_dns_servers: List[Dict[str, Any]] = []
 
             # Check network gateway (common DNS server location)
             if net.num_addresses > 1:
@@ -289,7 +289,7 @@ class LocalDNSEnumerator:
     def enumerate_zone(self, domain: str) -> Dict[str, Any]:
         """Attempt zone transfer enumeration"""
         try:
-            results = {
+            results: Dict[str, Any] = {
                 "domain": domain,
                 "zone_transfer_successful": False,
                 "records": [],

@@ -11,11 +11,20 @@ from typing import Any, Dict, List, Optional
 try:
     import psycopg2
     import psycopg2.extras
-    from psycopg2.pool import SimpleConnectionPool
+    from psycopg2.pool import SimpleConnectionPool  # type: ignore
 
     HAS_POSTGRESQL = True
 except ImportError:
     HAS_POSTGRESQL = False
+    
+    # Create dummy psycopg2 for type checking
+    class MockExtras:
+        RealDictCursor = None
+    
+    class MockPsycopg2:
+        extras = MockExtras()
+    
+    psycopg2 = MockPsycopg2()  # type: ignore
 
     # Create dummy classes for type hints
     class SimpleConnectionPool:
@@ -29,7 +38,7 @@ from .models import (AccessPolicy, DataObject, SecurityAlert, SecurityEvent,
 class SecurityDatabase:
     """PostgreSQL database adapter for security framework"""
 
-    def __init__(self, connection_string: str = None):
+    def __init__(self, connection_string: Optional[str] = None):
         self.logger = logging.getLogger(__name__)
 
         # Default connection string
@@ -51,9 +60,8 @@ class SecurityDatabase:
     def initialize_connection_pool(self):
         """Initialize PostgreSQL connection pool"""
         try:
-            self.pool = SimpleConnectionPool(
-                minconn=1, maxconn=10, dsn=self.connection_string
-            )
+            # Type checker doesn't recognize psycopg2 parameters properly
+            self.pool = SimpleConnectionPool(1, 10, self.connection_string)  # type: ignore
             self.logger.info("PostgreSQL connection pool initialized")
         except Exception as e:
             self.logger.error(f"Failed to initialize connection pool: {e}")
@@ -63,16 +71,39 @@ class SecurityDatabase:
     def get_connection(self):
         """Get database connection from pool"""
         if self.pool is None:
-            # Mock mode - yield None and handle in calling methods
-            yield None
+            # Mock mode - yield a mock connection object
+            class MockConnection:
+                def cursor(self, **kwargs):
+                    class MockCursor:
+                        def __enter__(self):
+                            return self
+                        def __exit__(self, *args):
+                            pass
+                        def execute(self, *args):
+                            pass
+                        def fetchone(self):
+                            return None
+                        def fetchall(self):
+                            return []
+                        def fetchmany(self, size=None):
+                            return []
+                        @property
+                        def rowcount(self):
+                            return 0
+                    return MockCursor()
+                def commit(self):
+                    pass
+                def rollback(self):
+                    pass
+            yield MockConnection()
         else:
             conn = None
             try:
-                conn = self.pool.getconn()
+                conn = self.pool.getconn()  # type: ignore
                 yield conn
             finally:
                 if conn:
-                    self.pool.putconn(conn)
+                    self.pool.putconn(conn)  # type: ignore
 
     def initialize_schema(self):
         """Initialize database schema for security framework"""
@@ -540,8 +571,8 @@ class SecurityDatabase:
 
     def list_data_objects(
         self,
-        owner_id: str = None,
-        classification: str = None,
+        owner_id: Optional[str] = None,
+        classification: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[DataObject]:
@@ -616,14 +647,14 @@ class SecurityDatabase:
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                         (
-                            policy.resource_type,
-                            policy.resource_id,
-                            policy.user_id,
-                            policy.role,
-                            policy.permissions,
-                            json.dumps(policy.conditions),
-                            policy.created_at,
-                            policy.expires_at,
+                            policy.resource_type,  # type: ignore
+                            policy.resource_id,  # type: ignore
+                            policy.user_id,  # type: ignore
+                            policy.role,  # type: ignore
+                            policy.permissions,  # type: ignore
+                            json.dumps(policy.conditions),  # type: ignore
+                            policy.created_at,  # type: ignore
+                            policy.expires_at,  # type: ignore
                         ),
                     )
                     conn.commit()
@@ -633,7 +664,7 @@ class SecurityDatabase:
             return False
 
     def load_access_policies(
-        self, resource_type: str = None, resource_id: str = None, user_id: str = None
+        self, resource_type: Optional[str] = None, resource_id: Optional[str] = None, user_id: Optional[str] = None
     ) -> List[AccessPolicy]:
         """Load access policies from database"""
         policies = []
@@ -664,14 +695,14 @@ class SecurityDatabase:
                         policies.append(
                             AccessPolicy(
                                 id=row["id"],
-                                resource_type=row["resource_type"],
-                                resource_id=row["resource_id"],
-                                user_id=row["user_id"],
-                                role=row["role"],
-                                permissions=row["permissions"],
-                                conditions=row["conditions"],
-                                created_at=row["created_at"],
-                                expires_at=row["expires_at"],
+                                resource_type=row["resource_type"],  # type: ignore
+                                resource_id=row["resource_id"],  # type: ignore
+                                user_id=row["user_id"],  # type: ignore
+                                role=row["role"],  # type: ignore
+                                permissions=row["permissions"],  # type: ignore
+                                conditions=row["conditions"],  # type: ignore
+                                created_at=row["created_at"],  # type: ignore
+                                expires_at=row["expires_at"],  # type: ignore
                             )
                         )
         except Exception as e:
@@ -748,43 +779,88 @@ class SecurityDatabase:
             self.logger.error(f"Failed to save security alert {alert.id}: {e}")
             return False
 
-    def get_security_events(
-        self, days: int = 7, limit: int = 1000
-    ) -> List[SecurityEvent]:
-        """Get security events from database"""
-        events = []
+    def get_security_alerts(
+        self, days: int = 7, limit: int = 1000, status: Optional[str] = None
+    ) -> List[SecurityAlert]:
+        """Get security alerts from database"""
+        alerts = []
         try:
             with self.get_connection() as conn:
                 with conn.cursor(
                     cursor_factory=psycopg2.extras.RealDictCursor
                 ) as cursor:
-                    cursor.execute(
-                        """
-                        SELECT * FROM security_events
+                    query = """
+                        SELECT * FROM security_alerts
                         WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '%s days'
-                        ORDER BY timestamp DESC
-                        LIMIT %s
-                    """,
-                        (days, limit),
-                    )
+                    """
+                    params = [days]
+
+                    if status:
+                        query += " AND status = %s"
+                        params.append(status)  # type: ignore
+
+                    query += " ORDER BY timestamp DESC LIMIT %s"
+                    params.append(limit)
+
+                    cursor.execute(query, params)
                     rows = cursor.fetchall()
                     for row in rows:
-                        events.append(
-                            SecurityEvent(
+                        alerts.append(
+                            SecurityAlert(
                                 id=row["id"],
                                 timestamp=row["timestamp"],
-                                event_type=row["event_type"],
+                                alert_type=row["alert_type"],
                                 severity=row["severity"],
-                                user_id=row["user_id"],
-                                ip_address=row["ip_address"],
-                                user_agent=row["user_agent"],
-                                details=row["details"],
-                                source=row["source"],
+                                description=row["description"],
+                                affected_users=row["affected_users"],
+                                affected_data=row["affected_data"],
+                                recommended_actions=row["recommended_actions"],
+                                status=row["status"],
+                                assigned_to=row["assigned_to"],
+                                resolved_at=row["resolved_at"],
+                                notes=row["notes"],
                             )
                         )
         except Exception as e:
-            self.logger.error(f"Failed to get security events: {e}")
-        return events
+            self.logger.error(f"Failed to get security alerts: {e}")
+        return alerts
+
+    def cleanup_old_data(self, days: int = 90) -> Dict[str, int]:
+        """Clean up old security data older than specified days"""
+        cleanup_stats = {"events_cleaned": 0, "alerts_cleaned": 0}
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Clean up old security events
+                    cursor.execute(
+                        """
+                        DELETE FROM security_events
+                        WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '%s days'
+                    """,
+                        (days,),
+                    )
+                    cleanup_stats["events_cleaned"] = cursor.rowcount
+
+                    # Clean up old security alerts (keep critical ones)
+                    cursor.execute(
+                        """
+                        DELETE FROM security_alerts
+                        WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '%s days'
+                        AND severity != 'critical'
+                        AND status = 'resolved'
+                    """,
+                        (days,),
+                    )
+                    cleanup_stats["alerts_cleaned"] = cursor.rowcount
+
+                    conn.commit()
+                    self.logger.info(
+                        f"Cleaned up {cleanup_stats['events_cleaned']} old events "
+                        f"and {cleanup_stats['alerts_cleaned']} old alerts"
+                    )
+        except Exception as e:
+            self.logger.error(f"Failed to cleanup old data: {e}")
+        return cleanup_stats
 
     def get_security_report(self, days: int = 7) -> Dict[str, Any]:
         """Generate security report from database"""
@@ -828,11 +904,11 @@ class SecurityDatabase:
 
                     return {
                         "period_days": days,
-                        "total_events": stats["total_events"],
-                        "critical_events": stats["critical_events"],
-                        "high_events": stats["high_events"],
-                        "failed_logins": stats["failed_logins"],
-                        "access_denials": stats["access_denials"],
+                        "total_events": stats.get("total_events", 0) if stats else 0,
+                        "critical_events": stats.get("critical_events", 0) if stats else 0,
+                        "high_events": stats.get("high_events", 0) if stats else 0,
+                        "failed_logins": stats.get("failed_logins", 0) if stats else 0,
+                        "access_denials": stats.get("access_denials", 0) if stats else 0,
                         "top_users": [
                             {"user_id": u["user_id"], "event_count": u["event_count"]}
                             for u in top_users
@@ -847,12 +923,12 @@ class SecurityDatabase:
         user_id: str,
         action: str,
         resource_type: str,
-        resource_id: str = None,
-        details: Dict = None,
-        ip_address: str = None,
-        user_agent: str = None,
+        resource_id: Optional[str] = None,
+        details: Optional[Dict] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
         success: bool = True,
-        error_message: str = None,
+        error_message: Optional[str] = None,
     ) -> bool:
         """Log audit action to database"""
         try:
@@ -886,7 +962,7 @@ class SecurityDatabase:
     def close(self):
         """Close database connections"""
         if self.pool:
-            self.pool.closeall()
+            self.pool.closeall()  # type: ignore
             self.logger.info("Database connections closed")
 
 

@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from .models import (AccessPolicy, DataCategory, DataClassification,
                      DataObject, Permission, User)
@@ -26,7 +26,7 @@ class DataAccessControl:
         self.db = None
 
         # Data objects registry
-        self.data_objects = {}
+        self.data_objects: Dict[str, DataObject] = {}
 
         # Classification mappings
         self.classification_permissions = {
@@ -59,8 +59,8 @@ class DataAccessControl:
         classification: str,
         category: str,
         owner_id: str,
-        tags: List[str] = None,
-        metadata: Dict = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict] = None,
     ) -> DataObject:
         """Classify a data object"""
         if classification not in [c.value for c in DataClassification]:
@@ -101,7 +101,7 @@ class DataAccessControl:
         return data_object
 
     def check_access(
-        self, user: User, data_id: str, action: str = "read", context: Dict = None
+        self, user: User, data_id: str, action: str = "read", context: Optional[Dict] = None
     ) -> bool:
         """Check if user has access to data object"""
         if context is None:
@@ -168,7 +168,7 @@ class DataAccessControl:
 
         # Load access policies from database
         if self.db:
-            policies = self.db.load_access_policies(
+            policies: List[AccessPolicy] = self.db.load_access_policies(
                 resource_type="data", resource_id=data_object.id
             )
         else:
@@ -264,12 +264,12 @@ class DataAccessControl:
         self,
         name: str,
         classification_level: str,
-        required_permissions: List[str] = None,
+        required_permissions: Optional[List[str]] = None,
         required_clearance: str = "standard",
-        allowed_roles: List[str] = None,
-        denied_users: List[str] = None,
-        time_restrictions: Dict = None,
-        location_restrictions: List[str] = None,
+        allowed_roles: Optional[List[str]] = None,
+        denied_users: Optional[List[str]] = None,
+        time_restrictions: Optional[Dict] = None,
+        location_restrictions: Optional[List[str]] = None,
     ) -> AccessPolicy:
         """Create a custom access policy"""
         if required_permissions is None:
@@ -355,7 +355,7 @@ class DataAccessControl:
             self.logger.info(f"Applied data retention: {deleted_count} objects deleted")
 
     def _audit_access(
-        self, action: str, user_id: str, data_id: str, details: Dict = None
+        self, action: str, user_id: str, data_id: str, details: Optional[Dict] = None
     ):
         """Log access event"""
         if details is None:

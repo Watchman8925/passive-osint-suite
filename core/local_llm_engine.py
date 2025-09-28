@@ -27,23 +27,26 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import requests
+import requests  # type: ignore
 
 # Local LLM backends
 try:
-    import ollama
+    import ollama  # type: ignore
 
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
+    ollama = None  # type: ignore
 
 try:
-    import torch
-    from transformers import pipeline
+    import torch  # type: ignore
+    from transformers import pipeline  # type: ignore
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
+    torch = None  # type: ignore
+    pipeline = None  # type: ignore
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -84,7 +87,7 @@ class LocalLLMEngine:
         self.config = config or {}
         self.available_backends = self._detect_backends()
         self.active_backend = None
-        self.models = {}
+        self.models: Dict[str, Any] = {}
 
         # OSINT-specific prompts and templates
         self.osint_prompts = self._load_osint_prompts()
@@ -204,7 +207,7 @@ class LocalLLMEngine:
 
             response = requests.post(url, json=payload, headers=headers, timeout=5)
             return response.status_code == 200
-        except:
+        except Exception:
             return False
 
     def _initialize_backend(self):
@@ -261,7 +264,7 @@ class LocalLLMEngine:
 
         # Check secrets manager (where API key manager stores it)
         try:
-            from secrets_manager import secrets_manager
+            from secrets_manager import secrets_manager  # type: ignore
             key = secrets_manager.get_secret("openai_api_key", "")
             if key:
                 return key
@@ -287,6 +290,9 @@ class LocalLLMEngine:
     def _setup_ollama(self):
         """Setup Ollama backend with OSINT-optimized models."""
         try:
+            if not OLLAMA_AVAILABLE or ollama is None:
+                logger.warning("Ollama not available, skipping setup")
+                return
             # Check available models
             client = ollama.Client()
             models = client.list()
@@ -339,6 +345,9 @@ class LocalLLMEngine:
 
             for config in model_configs:
                 try:
+                    if not TRANSFORMERS_AVAILABLE or torch is None or pipeline is None:
+                        logger.warning("Transformers not available, skipping model load")
+                        continue
                     if torch.cuda.is_available():
                         device = 0  # Use GPU
                     else:
@@ -362,9 +371,52 @@ class LocalLLMEngine:
 
     def _setup_llamacpp(self):
         """Setup llama.cpp backend."""
-        # Implementation for llama.cpp integration
-        logger.info("llama.cpp backend setup (placeholder)")
-        pass
+        try:
+            # Check if llama.cpp executable exists
+            llama_path = self.config.get("llama_cpp_path", "llama")
+            model_path = self.config.get("llama_model_path", "")
+
+            if not model_path:
+                # Try common model locations
+                possible_paths = [
+                    "./models/llama-2-7b.ggmlv3.q4_0.bin",
+                    "./models/llama-2-13b.ggmlv3.q4_0.bin",
+                    "/usr/local/models/llama-2-7b.ggmlv3.q4_0.bin",
+                    os.path.expanduser("~/models/llama-2-7b.ggmlv3.q4_0.bin"),
+                ]
+
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        model_path = path
+                        break
+
+            if not model_path or not os.path.exists(model_path):
+                logger.warning("No llama.cpp model file found. Please specify llama_model_path in config")
+                self.available_backends["llamacpp"] = False
+                return
+
+            # Test llama.cpp executable
+            try:
+                result = subprocess.run([llama_path, "--help"], capture_output=True, timeout=10)
+                if result.returncode != 0:
+                    raise subprocess.SubprocessError("llama.cpp executable test failed")
+            except (subprocess.SubprocessError, FileNotFoundError):
+                logger.warning("llama.cpp executable not found or not working")
+                self.available_backends["llamacpp"] = False
+                return
+
+            self.models["llamacpp"] = {
+                "executable": llama_path,
+                "model_path": model_path,
+                "context_size": self.config.get("llama_context_size", 2048),
+                "threads": self.config.get("llama_threads", 4),
+            }
+
+            logger.info(f"llama.cpp backend initialized with model: {model_path}")
+
+        except Exception as e:
+            logger.error(f"Failed to setup llama.cpp: {e}")
+            self.available_backends["llamacpp"] = False
 
     def _setup_mcp(self):
         """Setup Perplexity API backend."""
@@ -694,8 +746,106 @@ class LocalLLMEngine:
 
     async def _query_llamacpp(self, prompt: str, model: Optional[str] = None) -> str:
         """Query llama.cpp backend."""
-        # Implementation for llama.cpp
-        raise NotImplementedError("llama.cpp backend not yet implemented")
+        try:
+            config = self.models.get("llamacpp")
+            if not config:
+                raise RuntimeError("llama.cpp backend not properly configured")
+
+            executable = config["executable"]
+            model_path = config["model_path"]
+            context_size = config["context_size"]
+            threads = config["threads"]
+
+            # Prepare the command for llama.cpp
+            # Using the main executable with inference parameters
+            cmd = [
+                executable,
+                "--model", model_path,
+                "--prompt", prompt,
+                "--ctx-size", str(context_size),
+                "--threads", str(threads),
+                "--n-predict", "512",  # Maximum tokens to generate
+                "--temp", "0.7",      # Temperature for creativity
+                "--top-k", "40",      # Top-k sampling
+                "--top-p", "0.9",     # Top-p sampling
+                "--repeat-last-n", "64",  # Repeat penalty window
+                "--repeat-penalty", "1.1", # Repeat penalty
+                "--seed", "-1",       # Random seed (-1 for random)
+            ]
+
+            # Run llama.cpp as subprocess
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=os.getcwd()
+            )
+
+            # Wait for completion with timeout
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=120  # 2 minute timeout
+                )
+
+                if process.returncode == 0:
+                    # Extract the generated text (llama.cpp outputs the prompt + generation)
+                    output = stdout.decode('utf-8', errors='ignore')
+
+                    # Remove the original prompt from the output
+                    if prompt in output:
+                        generated_text = output.split(prompt, 1)[1].strip()
+                    else:
+                        generated_text = output.strip()
+
+                    # Clean up any llama.cpp artifacts
+                    generated_text = self._clean_llamacpp_output(generated_text)
+
+                    return generated_text if generated_text else "No response generated"
+
+                else:
+                    error_msg = stderr.decode('utf-8', errors='ignore')
+                    logger.error(f"llama.cpp process failed: {error_msg}")
+                    raise RuntimeError(f"llama.cpp execution failed: {error_msg}")
+
+            except asyncio.TimeoutError:
+                logger.warning("llama.cpp query timed out")
+                process.kill()
+                raise RuntimeError("llama.cpp query timed out")
+
+        except Exception as e:
+            logger.error(f"llama.cpp query failed: {e}")
+            raise RuntimeError(f"llama.cpp backend error: {e}")
+
+    def _clean_llamacpp_output(self, output: str) -> str:
+        """Clean llama.cpp output by removing artifacts."""
+        try:
+            # Remove common llama.cpp artifacts
+            lines = output.split('\n')
+
+            # Remove empty lines and llama.cpp status messages
+            cleaned_lines = []
+            for line in lines:
+                line = line.strip()
+                # Skip status messages and empty lines
+                if (line and
+                    not line.startswith('llama_') and
+                    not line.startswith('[') and
+                    'tokens/s' not in line and
+                    'generation speed' not in line):
+                    cleaned_lines.append(line)
+
+            # Join back and limit to reasonable length
+            cleaned_output = '\n'.join(cleaned_lines)
+
+            # Truncate if too long (llama.cpp can generate very long responses)
+            if len(cleaned_output) > 10000:
+                cleaned_output = cleaned_output[:10000] + "...[truncated]"
+
+            return cleaned_output
+
+        except Exception as e:
+            logger.warning(f"Failed to clean llama.cpp output: {e}")
+            return output
 
     async def _query_mcp(self, prompt: str, model: Optional[str] = None) -> str:
         """Query Perplexity API directly."""
@@ -1064,6 +1214,17 @@ Targets: {', '.join(targets) if targets else 'None specified'}
                 "metadata": {"error": str(e)},
                 "generated_at": datetime.now(),
             }
+
+    async def analyze_intelligence(
+        self,
+        intelligence_data: Dict[str, Any],
+        analysis_type: str = "pattern_analysis",
+        context: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Analyze intelligence data using LLM (alias for analyze_investigation)."""
+        return await self.analyze_investigation(
+            intelligence_data, analysis_type, context, include_raw_data=True
+        )
 
 
 # Factory function for easy instantiation

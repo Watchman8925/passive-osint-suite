@@ -200,7 +200,7 @@ class FreeToolsOSINT(OSINTUtils):
         return analysis
     def local_dns_lookup(self, hostname: str) -> Dict[str, Any]:
         """Perform local DNS lookup without external tools"""
-        result = {
+        result: Dict[str, Any] = {
             'hostname': hostname,
             'resolved': False,
             'results': {}
@@ -268,9 +268,8 @@ class FreeToolsOSINT(OSINTUtils):
         """
         if ports is None:
             ports = [21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995]
-            ports = [21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995]
 
-        result = {
+        result: Dict[str, Any] = {
             'target': target,
             'scan_timestamp': datetime.now().isoformat(),
             'ports_scanned': ports,
@@ -453,7 +452,7 @@ class FreeToolsOSINT(OSINTUtils):
                 public_ip = s.getsockname()[0]
                 s.close()
                 info['public_ip_guess'] = public_ip
-            except:
+            except Exception:
                 info['public_ip_guess'] = 'Unable to determine'
 
         except Exception as e:
@@ -463,7 +462,7 @@ class FreeToolsOSINT(OSINTUtils):
 
     def comprehensive_file_analysis(self, file_path: str) -> Dict[str, Any]:
         """Perform comprehensive file analysis"""
-        analysis = {
+        analysis: Dict[str, Any] = {
             'file_path': file_path,
             'analysis_timestamp': datetime.now().isoformat(),
             'metadata': {},

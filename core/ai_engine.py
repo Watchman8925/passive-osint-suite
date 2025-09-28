@@ -16,10 +16,10 @@ from typing import Any, Dict, List, Optional
 try:
     import openai
 except ImportError:
-    openai = None
+    openai = None  # type: ignore
 
 try:  # Optional provider
-    from anthropic import Anthropic
+    from anthropic import Anthropic  # type: ignore
 except Exception:  # pragma: no cover
     Anthropic = None  # type: ignore
 from jinja2 import Template
@@ -253,7 +253,7 @@ class OSINTAIEngine:
         try:
             if self.provider == "openai":
                 response = await asyncio.to_thread(
-                    self.client.ChatCompletion.create,
+                    self.client.chat.completions.create,  # type: ignore
                     model=self.model_name,
                     messages=[
                         {
@@ -269,21 +269,22 @@ class OSINTAIEngine:
                     temperature=0.3,
                     max_tokens=4000,
                 )
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                return content if content is not None else "No response generated"
 
             elif self.provider == "anthropic":
                 response = await asyncio.to_thread(
-                    self.client.messages.create,
+                    self.client.messages.create,  # type: ignore
                     model=self.model_name,
                     max_tokens=4000,
                     temperature=0.3,
                     messages=[{"role": "user", "content": prompt}],
                 )
-                return response.content[0].text
+                return response.content[0].text  # type: ignore
 
             elif self.provider == "perplexity":
                 response = await asyncio.to_thread(
-                    self.client.ChatCompletion.create,
+                    self.client.chat.completions.create,  # type: ignore
                     model=self.model_name,
                     messages=[
                         {
@@ -300,11 +301,15 @@ class OSINTAIEngine:
                     temperature=0.3,
                     max_tokens=4000,
                 )
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                return content if content is not None else "No response generated"
 
         except Exception as e:
             logger.error(f"AI model call failed: {e}")
             raise
+
+        # If no provider matched, return error message
+        return f"Unsupported AI provider: {self.provider}"
 
     def _preprocess_investigation_data(
         self, investigation_data: Dict[str, Any], include_raw_data: bool = False
@@ -331,7 +336,7 @@ class OSINTAIEngine:
         """Summarize key findings from investigation data"""
         results = investigation_data.get("results", {})
 
-        summary = {
+        summary: Dict[str, Any] = {
             "total_data_points": 0,
             "unique_domains": set(),
             "unique_ips": set(),
@@ -519,7 +524,7 @@ class OSINTAIEngine:
 
         lines = response.split("\n")
         current_section = None
-        current_content = []
+        current_content: List[str] = []
 
         for line in lines:
             line = line.strip()
@@ -728,7 +733,7 @@ class OSINTAIEngine:
         self,
         investigation_id: str,
         user_message: str,
-        conversation_history: List[Dict[str, str]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """Interactive chat about investigation data"""
         try:

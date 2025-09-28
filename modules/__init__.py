@@ -41,6 +41,13 @@ from .web_discovery import WebDiscoveryEngine
 from .dns_intelligence import DNSIntelligenceEngine
 from .pattern_matching import PatternMatchingEngine
 
+# Import new passive intelligence modules
+from .gitlab_passive import GitLabPassive
+from .bitbucket_passive import BitbucketPassive
+from .comprehensive_social_passive import ComprehensiveSocialPassive
+from .academic_passive import AcademicPassive
+from .patent_passive import PatentPassive
+
 # Import conspiracy analyzer and comprehensive sweep (with error handling)
 import importlib
 try:
@@ -143,9 +150,16 @@ except Exception as e:
     LocalNetworkAnalyzer = None
 
 from .comprehensive_sweep import ComprehensiveInvestigationSweep
+from typing import Any, Dict, List, Type, TypedDict
+
+class ModuleInfo(TypedDict):
+    """Structure for module information in the registry."""
+    class_: Type[Any]
+    description: str
+    category: str
 
 # Module registry for easy discovery and instantiation
-MODULE_REGISTRY = {
+MODULE_REGISTRY: Dict[str, Dict[str, Any]] = {
     # Domain and Network Intelligence
     'certificate_transparency': {
         'class': CertificateTransparency,
@@ -373,6 +387,33 @@ MODULE_REGISTRY = {
         'class': LocalNetworkAnalyzer,
         'description': 'Local network analysis and reconnaissance',
         'category': 'network'
+    },
+
+    # New Passive Intelligence Modules
+    'gitlab_passive': {
+        'class': GitLabPassive,
+        'description': 'Passive GitLab repository and user intelligence gathering',
+        'category': 'code'
+    },
+    'bitbucket_passive': {
+        'class': BitbucketPassive,
+        'description': 'Passive Bitbucket repository and user intelligence gathering',
+        'category': 'code'
+    },
+    'comprehensive_social_passive': {
+        'class': ComprehensiveSocialPassive,
+        'description': 'Multi-platform social media passive monitoring across 10+ platforms',
+        'category': 'social'
+    },
+    'academic_passive': {
+        'class': AcademicPassive,
+        'description': 'Academic and research paper passive intelligence across 6 databases',
+        'category': 'academic'
+    },
+    'patent_passive': {
+        'class': PatentPassive,
+        'description': 'Patent database passive intelligence across 4 global patent systems',
+        'category': 'patent'
     }
 }
 
@@ -381,22 +422,17 @@ CATEGORIES = {
     'domain': ['certificate_transparency', 'domain_recon', 'whois_history', 'dns_intelligence'],
     'network': ['ip_intel', 'passive_dns_enum', 'network_analysis', 'local_dns_enumerator', 'local_network_analyzer'],
     'web': ['web_scraper', 'wayback_machine', 'search_engine_dorking', 'web_discovery'],
-    'social': ['social_media_footprint'],
+    'social': ['social_media_footprint', 'comprehensive_social_passive'],
     'breach': ['public_breach_search', 'paste_site_monitor'],
     'business': ['company_intel'],
     'email': ['email_intel'],
     'aviation': ['flight_intel'],
     'crypto': ['crypto_intel'],
-    'code': ['github_search', 'code_analysis'],
-    'general': ['passive_search', 'rapidapi_osint'],
-    'analysis': ['hidden_pattern_detector', 'conspiracy_analyzer', 'cross_reference_engine', 'blackbox_patterns'],
-    'reporting': ['reporting_engine'],
-    'realtime': ['realtime_feeds'],
-    'investigation': ['bellingcat_toolkit'],
-    'forensics': ['metadata_extractor', 'digital_forensics']
+    'code': ['github_search', 'code_analysis', 'gitlab_passive', 'bitbucket_passive'],
+    'patent': ['patent_passive']
 }
 
-def get_module(module_name):
+def get_module(module_name: str) -> Any:
     """
     Get a module instance by name with dependency injection.
 
@@ -420,9 +456,12 @@ def get_module(module_name):
     except ImportError:
         # Fallback to simple instantiation
         module_info = MODULE_REGISTRY[module_name]
-        return module_info['class']()
+        module_class = module_info.get('class')
+        if module_class:
+            return module_class()
+        raise ValueError(f"Module '{module_name}' has no 'class' defined.")
 
-def get_modules_by_category(category):
+def get_modules_by_category(category: str) -> Dict[str, Dict[str, Any]]:
     """
     Get all modules in a specific category.
 
@@ -438,7 +477,7 @@ def get_modules_by_category(category):
 
     return {name: MODULE_REGISTRY[name] for name in CATEGORIES[category]}
 
-def list_modules():
+def list_modules() -> Dict[str, Dict[str, Any]]:
     """
     List all available modules with their descriptions.
 
@@ -447,7 +486,14 @@ def list_modules():
     """
     return MODULE_REGISTRY
 
-def list_categories():
+def list_categories() -> Dict[str, List[str]]:
+    """
+    List all available categories.
+
+    Returns:
+        dict: Category information
+    """
+    return CATEGORIES
     """
     List all available categories.
 
@@ -490,6 +536,13 @@ __all__ = [
     'WebDiscoveryEngine',
     'DNSIntelligenceEngine',
     'PatternMatchingEngine',
+
+    # New Passive Intelligence Modules
+    'GitLabPassive',
+    'BitbucketPassive',
+    'ComprehensiveSocialPassive',
+    'AcademicPassive',
+    'PatentPassive',
 
     # Specialized analysis modules
     'ComprehensiveInvestigationSweep',

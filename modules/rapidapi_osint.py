@@ -4,7 +4,6 @@ Provides access to various free RapidAPI services for OSINT gathering
 """
 
 import json
-import time
 from typing import Dict, List, Optional, Any
 from utils.osint_utils import OSINTUtils
 
@@ -250,7 +249,7 @@ class RapidAPIOSINTModule(OSINTUtils):
     def comprehensive_person_search(self, email: Optional[str] = None, phone: Optional[str] = None,
                                   name: Optional[str] = None, username: Optional[str] = None) -> Dict[str, Any]:
         """Comprehensive person search using multiple RapidAPI services"""
-        results = {
+        results: Dict[str, Any] = {
             'email': email,
             'phone': phone,
             'name': name,
@@ -280,7 +279,7 @@ class RapidAPIOSINTModule(OSINTUtils):
 
     def comprehensive_company_search(self, domain: str, company_name: Optional[str] = None) -> Dict[str, Any]:
         """Comprehensive company search using multiple RapidAPI services"""
-        results = {
+        results: Dict[str, Any] = {
             'domain': domain,
             'company_name': company_name,
             'sources': {}
@@ -312,7 +311,7 @@ class RapidAPIOSINTModule(OSINTUtils):
 
     def comprehensive_domain_search(self, domain: str) -> Dict[str, Any]:
         """Comprehensive domain search using multiple RapidAPI services"""
-        results = {
+        results: Dict[str, Any] = {
             'domain': domain,
             'sources': {}
         }
@@ -336,7 +335,7 @@ class RapidAPIOSINTModule(OSINTUtils):
 
     def threat_intelligence_lookup(self, indicator: str) -> Dict[str, Any]:
         """Comprehensive threat intelligence lookup"""
-        results = {
+        results: Dict[str, Any] = {
             'indicator': indicator,
             'sources': {}
         }

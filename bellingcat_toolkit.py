@@ -195,7 +195,7 @@ class BellingcatToolkit:
 
     def _perform_forensic_analysis(self, media_data: bytes, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Perform forensic analysis on media"""
-        forensic = {
+        forensic: Dict[str, Any] = {
             "file_integrity": "unknown",
             "manipulation_indicators": [],
             "compression_artifacts": False,
@@ -237,7 +237,7 @@ class BellingcatToolkit:
 
     def _cross_reference_media(self, media_data: bytes, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Cross-reference media with known sources"""
-        cross_ref = {
+        cross_ref: Dict[str, Any] = {
             "known_sources": [],
             "similar_images": [],
             "social_media_presence": [],
@@ -271,7 +271,7 @@ class BellingcatToolkit:
             analysis = self.analyze_media(image_url)
             metadata = analysis.get("metadata", {})
 
-            geolocation = {
+            geolocation: Dict[str, Any] = {
                 "image_url": image_url,
                 "geolocation_methods": [],
                 "possible_locations": [],
@@ -379,7 +379,7 @@ class BellingcatToolkit:
             if platforms is None:
                 platforms = list(self.social_platforms.keys())
 
-            investigation = {
+            investigation: Dict[str, Any] = {
                 "username": username,
                 "platforms_checked": platforms,
                 "profiles_found": [],
@@ -442,7 +442,7 @@ class BellingcatToolkit:
 
     def _analyze_cross_platform_presence(self, profiles: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze cross-platform social media presence"""
-        analysis = {
+        analysis: Dict[str, Any] = {
             "total_platforms": len(profiles),
             "consistency_score": 0.0,
             "activity_patterns": [],

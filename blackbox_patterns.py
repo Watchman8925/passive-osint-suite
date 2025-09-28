@@ -341,7 +341,7 @@ class BlackboxPatternEngine:
     def cluster_similar_patterns(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Cluster similar patterns using basic similarity metrics"""
         try:
-            clusters = []
+            clusters: List[Dict[str, Any]] = []
             processed = set()
 
             for i, point1 in enumerate(data_points):
@@ -424,7 +424,7 @@ class BlackboxPatternEngine:
         best_score = 0
 
         for theme, keywords in threat_keywords.items():
-            score = sum(1 for word in common_words if word in keywords)
+            score = sum(1 for word in common_words if word in keywords)  # type: ignore
             if score > best_score:
                 best_score = score
                 best_match = theme

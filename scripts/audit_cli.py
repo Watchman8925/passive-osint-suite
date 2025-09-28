@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 # Import our audit trail
 try:
-    from audit_trail import AuditTrail, audit_trail
+    from security.audit_trail import AuditTrail, audit_trail
 except ImportError:
     print("Error: Could not import audit_trail module")
     sys.exit(1)

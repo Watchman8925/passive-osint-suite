@@ -7,10 +7,8 @@ import os
 import json
 import subprocess
 import logging
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+from typing import Dict, List, Any
 import tempfile
-import shutil
 import re
 import urllib.parse
 
@@ -254,7 +252,7 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary with categorized URLs
         """
-        categories = {
+        categories: Dict[str, List[str]] = {
             "javascript": [],
             "css": [],
             "images": [],
@@ -340,7 +338,7 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing all discovery results
         """
-        discovery = {
+        discovery: Dict[str, Any] = {
             "domain": domain,
             "timestamp": None,  # Would be set by caller
             "discoveries": {}

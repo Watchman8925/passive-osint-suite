@@ -15,6 +15,7 @@ from types import SimpleNamespace
 # linter/runtime errors when optional modules are not installed.
 try:
     import validators  # preferred library for input validation
+    _validators_available = True
 except Exception:
     # Minimal validators fallback if the 'validators' package is not available.
     import re
@@ -51,7 +52,8 @@ except Exception:
         def url(v):
             return bool(_ValidatorsFallback._url_re.match(str(v)))
 
-    validators = _ValidatorsFallback()
+    validators = _ValidatorsFallback()  # type: ignore[assignment]
+    _validators_available = False
 
 # colorama fallback
 try:
@@ -82,7 +84,7 @@ try:
 except Exception:
     _rich_available = False
 
-    class Table:
+    class _TableFallback:
         def __init__(self, title=""):
             self.title = title
             self._columns = []
@@ -112,13 +114,16 @@ except Exception:
                 lines.append(line)
             return "\n".join(lines)
 
-    class Console:
+    class _ConsoleFallback:
         def print(self, obj):
             # If it's a Table replacement, use its string representation
             try:
                 print(str(obj))
             except Exception:
                 print(obj)
+
+    Table = _TableFallback
+    Console = _ConsoleFallback
 
 # transport.sync_get is required by the module; import at runtime to avoid binding to
 # a potentially incompatible type stub (which can declare NoReturn). Expose sync_get
@@ -179,15 +184,16 @@ except Exception:
         async def start():
             return True
 
-    class QueryPriority(int):
+    class _QueryPriorityFallback(int):
         def __new__(cls, value):
             return int.__new__(cls, value)
 
     query_obfuscator = _QueryObfuscatorFallback()
+    QueryPriority = _QueryPriorityFallback
 
 # Secrets manager
 try:
-    sm_mod = importlib.import_module("secrets_manager")
+    sm_mod = importlib.import_module("security.secrets_manager")
     get_api_key = getattr(sm_mod, "get_api_key")
     secrets_manager = getattr(sm_mod, "secrets_manager")
     store_api_key = getattr(sm_mod, "store_api_key")
@@ -215,7 +221,7 @@ except Exception:
 
 # Audit trail
 try:
-    audit_mod = importlib.import_module("audit_trail")
+    audit_mod = importlib.import_module("security.audit_trail")
     audit_trail = getattr(audit_mod, "audit_trail")
     AUDIT_AVAILABLE = True
 except Exception:
@@ -232,7 +238,7 @@ except Exception:
 
 # OPSEC policy engine
 try:
-    opsec_mod = importlib.import_module("opsec_policy")
+    opsec_mod = importlib.import_module("security.opsec_policy")
     enforce_policy = getattr(opsec_mod, "enforce_policy")
     OPSEC_AVAILABLE = True
 except Exception:
@@ -247,7 +253,7 @@ except Exception:
 
 # Result encryption
 try:
-    re_mod = importlib.import_module("result_encryption")
+    re_mod = importlib.import_module("security.result_encryption")
     result_encryption = getattr(re_mod, "result_encryption")
     ENCRYPTION_AVAILABLE = True
 except Exception:
@@ -879,3 +885,29 @@ class OSINTUtils:
 
         email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return re.findall(email_pattern, text)
+
+    def request_with_fallback(self, method, url, headers=None, params=None, timeout=30, allow_fallback=True):
+        """
+        Make HTTP request with fallback support.
+        
+        This method provides a unified interface for making HTTP requests with optional
+        fallback mechanisms. Currently uses the standard make_request method.
+        
+        Args:
+            method: HTTP method ('get', 'post', etc.)
+            url: Target URL
+            headers: Custom headers
+            params: Query parameters
+            timeout: Request timeout
+            allow_fallback: Whether to allow fallback mechanisms (currently unused)
+        
+        Returns:
+            Response object or None if request fails
+        """
+        if method.lower() == 'get':
+            return self.make_request(url, headers=headers, params=params, timeout=timeout)
+        else:
+            # For other methods, we'd need to implement them in make_request
+            # For now, just use make_request for GET requests
+            self.logger.warning(f"HTTP method {method} not fully implemented, using GET fallback")
+            return self.make_request(url, headers=headers, params=params, timeout=timeout)

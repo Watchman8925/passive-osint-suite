@@ -3,7 +3,7 @@ Transport utilities for OSINT Suite
 Tor proxy and network transport management
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -59,11 +59,15 @@ class ProxiedTransport:
         """GET request through proxy"""
         return self.session.get(url, **kwargs)
 
+    def post(self, url: str, **kwargs) -> requests.Response:
+        """POST request through proxy"""
+        return self.session.post(url, **kwargs)
+
 
 class Transport:
     """Main transport class for requests"""
 
-    def __init__(self, proxy_url: str = None):
+    def __init__(self, proxy_url: Optional[str] = None):
         if proxy_url:
             self.transport = ProxiedTransport(proxy_url)
         else:

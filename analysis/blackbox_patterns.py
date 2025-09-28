@@ -26,7 +26,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # Import local dependencies
-from local_llm_engine import create_local_llm_engine
+from core.local_llm_engine import create_local_llm_engine
 
 logger = logging.getLogger(__name__)
 
@@ -249,8 +249,12 @@ class BlackboxPatternEngine:
             
             # Enhanced analysis with local LLM if available
             if hasattr(self, 'llm_engine') and self.llm_engine.active_backend:
-                llm_patterns = self._llm_enhanced_analysis(data, detected_patterns)
-                detected_patterns.extend(llm_patterns)
+                import asyncio
+                try:
+                    llm_patterns = asyncio.run(self._llm_enhanced_analysis(data, detected_patterns))
+                    detected_patterns.extend(llm_patterns)
+                except Exception as e:
+                    logger.warning(f"LLM analysis failed: {e}")
             
             return detected_patterns
             
@@ -526,7 +530,7 @@ class BlackboxPatternEngine:
         Returns:
             Dictionary containing correlation analysis results
         """
-        correlations = {
+        correlations: Dict[str, Any] = {
             'relationships': [],
             'clusters': [],
             'anomalies': [],
@@ -658,7 +662,7 @@ class BlackboxPatternEngine:
     def _cluster_fragments(self, fragments: List[IntelligenceFragment]) -> List[Dict[str, Any]]:
         """Cluster related intelligence fragments."""
         # Simplified clustering - can be enhanced with more sophisticated algorithms
-        clusters = []
+        clusters: List[Dict[str, Any]] = []
         processed = set()
         
         try:
@@ -666,7 +670,7 @@ class BlackboxPatternEngine:
                 if fragment.fragment_id in processed:
                     continue
                 
-                cluster = {
+                cluster: Dict[str, Any] = {
                     'cluster_id': f"cluster_{len(clusters)}",
                     'fragments': [fragment.fragment_id],
                     'cluster_type': fragment.fragment_type,
@@ -811,7 +815,7 @@ class BlackboxPatternEngine:
                 return 0.0
             
             total_pairs = len(fragments) * (len(fragments) - 1) / 2
-            correlation_sum = 0
+            correlation_sum = 0.0
             
             for i, fragment1 in enumerate(fragments):
                 for fragment2 in fragments[i+1:]:

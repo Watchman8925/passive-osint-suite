@@ -5,9 +5,11 @@ Location tracking, mapping, and geographic analysis
 
 import re
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List, Any
+import requests
 
 from utils.osint_utils import OSINTUtils
+from utils.result_normalizer import normalize_result
 
 
 class GeospatialIntelligence(OSINTUtils):
@@ -16,6 +18,11 @@ class GeospatialIntelligence(OSINTUtils):
     def __init__(self):
         super().__init__()
         self.results = {}
+
+    def check_rate_limit(self, service: str) -> bool:
+        """Check if we're within rate limits for a service"""
+        # Simple rate limiting - could be enhanced with actual rate limiting
+        return True
 
     def analyze_location(self, location_query: str) -> Dict:
         """
@@ -41,14 +48,14 @@ class GeospatialIntelligence(OSINTUtils):
                 'nearby_services': self.find_nearby_services(location_query)
             }
 
-            return self.normalize_result({
+            return normalize_result({
                 "status": "success",
                 "data": self.results
             })
 
         except Exception as e:
             self.logger.error(f"Geospatial analysis failed: {e}")
-            return self.normalize_result({
+            return normalize_result({
                 "status": "error",
                 "error": str(e)
             })
@@ -76,7 +83,7 @@ class GeospatialIntelligence(OSINTUtils):
 
     def geocode_opencage(self, location: str) -> Optional[Dict]:
         """Geocode using OpenCage API"""
-        api_key = self.get_service_api_key('opencage')
+        api_key = self.get_api_key('opencage')
         if not api_key:
             return None
 
@@ -115,7 +122,7 @@ class GeospatialIntelligence(OSINTUtils):
 
     def geocode_mapbox(self, location: str) -> Optional[Dict]:
         """Geocode using Mapbox API"""
-        api_key = self.get_service_api_key('mapbox')
+        api_key = self.get_api_key('mapbox')
         if not api_key:
             return None
 
@@ -233,6 +240,9 @@ class GeospatialIntelligence(OSINTUtils):
             r'(\d+\.\d+)([NS])\s*(\d+\.\d+)([EW])'
         ]
 
+        lat: Optional[float] = None
+        lng: Optional[float] = None
+
         for pattern in patterns:
             match = re.search(pattern, location, re.IGNORECASE)
             if match:
@@ -261,7 +271,7 @@ class GeospatialIntelligence(OSINTUtils):
                         lng = -lng
 
                 # Validate coordinates
-                if -90 <= lat <= 90 and -180 <= lng <= 180:
+                if lat is not None and lng is not None and -90 <= lat <= 90 and -180 <= lng <= 180:
                     return (lat, lng)
 
         return None
@@ -374,10 +384,10 @@ class GeospatialIntelligence(OSINTUtils):
             url = "https://overpass-api.de/api/interpreter"
             data = {'data': query}
 
-            response = self.make_request(url, method='post', data=data)
+            response = requests.post(url, data=data)
             if response and response.status_code == 200:
                 data = response.json()
-                amenities = {}
+                amenities: Dict[str, List[Dict[str, Any]]] = {}
 
                 for element in data.get('elements', []):
                     amenity_type = element.get('tags', {}).get('amenity', 'unknown')

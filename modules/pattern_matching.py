@@ -4,15 +4,10 @@ Provides comprehensive pattern matching using Yara and custom security analysis
 """
 
 import os
-import json
 import subprocess
 import logging
 from typing import Dict, List, Optional, Any
-from pathlib import Path
-import tempfile
-import shutil
 import re
-import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +137,7 @@ class PatternMatchingEngine:
         if not os.path.exists(directory_path):
             return {"error": f"Directory not found: {directory_path}"}
 
-        results = {
+        results: Dict[str, Any] = {
             "directory": directory_path,
             "files_scanned": 0,
             "total_matches": 0,
@@ -223,7 +218,7 @@ class PatternMatchingEngine:
         Returns:
             Dictionary containing found secrets
         """
-        findings = {
+        findings: Dict[str, Any] = {
             "total_findings": 0,
             "categories": {}
         }
@@ -265,7 +260,7 @@ class PatternMatchingEngine:
         Returns:
             Dictionary containing JavaScript analysis results
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "endpoints": [],
             "secrets": {},
             "functions": [],
@@ -318,7 +313,7 @@ class PatternMatchingEngine:
         Returns:
             Dictionary containing webpage analysis results
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "secrets": {},
             "endpoints": [],
             "forms": [],
@@ -378,7 +373,7 @@ class PatternMatchingEngine:
         if not os.path.exists(search_path):
             return {"error": f"Search path not found: {search_path}"}
 
-        results = {
+        results: Dict[str, Any] = {
             "search_path": search_path,
             "patterns_searched": patterns,
             "results": {}
@@ -421,7 +416,7 @@ class PatternMatchingEngine:
         Returns:
             Dictionary containing comprehensive security analysis
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "target": target_path,
             "timestamp": None,  # Would be set by caller
             "analyses": {}

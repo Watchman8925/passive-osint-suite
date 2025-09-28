@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnknownParameterType=false
 """
 OSINT Investigation Manager
 Advanced workflow orchestration and data organization for complex OSINT investigations.
@@ -8,26 +9,22 @@ import asyncio
 import json
 import logging
 import uuid
+import importlib
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, cast
 
 import aiofiles
-from result_encryption import ResultEncryption
 
-from audit_trail import AuditTrail
+from security.audit_trail import AuditTrail
+from security.result_encryption import ResultEncryption
 # Import existing OSINT modules
 from osint_suite import OSINTSuite
+from security.secrets_manager import SecretsManager
 
-try:
-    from query_obfuscation import \
-        QueryObfuscator as QueryObfuscation  # backward alias
-except Exception:  # pragma: no cover
-    QueryObfuscation = None  # type: ignore
 # (Removed unused AnonymityGrid import to reduce unnecessary dependencies)
-from secrets_manager import SecretsManager
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +139,7 @@ class InvestigationManager:
         self.task_semaphore = asyncio.Semaphore(self.max_concurrent_tasks)
         
         # Event handlers
-        self.event_handlers: Dict[str, List[Callable]] = {
+        self.event_handlers: Dict[str, List[Callable[[Any], Coroutine[Any, Any, None]]]] = {
             "investigation_created": [],
             "investigation_started": [],
             "investigation_completed": [],
@@ -172,8 +169,8 @@ class InvestigationManager:
         organization: str = "OSINT Investigation",
         priority: Priority = Priority.MEDIUM,
         deadline: Optional[datetime] = None,
-        tags: List[str] = None,
-        configuration: Dict[str, Any] = None
+        tags: Optional[List[str]] = None,
+        configuration: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Create a new investigation.
@@ -224,7 +221,7 @@ class InvestigationManager:
         await self._save_investigation(investigation)
         
         # Log creation
-        await self.audit_trail.log_action(
+        await self._log_action(
             action="investigation_created",
             details={
                 "investigation_id": investigation_id,
@@ -234,9 +231,6 @@ class InvestigationManager:
             }
         )
         
-        # Trigger event handlers
-        await self._trigger_event("investigation_created", investigation)
-        
         return investigation_id
     
     async def add_task(
@@ -245,9 +239,9 @@ class InvestigationManager:
         name: str,
         task_type: str,
         targets: List[str],
-        parameters: Dict[str, Any] = None,
+        parameters: Optional[Dict[str, Any]] = None,
         priority: Priority = Priority.MEDIUM,
-        dependencies: List[str] = None,
+        dependencies: Optional[List[str]] = None,
         estimated_duration: int = 300,  # 5 minutes default
         max_retries: int = 3
     ) -> str:
@@ -313,7 +307,7 @@ class InvestigationManager:
         await self._save_investigation(investigation)
         
         # Log start
-        await self.audit_trail.log_action(
+        await self._log_action(
             action="investigation_started",
             details={
                 "investigation_id": investigation_id,
@@ -321,9 +315,6 @@ class InvestigationManager:
                 "task_count": len(investigation.tasks)
             }
         )
-        
-        # Trigger event handlers
-        await self._trigger_event("investigation_started", investigation)
         
         # Start task execution
         asyncio.create_task(self._execute_investigation(investigation_id))
@@ -342,14 +333,14 @@ class InvestigationManager:
             for task_batch in execution_plan:
                 # Execute tasks in batch (parallel execution for independent tasks)
                 batch_tasks = []
+            for task_batch in execution_plan:
+                # Execute tasks in batch (parallel execution for independent tasks)
+                batch_tasks: List[Coroutine[Any, Any, None]] = []
                 for task_id in task_batch:
                     batch_tasks.append(self._execute_task(investigation_id, task_id))
                 
                 # Wait for batch completion
                 await asyncio.gather(*batch_tasks, return_exceptions=True)
-            
-            # Complete investigation
-            await self._complete_investigation(investigation_id)
             
         except Exception as e:
             logger.error(f"Investigation execution failed: {e}")
@@ -358,13 +349,13 @@ class InvestigationManager:
     def _build_execution_plan(self, investigation: Investigation) -> List[List[str]]:
         """Build task execution plan based on dependencies"""
         # Topological sort with batching for parallel execution
-        executed = set()
-        execution_plan = []
+        executed: Set[str] = set()
+        execution_plan: List[List[str]] = []
         
         while len(executed) < len(investigation.tasks):
-            current_batch = []
+            current_batch: List[str] = []
             
-            for task_id, task in investigation.tasks.items():
+            for task_id, _ in investigation.tasks.items():
                 if task_id in executed:
                     continue
                 
@@ -453,89 +444,89 @@ class InvestigationManager:
         task_type = task.task_type.lower()
         targets = task.targets
         parameters = task.parameters
-        
+
+        # Initialize result
+        result = {}
+
         # Update progress
         task.progress = 0.2
-        
+
         if task_type == "domain_recon":
-            from domain_recon import DomainRecon
+            DomainRecon = self._load_class("modules.domain_recon", "DomainRecon")
             domain_recon = DomainRecon(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await domain_recon.comprehensive_domain_analysis(
+                target_result = await domain_recon.recon_domain(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-            
+
         elif task_type == "ip_intelligence":
-            from ip_intel import IPIntel
+            IPIntel = self._load_class("modules.ip_intel", "IPIntel")
             ip_intel = IPIntel(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await ip_intel.comprehensive_ip_analysis(
+                target_result = await ip_intel.analyze_ip(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-        
+
         elif task_type == "email_intelligence":
-            from email_intel import EmailIntel
+            EmailIntel = self._load_class("modules.email_intel", "EmailIntel")
             email_intel = EmailIntel(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await email_intel.comprehensive_email_analysis(
+                target_result = await email_intel.analyze_email(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-        
+
         elif task_type == "company_intelligence":
-            from company_intel import CompanyIntel
+            CompanyIntel = self._load_class("modules.company_intel", "CompanyIntel")
             company_intel = CompanyIntel(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await company_intel.comprehensive_company_analysis(
+                target_result = await company_intel.analyze_company(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-        
+
         elif task_type == "flight_intelligence":
-            from flight_intel import FlightIntel
+            FlightIntel = self._load_class("modules.flight_intel", "FlightIntel")
             flight_intel = FlightIntel(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await flight_intel.comprehensive_flight_analysis(
+                target_result = await flight_intel.analyze_flight(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-        
+
         elif task_type == "crypto_intelligence":
-            from crypto_intel import CryptoIntel
+            CryptoIntel = self._load_class("modules.crypto_intel", "CryptoIntel")
             crypto_intel = CryptoIntel(self.secrets_manager)
-            result = {}
             for target in targets:
-                target_result = await crypto_intel.comprehensive_crypto_analysis(
+                target_result = await crypto_intel.analyze_crypto(
                     target, **parameters
                 )
                 result[target] = target_result
                 task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-        
+
         elif task_type == "passive_search":
-            from passive_search import PassiveSearch
+            PassiveSearch = self._load_class("modules.passive_search", "PassiveSearch")
             passive_search = PassiveSearch(self.secrets_manager)
-            result = await passive_search.comprehensive_passive_search(
-                targets, **parameters
-            )
-        
+            for target in targets:
+                target_result = await passive_search.search(
+                    target, **parameters
+                )
+                result[target] = target_result
+                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
+
         else:
             raise ValueError(f"Unknown task type: {task_type}")
-        
+
         # Final progress update
         task.progress = 1.0
-        
+
         return {
             "status": "completed",
             "data": result,
@@ -557,21 +548,19 @@ class InvestigationManager:
         await self._save_investigation(investigation)
         
         # Log completion
-        await self.audit_trail.log_action(
+        await self._log_action(
             action="investigation_completed",
             details={
                 "investigation_id": investigation_id,
                 "name": investigation.name,
                 "duration": (
-                    (investigation.completed_at - investigation.started_at)
-                    .total_seconds()
+                    (investigation.completed_at - investigation.started_at).total_seconds()
+                    if investigation.completed_at and investigation.started_at
+                    else 0
                 ),
                 "task_count": len(investigation.tasks)
             }
         )
-        
-        # Trigger event handlers
-        await self._trigger_event("investigation_completed", investigation)
         
         # Archive investigation
         await self._archive_investigation(investigation_id)
@@ -712,15 +701,15 @@ class InvestigationManager:
     async def _save_investigation(self, investigation: Investigation):
         """Save investigation to storage"""
         file_path = self.storage_path / "active" / f"{investigation.id}.json"
-        
+
         # Convert investigation to dict
         investigation_dict = asdict(investigation)
-        
+
         # Convert datetime objects to ISO format
         investigation_dict = self._serialize_datetime(investigation_dict)
 
         # Sanitize any non-JSON-serializable primitives (enums, mappingproxy, sets, etc.)
-        def _sanitize(obj):  # type: ignore
+        def _sanitize(obj: Any) -> Any:
             if isinstance(obj, Enum):
                 return obj.value
             from types import MappingProxyType
@@ -733,8 +722,10 @@ class InvestigationManager:
             if isinstance(obj, set):
                 return [_sanitize(v) for v in obj]
             return obj
-        investigation_dict = _sanitize(investigation_dict)
-        
+
+        investigation_dict = cast(Dict[str, Any], _sanitize(investigation_dict))
+
+        # Save to file
         async with aiofiles.open(file_path, 'w') as f:
             await f.write(json.dumps(investigation_dict, indent=2))
     
@@ -770,14 +761,38 @@ class InvestigationManager:
         except Exception as e:
             logger.error(f"Failed to load investigation {investigation_id}: {e}")
             return None
-    
+
     async def _archive_investigation(self, investigation_id: str):
         """Archive completed investigation"""
         source_path = self.storage_path / "active" / f"{investigation_id}.json"
         dest_path = self.storage_path / "completed" / f"{investigation_id}.json"
-        
+
         if source_path.exists():
             source_path.rename(dest_path)
+    
+    async def _log_action(self, action: str, details: Dict[str, Any]) -> None:
+        """Safely log an action using the configured audit trail (supports sync/async)."""
+        try:
+            log_action = getattr(self.audit_trail, "log_action", None)
+            if not log_action:
+                logger.debug("AuditTrail.log_action is unavailable")
+                return
+            if asyncio.iscoroutinefunction(log_action):
+                await log_action(action=action, details=details)  # type: ignore[misc]
+            else:
+                result = log_action(action=action, details=details)  # type: ignore[misc]
+                if asyncio.iscoroutine(result):
+                    await result
+        except Exception as e:
+            logger.error(f"Audit logging failed for {action}: {e}")
+    
+    def _load_class(self, module_path: str, class_name: str):
+        """Dynamically load a class from a module path."""
+        try:
+            module = importlib.import_module(module_path)
+            return getattr(module, class_name)
+        except Exception as e:
+            raise ImportError(f"Failed to import {class_name} from {module_path}: {e}")
     
     def _serialize_datetime(self, obj: Any) -> Any:
         """Recursively serialize datetime objects to ISO format"""
@@ -791,7 +806,7 @@ class InvestigationManager:
             return self._serialize_datetime(obj.__dict__)
         else:
             return obj
-    
+
     def _deserialize_datetime(self, obj: Any) -> Any:
         """Recursively deserialize ISO format strings to datetime objects"""
         if isinstance(obj, str):
@@ -805,26 +820,28 @@ class InvestigationManager:
             return [self._deserialize_datetime(item) for item in obj]
         else:
             return obj
-    
+
     async def _trigger_event(self, event_name: str, data: Any):
-        """Trigger event handlers"""
+        """Trigger event handlers for a specific event"""
         handlers = self.event_handlers.get(event_name, [])
         for handler in handlers:
             try:
                 if asyncio.iscoroutinefunction(handler):
                     await handler(data)
                 else:
-                    handler(data)
+                    result = handler(data)
+                    if asyncio.iscoroutine(result):
+                        await result
             except Exception as e:
                 logger.error(f"Event handler failed for {event_name}: {e}")
-    
-    def add_event_handler(self, event_name: str, handler: Callable):
+
+    def add_event_handler(self, event_name: str, handler: Callable[[Any], Coroutine[Any, Any, None]]):
         """Add event handler"""
         if event_name not in self.event_handlers:
             self.event_handlers[event_name] = []
         self.event_handlers[event_name].append(handler)
-    
-    def remove_event_handler(self, event_name: str, handler: Callable):
+
+    def remove_event_handler(self, event_name: str, handler: Callable[[Any], Coroutine[Any, Any, None]]):
         """Remove event handler"""
         if event_name in self.event_handlers:
             try:

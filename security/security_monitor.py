@@ -90,7 +90,7 @@ class SecurityMonitor:
         event_type: str,
         severity: str = "low",
         user_id: Optional[str] = None,
-        details: Dict = None,
+        details: Optional[Dict] = None,
         source: str = "system",
         ip_address: str = "unknown",
         user_agent: str = "unknown",
@@ -253,8 +253,8 @@ class SecurityMonitor:
         # Get events using the SecurityDatabase method
         events = self.db.get_security_events(days=days, limit=10000)
 
-        # For now, mock alerts since we don't have a get_security_alerts method
-        alerts = []  # TODO: Implement alerts retrieval
+        # Get alerts using the SecurityDatabase method
+        alerts = self.db.get_security_alerts(days=days, limit=1000)
 
         report = {
             "period": f"{days} days",
@@ -390,12 +390,34 @@ class SecurityMonitor:
                 "response_time_avg": "unknown",
             }
 
-        # TODO: Implement alerts functionality
-        # For now, return mock compliance
+        # Get recent alerts
+        alerts = self.db.get_security_alerts(days=30, limit=1000)
+        unresolved_alerts = [a for a in alerts if a.status != "resolved"]
+
+        # Calculate average response time for resolved alerts
+        resolved_alerts = [a for a in alerts if a.status == "resolved" and a.resolved_at]
+        if resolved_alerts:
+            response_times = []
+            for alert in resolved_alerts:
+                if alert.resolved_at and alert.timestamp:
+                    response_time = (alert.resolved_at - alert.timestamp).total_seconds() / 3600  # hours
+                    response_times.append(response_time)
+            avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+            response_time_str = f"{avg_response_time:.1f} hours"
+        else:
+            response_time_str = "unknown"
+
+        # Determine compliance status
+        status = "compliant"
+        if len(unresolved_alerts) > 10:
+            status = "non_compliant"
+        elif len(unresolved_alerts) > 5:
+            status = "warning"
+
         return {
-            "status": "compliant",
-            "unresolved_alerts": 0,
-            "response_time_avg": "2 hours",
+            "status": status,
+            "unresolved_alerts": len(unresolved_alerts),
+            "response_time_avg": response_time_str,
         }
 
     def start_monitoring(self):
@@ -476,9 +498,13 @@ class SecurityMonitor:
             # Skip cleanup in mock mode
             return
 
-        # TODO: Implement proper data cleanup using SecurityDatabase methods
-        # For now, skip cleanup to avoid database errors
-        pass
+        # Use SecurityDatabase cleanup method
+        cleanup_stats = self.db.cleanup_old_data(days=90)
+        if cleanup_stats["events_cleaned"] > 0 or cleanup_stats["alerts_cleaned"] > 0:
+            self.logger.info(
+                f"Cleaned up {cleanup_stats['events_cleaned']} old events "
+                f"and {cleanup_stats['alerts_cleaned']} old alerts"
+            )
 
     def save_config(self):
         """Save monitoring configuration"""

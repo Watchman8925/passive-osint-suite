@@ -13,18 +13,18 @@ This script performs comprehensive security checks to ensure:
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Union
 
 class SecurityAuditor:
     """Comprehensive security auditor for the OSINT Suite."""
 
     def __init__(self, workspace_path: str):
         self.workspace = Path(workspace_path)
-        self.issues = []
-        self.warnings = []
-        self.passed = []
+        self.issues: List[str] = []
+        self.warnings: List[str] = []
+        self.passed: List[str] = []
 
-    def audit(self) -> Dict[str, List[str]]:
+    def audit(self) -> Dict[str, Union[List[str], float]]:
         """Run complete security audit."""
         print("🔒 Starting OSINT Suite Security Audit")
         print("=" * 50)
@@ -260,7 +260,7 @@ class SecurityAuditor:
                 except Exception as e:
                     self.warnings.append(f"⚠️  Could not check log file {log_file}: {e}")
 
-    def _generate_report(self) -> Dict[str, List[str]]:
+    def _generate_report(self) -> Dict[str, Union[List[str], float]]:
         """Generate audit report."""
         print("\n📊 Security Audit Results")
         print("=" * 30)

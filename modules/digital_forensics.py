@@ -8,9 +8,6 @@ import json
 import subprocess
 import logging
 from typing import Dict, List, Optional, Any
-from pathlib import Path
-import tempfile
-import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +248,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing all analysis results
         """
-        results = {
+        results: Dict[str, Any] = {
             "file_path": file_path,
             "file_exists": os.path.exists(file_path),
             "analyses": {}
@@ -296,7 +293,7 @@ class DigitalForensicsAnalyzer:
         if not os.path.exists(directory_path):
             return {"error": f"Directory not found: {directory_path}"}
 
-        results = {
+        results: Dict[str, Any] = {
             "directory": directory_path,
             "files_analyzed": 0,
             "results": []

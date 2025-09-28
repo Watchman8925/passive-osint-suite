@@ -204,6 +204,60 @@ class EnhancedReportingEngine:
 
         return summary
 
+    def generate_technical_report(
+        self, investigation_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate a technical report with detailed findings"""
+        technical_report = {
+            "investigation_id": investigation_data.get("investigation_id", "Unknown"),
+            "generated_at": datetime.now().isoformat(),
+            "title": "Technical Intelligence Report",
+            "methodology": self._generate_methodology_section(investigation_data),
+            "technical_findings": self._extract_technical_findings(investigation_data),
+            "infrastructure_analysis": self._analyze_infrastructure(investigation_data),
+            "vulnerability_assessment": self._assess_vulnerabilities(investigation_data),
+            "technical_recommendations": self._generate_technical_recommendations(investigation_data),
+            "confidence_score": self._calculate_confidence_score(investigation_data),
+        }
+
+        return technical_report
+
+    def generate_threat_assessment(
+        self, investigation_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate a threat assessment report"""
+        threat_assessment = {
+            "investigation_id": investigation_data.get("investigation_id", "Unknown"),
+            "generated_at": datetime.now().isoformat(),
+            "title": "Threat Intelligence Assessment",
+            "threat_actors": self._identify_threat_actors(investigation_data),
+            "attack_vectors": self._analyze_attack_vectors(investigation_data),
+            "threat_indicators": self._extract_threat_indicators(investigation_data),
+            "mitigation_strategies": self._generate_mitigation_strategies(investigation_data),
+            "risk_assessment": self._calculate_risk_score(investigation_data),
+            "confidence_score": self._calculate_confidence_score(investigation_data),
+        }
+
+        return threat_assessment
+
+    def generate_custom_report(
+        self, report_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate a custom report based on provided data"""
+        custom_report = {
+            "investigation_id": report_data.get("investigation_id", "Unknown"),
+            "generated_at": datetime.now().isoformat(),
+            "title": report_data.get("title", "Custom Intelligence Report"),
+            "custom_sections": report_data.get("custom_sections", []),
+            "intelligence_data": report_data.get("intelligence_data", {}),
+            "style": report_data.get("style", "professional"),
+            "length": report_data.get("length", "medium"),
+            "include_charts": report_data.get("include_charts", True),
+            "confidence_score": self._calculate_confidence_score(report_data.get("intelligence_data", {})),
+        }
+
+        return custom_report
+
     def generate_pdf_report(
         self,
         report_data: Dict[str, Any],
@@ -662,6 +716,123 @@ class EnhancedReportingEngine:
             confidence += 0.1
 
         return min(confidence, 1.0)
+
+    def _generate_methodology_section(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate methodology section for technical reports"""
+        return {
+            "data_sources": list(data.keys()),
+            "collection_methods": ["passive_intelligence", "osint_techniques"],
+            "analysis_framework": "intelligence_cycle",
+            "tools_used": ["osint_suite", "custom_modules"],
+        }
+
+    def _extract_technical_findings(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract technical findings from investigation data"""
+        findings = []
+
+        # Add technical details from various sources
+        if "domain_data" in data:
+            findings.append({
+                "category": "domain",
+                "findings": self._analyze_domain_findings(data["domain_data"]),
+                "severity": "medium",
+            })
+
+        if "ip_data" in data:
+            findings.append({
+                "category": "network",
+                "findings": self._analyze_ip_findings(data["ip_data"]),
+                "severity": "high",
+            })
+
+        return findings
+
+    def _analyze_infrastructure(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze infrastructure from investigation data"""
+        return {
+            "domains": data.get("domain_data", {}),
+            "ip_addresses": data.get("ip_data", {}),
+            "services": data.get("service_data", {}),
+            "geographic_distribution": data.get("geo_data", {}),
+        }
+
+    def _assess_vulnerabilities(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Assess vulnerabilities from investigation data"""
+        vulnerabilities = []
+
+        # Check for common vulnerabilities
+        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
+            vulnerabilities.append({
+                "type": "data_breach",
+                "severity": "high",
+                "description": "Data found in breach databases",
+            })
+
+        return vulnerabilities
+
+    def _generate_technical_recommendations(self, data: Dict[str, Any]) -> List[str]:
+        """Generate technical recommendations"""
+        recommendations = []
+
+        if data.get("domain_data", {}).get("subdomains_found", 0) > 10:
+            recommendations.append("Implement comprehensive subdomain monitoring")
+
+        if data.get("ip_data", {}).get("blacklisted_ips", 0) > 0:
+            recommendations.append("Review and remediate blacklisted IP addresses")
+
+        return recommendations
+
+    def _identify_threat_actors(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify potential threat actors"""
+        actors = []
+
+        # Basic threat actor identification logic
+        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
+            actors.append({
+                "type": "cyber_criminal",
+                "confidence": 0.7,
+                "indicators": ["data_breach_activity"],
+            })
+
+        return actors
+
+    def _analyze_attack_vectors(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Analyze potential attack vectors"""
+        vectors = []
+
+        if data.get("social_data", {}).get("total_profiles", 0) > 0:
+            vectors.append({
+                "type": "social_engineering",
+                "likelihood": "medium",
+                "description": "Social media presence enables targeted attacks",
+            })
+
+        return vectors
+
+    def _extract_threat_indicators(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract threat indicators"""
+        indicators = []
+
+        if data.get("domain_data", {}).get("suspicious_patterns"):
+            indicators.append({
+                "type": "domain",
+                "value": "suspicious_domain_patterns",
+                "confidence": 0.8,
+            })
+
+        return indicators
+
+    def _generate_mitigation_strategies(self, data: Dict[str, Any]) -> List[str]:
+        """Generate mitigation strategies"""
+        strategies = []
+
+        risk_score = self._calculate_risk_score(data)["score"]
+
+        if risk_score > 30:
+            strategies.append("Implement enhanced monitoring and alerting")
+            strategies.append("Conduct regular security assessments")
+
+        return strategies
 
     def schedule_report(self, schedule: ReportSchedule) -> str:
         """Schedule a recurring report"""

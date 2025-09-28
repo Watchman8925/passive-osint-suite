@@ -7,10 +7,7 @@ import os
 import json
 import subprocess
 import logging
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-import tempfile
-import shutil
+from typing import Dict, List, Any
 import re
 
 logger = logging.getLogger(__name__)
@@ -52,7 +49,7 @@ class NetworkAnalysisEngine:
         if not os.path.exists(pcap_path):
             return {"error": f"PCAP file not found: {pcap_path}"}
 
-        results = {
+        results: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "analysis_type": analysis_type,
             "results": {}
@@ -364,7 +361,7 @@ class NetworkAnalysisEngine:
         if "error" in analysis:
             return analysis
 
-        anomalies = {
+        anomalies: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "anomalies": [],
             "risk_score": 0
@@ -372,36 +369,41 @@ class NetworkAnalysisEngine:
 
         # Check for suspicious patterns
         if "results" in analysis and "conversations" in analysis["results"]:
-            conversations = analysis["results"]["conversations"]
+            conversations_data = analysis["results"]["conversations"]
+            if isinstance(conversations_data, list):
+                conversations = conversations_data
 
-            # Check for high-volume connections
-            for conv in conversations:
-                if conv.get("packets", 0) > 10000:  # Arbitrary threshold
-                    anomalies["anomalies"].append({
-                        "type": "high_volume_connection",
-                        "description": f"High packet count: {conv['source']} -> {conv['destination']}",
-                        "severity": "medium",
-                        "data": conv
-                    })
-                    anomalies["risk_score"] += 2
+                # Check for high-volume connections
+                for conv in conversations:
+                    if isinstance(conv, dict) and conv.get("packets", 0) > 10000:  # Arbitrary threshold
+                        anomalies["anomalies"].append({
+                            "type": "high_volume_connection",
+                            "description": f"High packet count: {conv.get('source', 'unknown')} -> {conv.get('destination', 'unknown')}",
+                            "severity": "medium",
+                            "data": conv
+                        })
+                        anomalies["risk_score"] += 2
 
         # Check protocols
         if "results" in analysis and "protocols" in analysis["results"]:
-            protocols = analysis["results"]["protocols"]
+            protocols_data = analysis["results"]["protocols"]
+            if isinstance(protocols_data, dict):
+                protocols = protocols_data
 
-            # Flag unusual protocols
-            suspicious_protocols = ['icmp', 'unknown']
-            for protocol, data in protocols.items():
-                protocol_lower = protocol.lower()
-                if any(susp in protocol_lower for susp in suspicious_protocols):
-                    if data.get("packets", 0) > 100:
-                        anomalies["anomalies"].append({
-                            "type": "suspicious_protocol",
-                            "description": f"Unusual protocol activity: {protocol}",
-                            "severity": "low",
-                            "data": data
-                        })
-                        anomalies["risk_score"] += 1
+                # Flag unusual protocols
+                suspicious_protocols = ['icmp', 'unknown']
+                for protocol, data in protocols.items():
+                    if isinstance(data, dict) and isinstance(protocol, str):
+                        protocol_lower = protocol.lower()
+                        if any(susp in protocol_lower for susp in suspicious_protocols):
+                            if data.get("packets", 0) > 100:
+                                anomalies["anomalies"].append({
+                                    "type": "suspicious_protocol",
+                                    "description": f"Unusual protocol activity: {protocol}",
+                                    "severity": "low",
+                                    "data": data
+                                })
+                                anomalies["risk_score"] += 1
 
         return anomalies
 
@@ -415,7 +417,7 @@ class NetworkAnalysisEngine:
         Returns:
             Dictionary containing all analysis results
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "timestamp": None,  # Would be set by caller
             "analyses": {}

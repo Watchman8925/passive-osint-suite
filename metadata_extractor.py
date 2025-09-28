@@ -8,8 +8,7 @@ import os
 import hashlib
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
-import json
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +165,7 @@ class MetadataExtractor:
     def _extract_document_metadata(self, file_path: str) -> Dict[str, Any]:
         """Extract metadata from documents"""
         try:
-            metadata = {}
+            metadata: Dict[str, Any] = {}
 
             # For text files, extract basic statistics
             if file_path.lower().endswith('.txt'):
@@ -211,7 +210,7 @@ class MetadataExtractor:
     def analyze_document(self, content: str) -> Dict[str, Any]:
         """Analyze document content for entities and patterns"""
         try:
-            analysis = {
+            analysis: Dict[str, Any] = {
                 "character_count": len(content),
                 "word_count": len(content.split()),
                 "line_count": len(content.split('\n')),
@@ -219,9 +218,7 @@ class MetadataExtractor:
                 "patterns": []
             }
 
-            # Basic entity extraction (could be enhanced with NLP)
-            words = content.split()
-            potential_entities = []
+                        # Basic entity extraction (could be enhanced with NLP)
 
             # Look for email patterns
             import re

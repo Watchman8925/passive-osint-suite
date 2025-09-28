@@ -21,15 +21,12 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote, urljoin
+from urllib.parse import quote
 
 from bs4 import BeautifulSoup
-from web_anonymity import ensure_anonymous_request
-
-from blackbox_patterns import create_blackbox_pattern_engine
-# Import our existing modules
-from local_llm_engine import create_local_llm_engine
-from transport import Transport
+from blackbox_patterns import BlackboxPatternEngine
+from local_llm_engine import LocalLLMEngine
+from transport import Transport, sync_get, ProxiedTransport
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +80,12 @@ class ConspiracyTheory:
     disinformation_markers: List[str] = field(default_factory=list)
 
 
+@dataclass
+class LLMAnalysisResult:
+    insights: List[str] = field(default_factory=list)
+    risk_assessment: Dict[str, Any] = field(default_factory=dict)
+
+
 class CrossReferenceEngine:
     """
     Advanced cross-reference intelligence engine for deep OSINT analysis.
@@ -95,8 +98,8 @@ class CrossReferenceEngine:
     def __init__(self):
         self.sources = {}
         self.transport = Transport()
-        self.llm_engine = create_local_llm_engine()
-        self.pattern_engine = create_blackbox_pattern_engine()
+        self.llm_engine = LocalLLMEngine()
+        self.pattern_engine = BlackboxPatternEngine()
 
         # Initialize intelligence sources
         self._initialize_sources()
@@ -397,24 +400,29 @@ class CrossReferenceEngine:
             if source.source_id == "wayback_machine":
                 # Wayback Machine API search
                 api_url = f"{source.api_endpoint}?url={quote(query)}"
-                response = await ensure_anonymous_request(api_url)
+                response = sync_get(api_url)
 
-                if response and "archived_snapshots" in response:
-                    snapshots = response["archived_snapshots"]
-                    if "closest" in snapshots:
-                        snapshot = snapshots["closest"]
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        if "archived_snapshots" in data:
+                            snapshots = data["archived_snapshots"]
+                            if "closest" in snapshots:
+                                snapshot = snapshots["closest"]
 
-                        hit = CrossReferenceHit(
-                            hit_id=f"wayback_{hashlib.md5(query.encode()).hexdigest()[:8]}",
-                            source=source.source_name,
-                            title=f"Archived: {query}",
-                            content=f"Archived snapshot from {snapshot.get('timestamp', 'unknown')}",
-                            url=snapshot.get("url", ""),
-                            timestamp=datetime.now(),
-                            confidence=0.9,
-                            relevance_score=0.8,
-                        )
-                        hits.append(hit)
+                                hit = CrossReferenceHit(
+                                    hit_id=f"wayback_{hashlib.md5(query.encode()).hexdigest()[:8]}",
+                                    source=source.source_name,
+                                    title=f"Archived: {query}",
+                                    content=f"Archived snapshot from {snapshot.get('timestamp', 'unknown')}",
+                                    url=snapshot.get("url", ""),
+                                    timestamp=datetime.now(),
+                                    confidence=0.9,
+                                    relevance_score=0.8,
+                                )
+                                hits.append(hit)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse Wayback API response: {e}")
 
             return hits
 
@@ -435,17 +443,15 @@ class CrossReferenceEngine:
             for search_url in search_urls:
                 try:
                     # Use anonymous request through our existing system
-                    response = await ensure_anonymous_request(search_url)
+                    response = sync_get(search_url)
 
-                    if isinstance(response, dict) and "content" in response:
-                        html_content = response["content"]
-                    elif isinstance(response, str):
-                        html_content = response
+                    if response.status_code == 200:
+                        html_content = response.text
                     else:
                         continue
 
                     # Parse HTML and extract relevant information
-                    soup = BeautifulSoup(html_content, "html.parser")
+                    soup = BeautifulSoup(html_content, "html.parser")  # type: ignore
                     source_hits = self._extract_hits_from_html(
                         soup, source, query, search_url
                     )
@@ -459,6 +465,46 @@ class CrossReferenceEngine:
 
         except Exception as e:
             logger.error(f"Web scraping failed for {source.source_name}: {e}")
+            return []
+
+    async def _search_via_tor(
+        self, source: IntelligenceSource, query: str
+    ) -> List[CrossReferenceHit]:
+        """Search source via Tor for anonymous access."""
+        hits = []
+
+        try:
+            # Create Tor transport
+            tor_transport = ProxiedTransport(proxy_url="socks5h://127.0.0.1:9050")
+
+            # Construct search URL based on source
+            search_urls = self._construct_search_urls(source, query)
+
+            for search_url in search_urls:
+                try:
+                    # Use Tor proxy for the request
+                    response = tor_transport.get(search_url, timeout=30)
+
+                    if response.status_code == 200:
+                        html_content = response.text
+                    else:
+                        continue
+
+                    # Parse HTML and extract relevant information
+                    soup = BeautifulSoup(html_content, "html.parser")  # type: ignore
+                    source_hits = self._extract_hits_from_html(
+                        soup, source, query, search_url
+                    )
+                    hits.extend(source_hits)
+
+                except Exception as e:
+                    logger.warning(f"Tor scraping failed for URL {search_url}: {e}")
+                    continue
+
+            return hits
+
+        except Exception as e:
+            logger.error(f"Tor-based search failed for {source.source_name}: {e}")
             return []
 
     def _construct_search_urls(
@@ -510,75 +556,311 @@ class CrossReferenceEngine:
         search_url: str,
     ) -> List[CrossReferenceHit]:
         """Extract intelligence hits from HTML content."""
-        hits = []
+        hits: List[CrossReferenceHit] = []
 
         try:
-            # Try different result container selectors
-            result_containers = soup.find_all(
-                ["article", "div"], class_=re.compile(r"result|item|entry|post")
-            )
-
-            if not result_containers:
-                # Fallback: look for any elements containing the query
-                result_containers = soup.find_all(
-                    text=re.compile(re.escape(query), re.IGNORECASE)
-                )
-                result_containers = [
-                    elem.parent for elem in result_containers if elem.parent
-                ]
-
-            for container in result_containers[:10]:  # Limit to top 10 results
-                try:
-                    # Extract title
-                    title_elem = container.find(["h1", "h2", "h3", "a"])
-                    title = (
-                        title_elem.get_text(strip=True) if title_elem else "No title"
-                    )
-
-                    # Extract URL
-                    link_elem = container.find("a", href=True)
-                    url = (
-                        urljoin(source.base_url, link_elem["href"])
-                        if link_elem
-                        else search_url
-                    )
-
-                    # Extract content
-                    content_elem = container.find(
-                        ["p", "div"], class_=re.compile(r"content|description|snippet")
-                    )
-                    if not content_elem:
-                        content_elem = container
-                    content = (
-                        content_elem.get_text(strip=True)[:500] if content_elem else ""
-                    )
-
-                    # Extract date
-                    timestamp = datetime.now()  # Default to now if no date found
-
-                    if (
-                        content and len(content) > 50
-                    ):  # Only include substantial content
-                        hit = CrossReferenceHit(
-                            hit_id=f"{source.source_id}_{hashlib.md5((title + url).encode()).hexdigest()[:8]}",
-                            source=source.source_name,
-                            title=title,
-                            content=content,
-                            url=url,
-                            timestamp=timestamp,
-                            confidence=0.7,
-                            relevance_score=self._calculate_relevance(content, query),
-                        )
-                        hits.append(hit)
-
-                except Exception as e:
-                    logger.warning(f"Hit extraction failed: {e}")
-                    continue
+            # Source-specific parsing
+            if source.source_id == "wikileaks":
+                hits.extend(self._parse_wikileaks_results(soup, source, query, search_url))
+            elif source.source_id in ["icij_offshoreleaks", "panama_papers", "paradise_papers", "pandora_papers"]:
+                hits.extend(self._parse_icij_results(soup, source, query, search_url))
+            elif source.source_id == "wikispooks":
+                hits.extend(self._parse_wikispooks_results(soup, source, query, search_url))
+            elif source.source_id == "cryptome":
+                hits.extend(self._parse_cryptome_results(soup, source, query, search_url))
+            else:
+                # Generic parsing for other sources
+                hits.extend(self._parse_generic_results(soup, source, query, search_url))
 
             return hits
 
         except Exception as e:
             logger.error(f"HTML extraction failed: {e}")
+            return []
+
+    def _parse_generic_results(
+        self,
+        soup: BeautifulSoup,
+        source: IntelligenceSource,
+        query: str,
+        search_url: str,
+    ) -> List[CrossReferenceHit]:
+        """Generic HTML parsing for search results."""
+        hits = []
+
+        try:
+            # Look for common search result patterns
+            result_selectors = [
+                "div.search-result",
+                "div.result",
+                "article",
+                "li.search-item",
+                ".search-result",
+                ".result-item",
+            ]
+
+            results = []
+            for selector in result_selectors:
+                results = soup.select(selector)  # type: ignore
+                if results:
+                    break
+
+            if not results:
+                # Fallback: look for links containing the query
+                links = soup.find_all("a", href=True)  # type: ignore
+                results = [link for link in links if query.lower() in link.get_text().lower()]  # type: ignore
+
+            for result in results[:10]:  # Limit to top 10
+                try:
+                    # Extract title
+                    title = "No title"
+                    for tag in ["h1", "h2", "h3", "h4", "title"]:
+                        title_elem = result.find(tag)  # type: ignore
+                        if title_elem:
+                            title = title_elem.get_text().strip()  # type: ignore
+                            break
+                    if title == "No title" and hasattr(result, 'get_text'):
+                        title = result.get_text().strip()[:100]  # type: ignore
+
+                    # Extract URL
+                    url = search_url
+                    link_elem = result.find("a", href=True)  # type: ignore
+                    if link_elem and "href" in link_elem.attrs:  # type: ignore
+                        href = link_elem["href"]  # type: ignore
+                        if isinstance(href, str):
+                            url = href
+                            if not url.startswith("http"):
+                                url = f"{source.base_url.rstrip('/')}/{url.lstrip('/')}"
+
+                    # Extract content snippet
+                    content = title
+                    for tag in ["p", "div", "span"]:
+                        content_elem = result.find(tag)  # type: ignore
+                        if content_elem:
+                            content = content_elem.get_text().strip()  # type: ignore
+                            break
+
+                    # Calculate relevance
+                    relevance = self._calculate_relevance(content, query)
+
+                    if relevance > 0.1:  # Only include relevant results
+                        hit = CrossReferenceHit(
+                            hit_id=f"{source.source_id}_{hashlib.md5(url.encode()).hexdigest()[:8]}",
+                            source=source.source_name,
+                            title=title,
+                            content=content,
+                            url=url,
+                            timestamp=datetime.now(),
+                            confidence=0.7,
+                            relevance_score=relevance,
+                        )
+                        hits.append(hit)
+
+                except Exception:
+                    continue
+
+            return hits
+
+        except Exception:
+            logger.error("Generic parsing failed")
+            return []
+
+    def _parse_wikileaks_results(
+        self,
+        soup: BeautifulSoup,
+        source: IntelligenceSource,
+        query: str,
+        search_url: str,
+    ) -> List[CrossReferenceHit]:
+        """Parse WikiLeaks search results."""
+        hits = []
+
+        try:
+            # WikiLeaks search results are in div.result or similar
+            results = soup.find_all("div", class_="result") or soup.find_all("article")  # type: ignore
+
+            for result in results[:10]:
+                try:
+                    title_elem = result.find("h3") or result.find("a")  # type: ignore
+                    title = title_elem.get_text().strip() if title_elem else "WikiLeaks Document"  # type: ignore
+
+                    link_elem = result.find("a", href=True)  # type: ignore
+                    url = link_elem["href"] if link_elem else search_url  # type: ignore
+
+                    content_elem = result.find("p") or result  # type: ignore
+                    content = content_elem.get_text().strip() if content_elem else ""  # type: ignore
+
+                    relevance = self._calculate_relevance(content, query)
+
+                    if relevance > 0.1:
+                        hit = CrossReferenceHit(
+                            hit_id=f"wikileaks_{hashlib.md5(url.encode()).hexdigest()[:8]}",  # type: ignore
+                            source="WikiLeaks",
+                            title=title,
+                            content=content,
+                            url=url,  # type: ignore
+                            timestamp=datetime.now(),
+                            confidence=0.9,
+                            relevance_score=relevance,
+                        )
+                        hits.append(hit)
+
+                except Exception:
+                    continue
+
+            return hits
+
+        except Exception as e:
+            logger.error(f"WikiLeaks parsing failed: {e}")
+            return []
+
+    def _parse_icij_results(
+        self,
+        soup: BeautifulSoup,
+        source: IntelligenceSource,
+        query: str,
+        search_url: str,
+    ) -> List[CrossReferenceHit]:
+        """Parse ICIJ database results."""
+        hits = []
+
+        try:
+            # ICIJ results are typically in cards or list items
+            results = soup.find_all("div", class_=re.compile(r"card|result|item"))  # type: ignore
+
+            for result in results[:10]:
+                try:
+                    title_elem = result.find("h3") or result.find("h4") or result.find("a")  # type: ignore
+                    title = title_elem.get_text().strip() if title_elem else "ICIJ Document"  # type: ignore
+
+                    link_elem = result.find("a", href=True)  # type: ignore
+                    url = link_elem["href"] if link_elem else search_url  # type: ignore
+                    if not url.startswith("http"):  # type: ignore
+                        url = f"https://offshoreleaks.icij.org{url}"
+
+                    content_elem = result.find("p") or result  # type: ignore
+                    content = content_elem.get_text().strip() if content_elem else ""  # type: ignore
+
+                    relevance = self._calculate_relevance(content, query)
+
+                    if relevance > 0.1:
+                        hit = CrossReferenceHit(
+                            hit_id=f"icij_{hashlib.md5(url.encode()).hexdigest()[:8]}",  # type: ignore
+                            source=source.source_name,
+                            title=title,
+                            content=content,
+                            url=url,  # type: ignore
+                            timestamp=datetime.now(),
+                            confidence=0.95,
+                            relevance_score=relevance,
+                        )
+                        hits.append(hit)
+
+                except Exception:
+                    continue
+
+            return hits
+
+        except Exception as e:
+            logger.error(f"ICIJ parsing failed: {e}")
+            return []
+
+    def _parse_wikispooks_results(
+        self,
+        soup: BeautifulSoup,
+        source: IntelligenceSource,
+        query: str,
+        search_url: str,
+    ) -> List[CrossReferenceHit]:
+        """Parse Wikispooks search results."""
+        hits = []
+
+        try:
+            # Wikispooks uses MediaWiki search results
+            results = soup.find_all("div", class_="mw-search-result") or soup.find_all("li")  # type: ignore
+
+            for result in results[:10]:
+                try:
+                    title_elem = result.find("a")  # type: ignore
+                    title = title_elem.get_text().strip() if title_elem else "Wikispooks Article"  # type: ignore
+
+                    link_elem = result.find("a", href=True)  # type: ignore
+                    url = link_elem["href"] if link_elem else search_url  # type: ignore
+                    if not url.startswith("http"):  # type: ignore
+                        url = f"https://wikispooks.com{url}"
+
+                    content_elem = result.find("div", class_="searchresult") or result  # type: ignore
+                    content = content_elem.get_text().strip() if content_elem else ""  # type: ignore
+
+                    relevance = self._calculate_relevance(content, query)
+
+                    if relevance > 0.1:
+                        hit = CrossReferenceHit(
+                            hit_id=f"wikispooks_{hashlib.md5(url.encode()).hexdigest()[:8]}",  # type: ignore
+                            source="Wikispooks",
+                            title=title,
+                            content=content,
+                            url=url,  # type: ignore
+                            timestamp=datetime.now(),
+                            confidence=0.7,
+                            relevance_score=relevance,
+                        )
+                        hits.append(hit)
+
+                except Exception:
+                    continue
+
+            return hits
+
+        except Exception as e:
+            logger.error(f"Wikispooks parsing failed: {e}")
+            return []
+
+    def _parse_cryptome_results(
+        self,
+        soup: BeautifulSoup,
+        source: IntelligenceSource,
+        query: str,
+        search_url: str,
+    ) -> List[CrossReferenceHit]:
+        """Parse Cryptome search results."""
+        hits = []
+
+        try:
+            # Cryptome has simple HTML structure
+            links = soup.find_all("a", href=True)  # type: ignore
+
+            for link in links[:20]:  # Check more links
+                try:
+                    url = link["href"]  # type: ignore
+                    if not url.startswith("http"):  # type: ignore
+                        url = f"https://cryptome.org{url}"
+
+                    title = link.get_text().strip() or "Cryptome Document"  # type: ignore
+                    content = title  # Cryptome often has descriptive link text
+
+                    relevance = self._calculate_relevance(content, query)
+
+                    if relevance > 0.2:  # Higher threshold for Cryptome
+                        hit = CrossReferenceHit(
+                            hit_id=f"cryptome_{hashlib.md5(url.encode()).hexdigest()[:8]}",  # type: ignore
+                            source="Cryptome",
+                            title=title,
+                            content=content,
+                            url=url,  # type: ignore
+                            timestamp=datetime.now(),
+                            confidence=0.8,
+                            relevance_score=relevance,
+                        )
+                        hits.append(hit)
+
+                except Exception:
+                    continue
+
+            return hits
+
+        except Exception as e:
+            logger.error(f"Cryptome parsing failed: {e}")
             return []
 
     def _calculate_relevance(self, content: str, query: str) -> float:
@@ -607,12 +889,11 @@ class CrossReferenceEngine:
                         next_pos = content_lower.find(next_word, word_pos)
                         if 0 < next_pos - word_pos < 100:  # Words within 100 characters
                             base_score += 0.1
-
-            return min(base_score, 1.0)
+            return base_score
 
         except Exception as e:
             logger.warning(f"Relevance calculation failed: {e}")
-            return 0.5
+            return 0.0
 
     async def _enhance_hits_with_patterns(
         self, hits: List[CrossReferenceHit], query: str
@@ -631,22 +912,48 @@ class CrossReferenceEngine:
                 hit.hidden_indicators = hidden_indicators
 
                 # Use pattern engine for additional analysis
-                patterns = self.pattern_engine.analyze_patterns(hit.content, "mixed")
-                hit.patterns_detected = [p.pattern_type for p in patterns]
+                pattern_input = {
+                    "text": hit.content,
+                    "content": hit.content,
+                    "title": hit.title,
+                    "source": hit.source,
+                    "url": hit.url,
+                    "timestamp": hit.timestamp.isoformat(),
+                    "query": query,
+                }
+                patterns = self.pattern_engine.analyze_patterns(pattern_input)
+                # Normalize patterns to a list of strings regardless of return type
+                normalized_patterns: List[str] = []
+                for p in (patterns or []):
+                    if hasattr(p, "pattern_type"):
+                        normalized_patterns.append(str(getattr(p, "pattern_type")))
+                    elif isinstance(p, dict) and "pattern_type" in p:
+                        normalized_patterns.append(str(p["pattern_type"]))
+                    else:
+                        normalized_patterns.append(str(p))
+                hit.patterns_detected = normalized_patterns
 
                 # Use LLM for enhanced analysis if available
                 if self.llm_engine.active_backend:
                     try:
-                        llm_analysis = await self.llm_engine.analyze_osint_data(
+                        llm_analysis = await self._analyze_with_llm(
                             hit.content, "pattern_analysis"
                         )
+                        if llm_analysis:
+                            # Incorporate LLM insights
+                            hit.hidden_indicators.extend(llm_analysis.insights)
 
-                        # Incorporate LLM insights
-                        hit.hidden_indicators.extend(llm_analysis.insights)
-
-                        # Update confidence based on LLM analysis
-                        if llm_analysis.risk_assessment.get("level", 0) > 5:
-                            hit.confidence += 0.1
+                            # Update confidence based on LLM analysis
+                            level_val = llm_analysis.risk_assessment.get("level", 0)
+                            try:
+                                level_num = float(level_val)
+                            except Exception:
+                                try:
+                                    level_num = float(re.sub(r"[^\d.]+", "", str(level_val)) or 0.0)
+                                except Exception:
+                                    level_num = 0.0
+                            if level_num > 5:
+                                hit.confidence = min(hit.confidence + 0.1, 1.0)
 
                     except Exception as e:
                         logger.warning(f"LLM analysis failed for hit {hit.hit_id}: {e}")
@@ -658,6 +965,50 @@ class CrossReferenceEngine:
         except Exception as e:
             logger.error(f"Hit enhancement failed: {e}")
             return hits
+
+    async def _analyze_with_llm(self, text: str, mode: str) -> Optional["LLMAnalysisResult"]:
+        """Adapter that probes LocalLLMEngine for an analysis method and normalizes the result."""
+        try:
+            method = None
+            for name in ("analyze_osint_data", "analyze_text", "analyze", "run", "infer"):
+                candidate = getattr(self.llm_engine, name, None)
+                if candidate:
+                    method = candidate
+                    break
+            if not method:
+                return None
+
+            result = method(text, mode)
+            if asyncio.iscoroutine(result):
+                result = await result
+
+            insights: List[str] = []
+            risk_assessment: Dict[str, Any] = {}
+
+            if result is None:
+                pass
+            elif hasattr(result, "insights") or hasattr(result, "risk_assessment"):
+                insights = list(getattr(result, "insights", []) or [])
+                risk_assessment = dict(getattr(result, "risk_assessment", {}) or {})
+            elif isinstance(result, dict):
+                raw_insights = result.get("insights", [])
+                raw_risk = result.get("risk_assessment", result.get("risk", {}))
+                if isinstance(raw_insights, list):
+                    insights = [str(i) for i in raw_insights]
+                elif raw_insights:
+                    insights = [str(raw_insights)]
+                if isinstance(raw_risk, dict):
+                    risk_assessment = raw_risk
+                elif raw_risk is not None:
+                    risk_assessment = {"level": raw_risk}
+            else:
+                insights = [str(result)]
+
+            return LLMAnalysisResult(insights=insights, risk_assessment=risk_assessment)
+
+        except Exception as e:
+            logger.warning(f"LLM adapter failed: {e}")
+            return None
 
     def _detect_conspiracy_patterns(self, content: str) -> List[str]:
         """Detect conspiracy theory patterns in content."""
@@ -797,7 +1148,7 @@ class CrossReferenceEngine:
         - Plausible deniability layers
         - Disinformation markers vs truth indicators
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "theory_id": theory.theory_id,
             "plausibility_assessment": {},
             "evidence_analysis": {},
@@ -854,7 +1205,7 @@ class CrossReferenceEngine:
         self, claim: str, evidence: List[CrossReferenceHit]
     ) -> Dict[str, Any]:
         """Analyze evidence for a specific claim."""
-        claim_analysis = {
+        claim_analysis: Dict[str, Any] = {
             "claim": claim,
             "supporting_evidence": [],
             "contradicting_evidence": [],
@@ -939,7 +1290,7 @@ class CrossReferenceEngine:
 
     async def _analyze_actor_connections(self, actors: List[str]) -> Dict[str, Any]:
         """Analyze connections between key actors."""
-        connections = {
+        connections: Dict[str, Any] = {
             "direct_connections": [],
             "indirect_connections": [],
             "network_analysis": {},
@@ -1022,7 +1373,7 @@ class CrossReferenceEngine:
 
     async def _analyze_event_patterns(self, events: List[str]) -> Dict[str, Any]:
         """Analyze patterns in key events."""
-        patterns = {
+        patterns: Dict[str, Any] = {
             "temporal_patterns": [],
             "geographic_patterns": [],
             "causal_relationships": [],
@@ -1134,7 +1485,7 @@ class CrossReferenceEngine:
             for locations in event_locations.values():
                 all_locations.extend(locations)
 
-            location_counts = {}
+            location_counts: Dict[str, int] = {}
             for location in all_locations:
                 location_counts[location] = location_counts.get(location, 0) + 1
 
@@ -1144,13 +1495,13 @@ class CrossReferenceEngine:
             }
 
             if common_locations:
-                geographic_patterns.append(
-                    {
-                        "pattern_type": "clustering",
-                        "common_locations": common_locations,
-                        "significance": "Multiple events concentrated in same locations",
-                    }
-                )
+                for location, count in common_locations.items():
+                    geographic_patterns.append({
+                        "location": location,
+                        "frequency": count,
+                        "events": [event for event, locs in event_locations.items() if location in locs],
+                        "significance": "High" if count > 2 else "Medium"
+                    })
 
             return geographic_patterns
 
@@ -1161,85 +1512,44 @@ class CrossReferenceEngine:
     def _analyze_causal_relationships(
         self, event_data: Dict[str, List[CrossReferenceHit]]
     ) -> List[Dict[str, Any]]:
-        """Analyze potential causal relationships between events."""
+        """Analyze causal relationships between events."""
         causal_relationships = []
 
         try:
-            # Look for causal language in event descriptions
+            # Causal indicators that suggest one event caused another
             causal_indicators = [
-                "as a result of",
-                "caused by",
-                "led to",
-                "triggered",
-                "following",
-                "in response to",
-                "because of",
+                "led to", "caused", "resulted in", "triggered", "sparked",
+                "provoked", "precipitated", "brought about", "gave rise to",
+                "culminated in", "stemmed from", "arose from", "originated from"
             ]
 
+            # Check each pair of events for causal relationships
             events = list(event_data.keys())
-
             for i, event1 in enumerate(events):
-                for event2 in events[i + 1 :]:
-                    # Check if either event is mentioned in the other's evidence
-                    for hit in event_data[event1]:
-                        if event2.lower() in hit.content.lower():
-                            # Look for causal language
-                            for indicator in causal_indicators:
-                                if indicator in hit.content.lower():
-                                    causal_relationships.append(
-                                        {
-                                            "cause_event": event1,
-                                            "effect_event": event2,
-                                            "indicator": indicator,
-                                            "evidence": hit.content[:200] + "...",
-                                        }
-                                    )
-                                    break
+                for event2 in events[i + 1:]:
+                    # Search for evidence of causality
+                    causal_evidence = []
+                    for hit in event_data[event1] + event_data[event2]:
+                        content_lower = hit.content.lower()
+                        for indicator in causal_indicators:
+                            if indicator in content_lower:
+                                causal_evidence.append(hit)
+                                break
+
+                    if causal_evidence:
+                        causal_relationships.append({
+                            "cause_event": event1,
+                            "effect_event": event2,
+                            "evidence": causal_evidence[:3],  # Top 3 pieces of evidence
+                            "strength": len(causal_evidence),
+                            "indicators_found": causal_indicators
+                        })
 
             return causal_relationships
 
         except Exception as e:
             logger.warning(f"Causal relationship analysis failed: {e}")
             return []
-
-    async def _llm_conspiracy_analysis(
-        self, theory: ConspiracyTheory
-    ) -> Dict[str, Any]:
-        """Use LLM for comprehensive conspiracy theory analysis."""
-        try:
-            # Prepare analysis prompt
-            theory_context = f"""
-            Theory: {theory.title}
-            Description: {theory.description}
-            Key Claims: {', '.join(theory.key_claims)}
-            Key Actors: {', '.join(theory.key_actors)}
-            Key Events: {', '.join(theory.key_events)}
-            """
-
-            # Analyze with custom conspiracy analysis prompt
-            analysis = await self.llm_engine.analyze_osint_data(
-                theory_context, "threat_assessment"
-            )
-
-            # Generate specific insights
-            insights = {
-                "plausibility_assessment": analysis.risk_assessment,
-                "evidence_quality": analysis.insights,
-                "investigation_angles": [],
-                "truth_probability": 0.5,  # Default
-            }
-
-            # Calculate truth probability based on analysis
-            if "high confidence" in str(analysis.insights).lower():
-                insights["truth_probability"] = 0.8
-            elif "low confidence" in str(analysis.insights).lower():
-                insights["truth_probability"] = 0.2
-
-            return insights
-
-        except Exception as e:
-            logger.warning(f"LLM conspiracy analysis failed: {e}")
-            return {"analysis_failed": True, "error": str(e)}
 
     def _calculate_theory_plausibility(
         self, theory: ConspiracyTheory, analysis: Dict[str, Any]
@@ -1412,6 +1722,117 @@ class CrossReferenceEngine:
         except Exception as e:
             logger.error(f"Recommendation generation failed: {e}")
             return ["Conduct comprehensive multi-source investigation"]
+
+    async def _llm_conspiracy_analysis(self, theory: ConspiracyTheory) -> Dict[str, Any]:
+        """Use LLM to perform comprehensive conspiracy theory analysis."""
+        llm_analysis: Dict[str, Any] = {
+            "llm_summary": "",
+            "key_insights": [],
+            "plausibility_assessment": "",
+            "missing_evidence": [],
+            "alternative_explanations": [],
+            "investigation_priorities": []
+        }
+
+        try:
+            if not self.llm_engine or not self.llm_engine.active_backend:
+                return llm_analysis
+
+            # Create comprehensive analysis prompt
+            analysis_prompt = f"""
+            Analyze the following conspiracy theory comprehensively:
+
+            Theory: {theory.title}
+            Description: {theory.description}
+
+            Key Claims:
+            {chr(10).join(f"- {claim}" for claim in theory.key_claims)}
+
+            Key Actors:
+            {chr(10).join(f"- {actor}" for actor in theory.key_actors)}
+
+            Key Events:
+            {chr(10).join(f"- {event}" for event in theory.key_events)}
+
+            Please provide:
+            1. A summary of the theory's plausibility
+            2. Key insights about connections between actors and events
+            3. Assessment of what evidence would be needed to prove/disprove the theory
+            4. Alternative explanations for the observed patterns
+            5. Investigation priorities and recommendations
+
+            Focus on logical analysis, evidence requirements, and investigative approaches.
+            """
+
+            # Get LLM analysis using dynamic method access
+            analyze_method = getattr(self.llm_engine, 'analyze_intelligence', None)
+            if analyze_method:
+                llm_response = await analyze_method({
+                    "type": "conspiracy_analysis",
+                    "theory": {
+                        "title": theory.title,
+                        "description": theory.description,
+                        "key_claims": theory.key_claims,
+                        "key_actors": theory.key_actors,
+                        "key_events": theory.key_events
+                    },
+                    "analysis_prompt": analysis_prompt
+                })
+            else:
+                llm_response = None
+
+            # Parse LLM response into structured format
+            if isinstance(llm_response, dict):
+                llm_analysis["llm_summary"] = llm_response.get("analysis", "")
+                llm_analysis["key_insights"] = llm_response.get("insights", [])
+                llm_analysis["plausibility_assessment"] = llm_response.get("assessment", "")
+                llm_analysis["missing_evidence"] = llm_response.get("missing_evidence", [])
+                llm_analysis["alternative_explanations"] = llm_response.get("alternatives", [])
+                llm_analysis["investigation_priorities"] = llm_response.get("priorities", [])
+            elif isinstance(llm_response, str):
+                llm_analysis["llm_summary"] = llm_response
+
+                # Extract key insights from response
+                lines = llm_response.split('\n')
+                current_section = ""
+
+                for line in lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    # Identify sections
+                    if any(keyword in line.lower() for keyword in ["summary", "plausibility", "assessment"]):
+                        current_section = "summary"
+                        llm_analysis["plausibility_assessment"] = line
+                    elif any(keyword in line.lower() for keyword in ["insight", "connection", "key finding"]):
+                        current_section = "insights"
+                        llm_analysis["key_insights"].append(line)
+                    elif any(keyword in line.lower() for keyword in ["evidence", "missing", "needed"]):
+                        current_section = "evidence"
+                        llm_analysis["missing_evidence"].append(line)
+                    elif any(keyword in line.lower() for keyword in ["alternative", "explanation"]):
+                        current_section = "alternatives"
+                        llm_analysis["alternative_explanations"].append(line)
+                    elif any(keyword in line.lower() for keyword in ["priority", "recommend", "investigat"]):
+                        current_section = "priorities"
+                        llm_analysis["investigation_priorities"].append(line)
+                    elif current_section and line.startswith(('-', '•', '*')):
+                        # Add to current section
+                        if current_section == "insights":
+                            llm_analysis["key_insights"].append(line[1:].strip())
+                        elif current_section == "evidence":
+                            llm_analysis["missing_evidence"].append(line[1:].strip())
+                        elif current_section == "alternatives":
+                            llm_analysis["alternative_explanations"].append(line[1:].strip())
+                        elif current_section == "priorities":
+                            llm_analysis["investigation_priorities"].append(line[1:].strip())
+
+            return llm_analysis
+
+        except Exception as e:
+            logger.error(f"LLM conspiracy analysis failed: {e}")
+            return llm_analysis
 
 
 # Factory function

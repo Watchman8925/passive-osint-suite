@@ -53,7 +53,7 @@ class LocalNetworkAnalyzer:
     def analyze_network(self, network_range: str) -> Dict[str, Any]:
         """Analyze local network for active hosts and services"""
         try:
-            results = {
+            results: Dict[str, Any] = {
                 "network_range": network_range,
                 "hosts": [],
                 "services": [],
@@ -105,7 +105,7 @@ class LocalNetworkAnalyzer:
 
     def _get_local_network_info(self) -> Dict[str, Any]:
         """Get local network interface information"""
-        info = {
+        info: Dict[str, Any] = {
             "hostname": socket.gethostname(),
             "interfaces": []
         }
@@ -120,7 +120,7 @@ class LocalNetworkAnalyzer:
             if HAS_PSUTIL:
                 interfaces = psutil.net_if_addrs()  # type: ignore
                 for interface_name, addresses in interfaces.items():
-                    interface_info = {"name": interface_name, "addresses": []}
+                    interface_info: Dict[str, Any] = {"name": interface_name, "addresses": []}
                     for addr in addresses:
                         if addr.family == socket.AF_INET:  # IPv4
                             interface_info["addresses"].append({
@@ -236,7 +236,7 @@ class LocalNetworkAnalyzer:
 
     def _analyze_network_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze network scan results"""
-        analysis = {
+        analysis: Dict[str, Any] = {
             "total_hosts_scanned": len(results.get("hosts", [])),
             "active_hosts": len([h for h in results.get("hosts", []) if h.get("status") == "active"]),
             "total_services": len(results.get("services", [])),
@@ -246,7 +246,7 @@ class LocalNetworkAnalyzer:
 
         # Analyze service distribution
         services = results.get("services", [])
-        service_counts = {}
+        service_counts: Dict[str, int] = {}
         for service in services:
             service_name = service.get("service", "unknown")
             service_counts[service_name] = service_counts.get(service_name, 0) + 1
@@ -269,7 +269,7 @@ class LocalNetworkAnalyzer:
     def detect_anomalies(self, traffic_data: Dict[str, Any]) -> Dict[str, Any]:
         """Detect network anomalies in traffic data"""
         try:
-            anomalies = []
+            anomalies: List[Dict[str, Any]] = []
             detected = False
 
             # Analyze packet counts if available
@@ -277,7 +277,7 @@ class LocalNetworkAnalyzer:
                 packets = traffic_data["packets"]
                 if isinstance(packets, list):
                     # Basic anomaly detection
-                    packet_counts = {}
+                    packet_counts: Dict[str, int] = {}
                     for packet in packets:
                         src = packet.get("source_ip")
                         if src:
@@ -304,7 +304,7 @@ class LocalNetworkAnalyzer:
                 if isinstance(connections, list):
                     # Detect port scanning
                     port_scan_threshold = 10
-                    source_ports = {}
+                    source_ports: Dict[str, Set[int]] = {}
 
                     for conn in connections:
                         src = conn.get("source_ip")
@@ -356,7 +356,7 @@ class LocalNetworkAnalyzer:
             # First analyze the network
             analysis = self.analyze_network(network_range)
 
-            topology = {
+            topology: Dict[str, Any] = {
                 "network": network_range,
                 "nodes": [],
                 "edges": [],

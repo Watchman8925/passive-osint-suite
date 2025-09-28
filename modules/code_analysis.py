@@ -95,7 +95,7 @@ class CodeAnalysisEngine:
         if not os.path.exists(os.path.join(repo_path, ".git")):
             return {"error": f"Not a git repository: {repo_path}"}
 
-        results = {"repository": repo_path, "scans": {}}
+        results: Dict[str, Any] = {"repository": repo_path, "scans": {}}
 
         # GitLeaks scan
         if (scan_type in ["gitleaks", "both", "all"]) and self.tools["gitleaks"]:
@@ -202,10 +202,10 @@ class CodeAnalysisEngine:
         if not os.path.exists(search_path):
             return {"error": f"Search path not found: {search_path}"}
 
-        results = {
+        results: Dict[str, Any] = {
             "search_path": search_path,
             "patterns_searched": patterns,
-            "results": {},
+            "results": {},  # This will hold pattern -> result mappings
         }
 
         for pattern in patterns:
@@ -281,8 +281,8 @@ class CodeAnalysisEngine:
         analysis["structure"] = structure
 
         # Analyze languages and file types
-        languages = {}
-        file_types = {}
+        languages: Dict[str, int] = {}
+        file_types: Dict[str, int] = {}
 
         for root, dirs, files in os.walk(repo_path):
             if ".git" in root:
@@ -387,7 +387,7 @@ class CodeAnalysisEngine:
         Returns:
             Dictionary containing all analysis results
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "repository": repo_path,
             "timestamp": None,  # Would be set by caller
             "results": {},

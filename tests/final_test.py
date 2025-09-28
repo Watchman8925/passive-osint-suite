@@ -42,7 +42,7 @@ def test_core_functionality():
     # Test 1: Secrets Manager
     print("\n🔐 Testing Secrets Manager...")
     try:
-        from secrets_manager import secrets_manager
+        from security.secrets_manager import secrets_manager
 
         success = secrets_manager.store_secret(
             service="test_service",
@@ -67,7 +67,7 @@ def test_core_functionality():
     # Test 2: Audit Trail
     print("\n📝 Testing Audit Trail...")
     try:
-        from audit_trail import audit_trail
+        from security.audit_trail import audit_trail
 
         audit_trail.log_operation(
             operation="test_operation",
@@ -90,7 +90,7 @@ def test_core_functionality():
     # Test 3: Result Encryption
     print("\n🔒 Testing Result Encryption...")
     try:
-        from result_encryption import result_encryption
+        from security.result_encryption import result_encryption
 
         test_data = {
             "operation": "test_scan",
@@ -121,7 +121,7 @@ def test_core_functionality():
     # Test 4: OPSEC Policy
     print("\n🛡️ Testing OPSEC Policy...")
     try:
-        from opsec_policy import enforce_policy
+        from security.opsec_policy import enforce_policy
 
         result = enforce_policy(
             operation_type="domain_lookup", target="example.com", actor="test_user"
@@ -138,7 +138,7 @@ def test_core_functionality():
     # Test 5: Query Obfuscation
     print("\n🎭 Testing Query Obfuscation...")
     try:
-        from query_obfuscation import query_obfuscator
+        from tools.query_obfuscation import query_obfuscator
 
         query_obfuscator.get_statistics()  # Test that method exists
         print("   ✅ Query Obfuscation: BASIC FUNCTIONAL")
@@ -149,7 +149,7 @@ def test_core_functionality():
     # Test 6: Anonymity Grid
     print("\n🕸️ Testing Anonymity Grid...")
     try:
-        from anonymity_grid import GridNodeRole, initialize_anonymity_grid
+        from utils.anonymity_grid import GridNodeRole, initialize_anonymity_grid
 
         grid = initialize_anonymity_grid(role=GridNodeRole.MIXER)
         if grid:
@@ -181,7 +181,7 @@ def test_core_functionality():
     # Test 9: OSINT Utils (FIXED)
     print("\n🛠️ Testing OSINT Utils...")
     try:
-        from osint_utils import OSINTUtils
+        from utils.osint_utils import OSINTUtils
 
         OSINTUtils()  # Test that class can be instantiated
         print("   ✅ OSINT Utils: FULLY FUNCTIONAL (FIXED)")

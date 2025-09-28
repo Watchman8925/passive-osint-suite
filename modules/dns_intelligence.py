@@ -8,10 +8,6 @@ import json
 import subprocess
 import logging
 from typing import Dict, List, Optional, Any
-from pathlib import Path
-import tempfile
-import shutil
-import re
 import socket
 
 logger = logging.getLogger(__name__)
@@ -110,7 +106,7 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary with categorized records
         """
-        categories = {
+        categories: Dict[str, List[Dict[str, Any]]] = {
             "A": [],
             "AAAA": [],
             "CNAME": [],
@@ -142,7 +138,7 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing passive DNS results
         """
-        results = {
+        results: Dict[str, Any] = {
             "domain": domain,
             "passive_sources": {}
         }
@@ -208,7 +204,7 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing subdomain enumeration results
         """
-        results = {
+        results: Dict[str, Any] = {
             "domain": domain,
             "subdomains": [],
             "sources": {}
@@ -352,7 +348,7 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing zone transfer results
         """
-        results = {
+        results: Dict[str, Any] = {
             "domain": domain,
             "zone_transfer_possible": False,
             "nameservers": [],
@@ -435,7 +431,7 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing all DNS analysis results
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "domain": domain,
             "timestamp": None,  # Would be set by caller
             "analyses": {}

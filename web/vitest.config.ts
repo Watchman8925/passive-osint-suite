@@ -6,6 +6,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./vitest.setup.ts']
+    setupFiles: ['./vitest.setup.ts'],
+    // Vitest 3.x compatibility
+    server: {
+      deps: {
+        inline: ['@testing-library/jest-dom']
+      }
+    }
   }
 });

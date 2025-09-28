@@ -20,7 +20,7 @@ class SecretsManager:
     Uses Fernet encryption for secure storage.
     """
 
-    def __init__(self, key_file: str = None, secrets_file: str = None):
+    def __init__(self, key_file: Optional[str] = None, secrets_file: Optional[str] = None):
         self.key_file = key_file or os.path.join(os.path.dirname(__file__), 'encryption.key')
         self.secrets_file = secrets_file or os.path.join(os.path.dirname(__file__), 'secrets.enc')
         self._secrets = {}
@@ -189,6 +189,10 @@ class SecretsManager:
         except Exception as e:
             print(f"Warning: Key rotation failed: {e}")
             return False
+
+    def get_all_secrets(self) -> Dict[str, Any]:
+        """Get all secrets as a dictionary."""
+        return self._secrets.copy()
 
 
 # Global instance for backward compatibility

@@ -14,14 +14,12 @@ This module serves as the "master orchestrator" that:
 - Provides comprehensive reporting and analysis
 """
 
-import asyncio
-import json
 import logging
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from utils.osint_utils import OSINTUtils
 
@@ -111,7 +109,7 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
         self.logger.info(f"Starting comprehensive investigation sweep for: {target} ({target_type})")
 
         start_time = time.time()
-        results = {
+        results: Dict[str, Any] = {
             'target': target,
             'target_type': target_type,
             'timestamp': datetime.now().isoformat(),
@@ -142,7 +140,7 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
 
         # Extract findings and leads
         findings, leads, pivots = self._process_module_results(module_results, target, target_type)
-        results['findings'] = findings
+        results['findings'] = dict(findings)  # Convert defaultdict to regular dict
         results['leads'] = leads
         results['pivot_points'] = pivots
 
@@ -275,8 +273,8 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
     def _process_module_results(self, module_results: Dict[str, Any], target: str, target_type: str):
         """Process and aggregate results from all modules."""
         findings = defaultdict(list)
-        leads = []
-        pivots = []
+        leads: List[Dict[str, Any]] = []
+        pivots: List[Dict[str, Any]] = []
 
         for module_name, result in module_results.items():
             if not result.get('success', False):
@@ -302,7 +300,7 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
 
     def _extract_leads_from_result(self, module_name: str, result: Any, target: str, target_type: str) -> List[Dict]:
         """Extract investigation leads from module results."""
-        leads = []
+        leads: List[Dict[str, Any]] = []
 
         if not isinstance(result, dict):
             return leads
@@ -355,7 +353,7 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
 
     def _extract_pivots_from_result(self, module_name: str, result: Any, target: str, target_type: str) -> List[Dict]:
         """Extract pivot points for further investigation."""
-        pivots = []
+        pivots: List[Dict[str, Any]] = []
 
         if not isinstance(result, dict):
             return pivots

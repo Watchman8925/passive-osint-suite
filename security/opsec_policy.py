@@ -3,10 +3,10 @@ OPSEC Policy Enforcement
 Operational security policies and enforcement
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
-def enforce_policy(action: str = None, context: Dict[str, Any] = None, **kwargs) -> Dict[str, Any]:
+def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
     """
     Enforce OPSEC policies for actions
 
@@ -30,7 +30,7 @@ def enforce_policy(action: str = None, context: Dict[str, Any] = None, **kwargs)
         actor = context.get('actor') if context else None
     else:
         # New pattern: enforce_policy(operation_type=..., target=..., actor=...)
-        operation_type = kwargs.get('operation_type', action)
+        operation_type = kwargs.get('operation_type', action or 'unknown')
         target = kwargs.get('target')
         actor = kwargs.get('actor')
 

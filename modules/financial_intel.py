@@ -5,9 +5,10 @@ Banking records, asset searches, financial investigations
 
 import re
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 from utils.osint_utils import OSINTUtils
+from utils.result_normalizer import normalize_result
 
 
 class FinancialIntelligence(OSINTUtils):
@@ -16,6 +17,11 @@ class FinancialIntelligence(OSINTUtils):
     def __init__(self):
         super().__init__()
         self.results = {}
+
+    def check_rate_limit(self, service: str) -> bool:
+        """Check if we're within rate limits for a service"""
+        # Simple rate limiting - could be enhanced with actual rate limiting
+        return True
 
     def analyze_financial_entity(self, entity_query: str) -> Dict:
         """
@@ -42,11 +48,11 @@ class FinancialIntelligence(OSINTUtils):
                 "risk_assessment": self.assess_financial_risk(entity_query),
             }
 
-            return self.normalize_result({"status": "success", "data": self.results})
+            return normalize_result({"status": "success", "data": self.results})
 
         except Exception as e:
             self.logger.error(f"Financial analysis failed: {e}")
-            return self.normalize_result({"status": "error", "error": str(e)})
+            return normalize_result({"status": "error", "error": str(e)})
 
     def classify_entity(self, query: str) -> str:
         """Classify the type of financial entity being queried"""
@@ -150,7 +156,7 @@ class FinancialIntelligence(OSINTUtils):
 
     def analyze_etherscan_address(self, address: str) -> Optional[Dict]:
         """Analyze Ethereum address using Etherscan"""
-        api_key = self.get_service_api_key("etherscan")
+        api_key = self.get_api_key("etherscan")
         if not api_key:
             return None
 

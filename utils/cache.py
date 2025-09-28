@@ -60,7 +60,7 @@ class CacheEntry:
 class OSINTCache:
     """Caching system for OSINT operations"""
 
-    def __init__(self, cache_dir: str = None, max_size: int = 1000):
+    def __init__(self, cache_dir: Optional[str] = None, max_size: int = 1000):
         self.utils = OSINTUtils()
         self.cache_dir = cache_dir or os.path.join('output', 'cache')
         self.max_size = max_size
@@ -170,7 +170,7 @@ class OSINTCache:
             self.utils.logger.debug(f"Cache miss: {service}:{operation}")
             return None
 
-    def put(self, service: str, operation: str, params: Dict, data: Any, ttl_seconds: int = None):
+    def put(self, service: str, operation: str, params: Dict, data: Any, ttl_seconds: Optional[int] = None):
         """Store result in cache"""
         with self._lock:
             key = self._generate_key(service, operation, params)
@@ -191,7 +191,7 @@ class OSINTCache:
 
             self.utils.logger.debug(f"Cached: {service}:{operation} (TTL: {ttl_seconds}s)")
 
-    def invalidate(self, service: str = None, operation: str = None, params: Dict = None):
+    def invalidate(self, service: Optional[str] = None, operation: Optional[str] = None, params: Optional[Dict] = None):
         """Invalidate cache entries"""
         with self._lock:
             if service and operation and params:
@@ -245,7 +245,7 @@ class OSINTCache:
 # Global cache instance
 cache = OSINTCache()
 
-def cached_request(service: str, operation: str, params: Dict, ttl_seconds: int = None):
+def cached_request(service: str, operation: str, params: Dict, ttl_seconds: Optional[int] = None):
     """
     Decorator for caching function results
 

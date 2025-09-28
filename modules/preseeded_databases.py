@@ -6,7 +6,6 @@ No API keys required - uses publicly available data sources
 
 from utils.osint_utils import OSINTUtils
 import json
-import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -277,7 +276,7 @@ class PreSeededDatabases(OSINTUtils):
         if categories is None:
             categories = ['vulnerabilities', 'law_enforcement', 'sanctions']
 
-        results = {
+        results: Dict[str, Any] = {
             'query': query,
             'timestamp': datetime.now().isoformat(),
             'results': {}
@@ -303,7 +302,7 @@ class PreSeededDatabases(OSINTUtils):
 
     def get_database_statistics(self) -> Dict[str, Any]:
         """Get statistics about available databases"""
-        stats = {
+        stats: Dict[str, Any] = {
             'total_databases': len(self.databases),
             'categories': {},
             'last_updated': datetime.now().isoformat()

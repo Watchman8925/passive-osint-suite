@@ -3,7 +3,7 @@ Security Models
 Data models for the security framework
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -57,12 +57,8 @@ class DataObject:
     last_modified: datetime
     tags: List[str]
     metadata: Dict[str, Any]
-    access_log: List[Dict] = None
+    access_log: List[Dict] = field(default_factory=list)
     retention_policy: str = "standard"  # standard, extended, permanent
-
-    def __post_init__(self):
-        if self.access_log is None:
-            self.access_log = []
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for serialization"""
@@ -104,7 +100,7 @@ class User:
     created_at: datetime
     last_login: Optional[datetime] = None
     password_hash: Optional[str] = None
-    api_keys: List[str] = None
+    api_keys: Optional[List[str]] = None
     security_clearance: str = "standard"
 
     def __post_init__(self):

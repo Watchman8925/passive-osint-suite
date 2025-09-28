@@ -7,11 +7,11 @@ apply jitter and decoys, and forward each operation via a provided caller
 """
 import random
 import time
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 
 class Relay:
-    def __init__(self, caller: Callable, decoy_pool: List[Dict[str, Any]] = None, min_delay=0.5, max_delay=2.0):
+    def __init__(self, caller: Callable, decoy_pool: Optional[List[Dict[str, Any]]] = None, min_delay=0.5, max_delay=2.0):
         """
         caller: a callable with signature (method, url, **kwargs) -> response
         decoy_pool: list of request dicts for decoy traffic (e.g., {'method':'get','url':'https://example.com'})

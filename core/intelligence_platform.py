@@ -18,13 +18,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from api_key_manager import APIConfigurationManager
-from conspiracy_analyzer import (ConspiracyAnalysisResult,
+from security.api_key_manager import APIConfigurationManager
+from analysis.conspiracy_analyzer import (ConspiracyAnalysisResult,
                                  ConspiracyTheoryAnalyzer)
 # Import all our advanced modules
-from cross_reference_engine import (ConspiracyTheory, CrossReferenceEngine,
+from analysis.cross_reference_engine import (ConspiracyTheory, CrossReferenceEngine,
                                     CrossReferenceHit)
-from hidden_pattern_detector import HiddenPattern, HiddenPatternDetector
+from analysis.hidden_pattern_detector import HiddenPattern, HiddenPatternDetector
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class IntelligenceOperation:
     start_time: datetime
     end_time: Optional[datetime] = None
     status: str = "running"  # running, completed, failed
-    results: Dict[str, Any] = None
+    results: Optional[Dict[str, Any]] = None
 
 class AdvancedIntelligencePlatform:
     """
@@ -87,13 +87,13 @@ class AdvancedIntelligencePlatform:
         try:
             logger.info(f"Starting comprehensive investigation: {target}")
             
-            results = {
+            results: Dict[str, Any] = {
                 'operation_id': operation_id,
                 'target': target,
                 'investigation_type': investigation_type,
                 'start_time': operation.start_time.isoformat(),
                 'cross_reference_results': {},
-                'hidden_patterns': [],
+                'hidden_patterns': [],  # Will be populated with pattern summaries
                 'conspiracy_analysis': {},
                 'api_status': {},
                 'summary': {},
@@ -407,7 +407,7 @@ class AdvancedIntelligencePlatform:
     
     async def validate_platform_health(self) -> Dict[str, Any]:
         """Validate overall platform health and readiness."""
-        health_report = {
+        health_report: Dict[str, Any] = {
             'timestamp': datetime.now().isoformat(),
             'overall_status': 'unknown',
             'component_status': {},

@@ -240,7 +240,7 @@ class APIConfigurationManager:
                         "certificates": "/certificates/search",
                     },
                     headers={"User-Agent": "OSINT-NetworkIntel"},
-                    rate_limits={"per_second": 0.4, "per_day": 1000},
+                    rate_limits={"per_second": 1, "per_day": 1000},
                     auth_type="basic_auth",
                     test_endpoint="/hosts/search?q=google.com",
                     daily_quota=1000,
@@ -535,7 +535,7 @@ class APIConfigurationManager:
                     auth = aiohttp.BasicAuth(api_key, "")
                     async with aiohttp.ClientSession(auth=auth) as session:
                         async with session.get(
-                            test_url, headers=headers, timeout=10
+                            test_url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
                         ) as response:
                             response_data = await response.text()
                             status_code = response.status
@@ -543,7 +543,7 @@ class APIConfigurationManager:
                 else:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
-                            test_url, headers=headers, timeout=10
+                            test_url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
                         ) as response:
                             response_data = await response.text()
                             status_code = response.status
@@ -758,7 +758,7 @@ class APIConfigurationManager:
         self, service: APIServiceConfig, headers: Dict[str, str], response_data: str
     ) -> Dict[str, Any]:
         """Extract quota and rate limit information from API response."""
-        quota_info = {}
+        quota_info: Dict[str, Any] = {}
 
         try:
             # Common rate limit headers
@@ -793,8 +793,6 @@ class APIConfigurationManager:
             # Service-specific quota extraction
             if service.service_name == "Shodan" and "query_credits" in response_data:
                 try:
-                    import json
-
                     data = json.loads(response_data)
                     quota_info["remaining"] = data.get("query_credits", 0)
                 except (json.JSONDecodeError, KeyError, TypeError):
@@ -953,7 +951,7 @@ class APIConfigurationManager:
             ]
 
             # Group services by type
-            service_types = {}
+            service_types: Dict[str, List[APIKeyStatus]] = {}
             for status in service_statuses.values():
                 service_type = self._get_service_type(status.service_name)
                 if service_type not in service_types:

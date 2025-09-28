@@ -109,7 +109,7 @@ class CrossReferenceEngine:
 
     def _extract_from_text(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract entities from unstructured text content"""
-        entities = []
+        entities: List[Dict[str, Any]] = []
 
         # Get all text content
         text_content = self._get_text_content(source)
@@ -414,7 +414,7 @@ class CrossReferenceEngine:
 
     def _find_central_entities(self, relationships: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Find most central entities in the network"""
-        entity_connections = defaultdict(int)
+        entity_connections: Dict[str, int] = defaultdict(int)
 
         for rel in relationships:
             entity1_id = f"{rel['entity1']['type']}:{rel['entity1']['value']}"

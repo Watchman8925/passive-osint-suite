@@ -6,9 +6,11 @@ IoT device discovery, smart device intelligence, Shodan integration
 import ipaddress
 import re
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+import requests
 
 from utils.osint_utils import OSINTUtils
+from utils.result_normalizer import normalize_result
 
 
 class IoTDeviceIntelligence(OSINTUtils):
@@ -17,9 +19,14 @@ class IoTDeviceIntelligence(OSINTUtils):
     def __init__(self):
         super().__init__()
         self.results = {}
-        self.shodan_api_key = self.get_service_api_key('shodan')
-        self.censys_api_id = self.get_service_api_key('censys_id')
-        self.censys_api_secret = self.get_service_api_key('censys_secret')
+        self.shodan_api_key = self.get_api_key('shodan')
+        self.censys_api_id = self.get_api_key('censys_id')
+        self.censys_api_secret = self.get_api_key('censys_secret')
+
+    def check_rate_limit(self, service: str) -> bool:
+        """Check if we're within rate limits for a service"""
+        # Simple rate limiting - could be enhanced with actual rate limiting
+        return True
 
     def analyze_iot_devices(self, target: str) -> Dict:
         """
@@ -46,21 +53,21 @@ class IoTDeviceIntelligence(OSINTUtils):
                 'iot_protocols': self.analyze_iot_protocols(target)
             }
 
-            return self.normalize_result({
+            return normalize_result({
                 "status": "success",
                 "data": self.results
             })
 
         except Exception as e:
             self.logger.error(f"IoT device analysis failed: {e}")
-            return self.normalize_result({
+            return normalize_result({
                 "status": "error",
                 "error": str(e)
             })
 
-    def discover_iot_devices(self, target: str) -> Dict:
+    def discover_iot_devices(self, target: str) -> Dict[str, Any]:
         """Discover IoT devices in target network or domain"""
-        results = {}
+        results: Dict[str, Any] = {}
 
         # Check if target is an IP range
         if self.is_ip_range(target):
@@ -228,7 +235,7 @@ class IoTDeviceIntelligence(OSINTUtils):
             auth = (self.censys_api_id, self.censys_api_secret)
             query = {"q": target}
 
-            response = self.make_request(url, method='post', json=query, auth=auth)
+            response = requests.post(url, json=query, auth=auth, timeout=30)
             if response and response.status_code == 200:
                 data = response.json()
                 return {

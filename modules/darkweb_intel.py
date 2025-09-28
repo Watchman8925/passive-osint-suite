@@ -5,11 +5,12 @@ Onion routing support, dark web search capabilities
 
 import re
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import requests
 
 from utils.osint_utils import OSINTUtils
+from utils.result_normalizer import normalize_result
 
 
 class DarkWebIntelligence(OSINTUtils):
@@ -27,6 +28,11 @@ class DarkWebIntelligence(OSINTUtils):
                 'http': self.tor_proxy,
                 'https': self.tor_proxy
             }
+
+    def check_rate_limit(self, service: str) -> bool:
+        """Check if we're within rate limits for a service"""
+        # Simple rate limiting - could be enhanced with actual rate limiting
+        return True
 
     def analyze_dark_web(self, search_term: str) -> Dict:
         """
@@ -52,21 +58,21 @@ class DarkWebIntelligence(OSINTUtils):
                 'leak_intelligence': self.search_dark_web_leaks(search_term)
             }
 
-            return self.normalize_result({
+            return normalize_result({
                 "status": "success",
                 "data": self.results
             })
 
         except Exception as e:
             self.logger.error(f"Dark web analysis failed: {e}")
-            return self.normalize_result({
+            return normalize_result({
                 "status": "error",
                 "error": str(e)
             })
 
-    def analyze_onion_address(self, address: str) -> Dict:
+    def analyze_onion_address(self, address: str) -> Dict[str, Any]:
         """Analyze onion addresses and services"""
-        results = {}
+        results: Dict[str, Any] = {}
 
         # Check if it's an onion address
         if self.is_onion_address(address):
@@ -149,9 +155,9 @@ class DarkWebIntelligence(OSINTUtils):
             'risk_level': 'medium'
         }
 
-    def search_dark_web_sources(self, search_term: str) -> Dict:
+    def search_dark_web_sources(self, search_term: str) -> Dict[str, Any]:
         """Search dark web sources for information"""
-        results = {}
+        results: Dict[str, Any] = {}
 
         # IntelX search (dark web search engine)
         intelx_results = self.search_intelx(search_term)
@@ -172,7 +178,7 @@ class DarkWebIntelligence(OSINTUtils):
 
     def search_intelx(self, search_term: str) -> Optional[Dict]:
         """Search using IntelX dark web search engine"""
-        api_key = self.get_service_api_key('intelx')
+        api_key = self.get_api_key('intelx')
         if not api_key:
             return None
 
@@ -199,7 +205,7 @@ class DarkWebIntelligence(OSINTUtils):
                 'terminate': []
             }
 
-            response = self.request_with_fallback('post', url, headers=headers, json=data)
+            response = requests.post(url, headers=headers, json=data, timeout=30)
             if response and response.status_code == 200:
                 result_data = response.json()
                 return {

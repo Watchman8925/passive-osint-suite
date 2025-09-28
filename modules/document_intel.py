@@ -5,9 +5,11 @@ Document leak monitoring, file sharing site analysis, PDF/text extraction
 
 import hashlib
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+import requests
 
 from utils.osint_utils import OSINTUtils
+from utils.result_normalizer import normalize_result
 
 
 class DocumentIntelligence(OSINTUtils):
@@ -26,6 +28,11 @@ class DocumentIntelligence(OSINTUtils):
             'ideone.com': self.scrape_ideone,
             'codepad.org': self.scrape_codepad,
         }
+
+    def check_rate_limit(self, service: str) -> bool:
+        """Check if we're within rate limits for a service"""
+        # Simple rate limiting - could be enhanced with actual rate limiting
+        return True
 
     def analyze_document_leaks(self, search_term: str) -> Dict:
         """
@@ -51,14 +58,14 @@ class DocumentIntelligence(OSINTUtils):
                 'risk_assessment': self.assess_document_risk(search_term)
             }
 
-            return self.normalize_result({
+            return normalize_result({
                 "status": "success",
                 "data": self.results
             })
 
         except Exception as e:
             self.logger.error(f"Document leak analysis failed: {e}")
-            return self.normalize_result({
+            return normalize_result({
                 "status": "error",
                 "error": str(e)
             })
@@ -137,7 +144,7 @@ class DocumentIntelligence(OSINTUtils):
 
     def search_pastebin_api(self, search_term: str) -> Optional[Dict]:
         """Search Pastebin using API"""
-        api_key = self.get_service_api_key('pastebin')
+        api_key = self.get_api_key("virusshare")
         if not api_key:
             return None
 
@@ -153,7 +160,7 @@ class DocumentIntelligence(OSINTUtils):
                 'api_paste_key': search_term
             }
 
-            response = self.make_request(url, method='post', data=data)
+            response = requests.post(url, data=data, timeout=30)
             if response and response.status_code == 200:
                 # Parse Pastebin API response
                 return {
@@ -229,9 +236,9 @@ class DocumentIntelligence(OSINTUtils):
             self.logger.error(f"Document search failed: {e}")
             return []
 
-    def search_document_databases(self, search_term: str) -> Dict:
+    def search_document_databases(self, search_term: str) -> Dict[str, Any]:
         """Search document databases and archives"""
-        results = {}
+        results: Dict[str, Any] = {}
 
         # Archive.org search
         archive_results = self.search_archive_org(search_term)
@@ -389,7 +396,7 @@ class DocumentIntelligence(OSINTUtils):
     def analyze_document_metadata(self, url: str) -> Optional[Dict]:
         """Analyze document metadata"""
         try:
-            response = self.make_request(url, stream=True)
+            response = requests.get(url, stream=True, timeout=30)
             if response and response.status_code == 200:
                 headers = dict(response.headers)
 

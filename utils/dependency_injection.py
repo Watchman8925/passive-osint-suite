@@ -3,7 +3,7 @@ Dependency Injection System for OSINT Suite
 Manage cross-module dependencies and injection
 """
 
-from typing import Dict, List
+from typing import Dict, List, Any, cast, Callable
 
 from modules import MODULE_REGISTRY
 
@@ -65,7 +65,7 @@ class DependencyInjector:
             raise ValueError(f"Dependency '{dep_name}' not found")
 
         module_info = MODULE_REGISTRY[dep_name]
-        instance = module_info['class']()
+        instance = cast(Callable[[], Any], module_info['class'])()
         self._injection_cache[dep_name] = instance
         return instance
 
@@ -139,7 +139,7 @@ class ModuleFactory:
                 raise ValueError(f"Module '{module_name}' not found")
 
             module_info = MODULE_REGISTRY[module_name]
-            instance = module_info['class']()
+            instance = cast(Callable[[], Any], module_info['class'])()
 
             # Inject dependencies
             self.injector.inject_dependencies(instance)
