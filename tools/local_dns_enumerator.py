@@ -14,13 +14,11 @@ import dns.reversename
 import dns.zone
 import dns.query
 import dns.exception
-import socket
 import ipaddress
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 
-from osint_utils import OSINTUtils
+from utils.osint_utils import OSINTUtils
 
 
 class LocalDNSEnumerator(OSINTUtils):
@@ -112,7 +110,7 @@ class LocalDNSEnumerator(OSINTUtils):
 
                     break  # Stop after first successful transfer
 
-                except Exception as e:
+                except Exception:
                     continue  # Try next nameserver
 
         except Exception as e:
@@ -137,7 +135,7 @@ class LocalDNSEnumerator(OSINTUtils):
             try:
                 self.resolver.resolve(full_domain, 'A')
                 return full_domain
-            except:
+            except Exception:
                 return None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -176,7 +174,7 @@ class LocalDNSEnumerator(OSINTUtils):
 
         try:
             # Validate IP address
-            ip_obj = ipaddress.ip_address(ip_address)
+            ipaddress.ip_address(ip_address)
 
             # Create reverse name
             reverse_name = dns.reversename.from_address(ip_address)
@@ -222,7 +220,7 @@ class LocalDNSEnumerator(OSINTUtils):
                 results["checks"][f"{record_type}_record"] = len(answers) > 0
                 if len(answers) > 0:
                     results["score"] += 1
-            except:
+            except Exception:
                 results["checks"][f"{record_type}_record"] = False
                 results["issues"].append(f"Missing {record_type} record")
 
@@ -235,7 +233,7 @@ class LocalDNSEnumerator(OSINTUtils):
                 results["score"] += 1
             else:
                 results["issues"].append("Missing SPF record")
-        except:
+        except Exception:
             results["checks"]["spf_record"] = False
             results["issues"].append("Missing SPF record")
 
@@ -248,7 +246,7 @@ class LocalDNSEnumerator(OSINTUtils):
                 results["score"] += 1
             else:
                 results["issues"].append("Missing DMARC record")
-        except:
+        except Exception:
             results["checks"]["dmarc_record"] = False
             results["issues"].append("Missing DMARC record")
 

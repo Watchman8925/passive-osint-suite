@@ -34,8 +34,8 @@ def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any
         target = kwargs.get('target')
         actor = kwargs.get('actor')
 
-    # Basic policy enforcement
-    policies = {
+    # Basic policy enforcement framework (policies available for future use)
+    _policies = {
         'network_scan': {'max_requests': 100, 'cooldown': 60},
         'api_call': {'max_requests': 1000, 'cooldown': 60},
         'file_access': {'allowed_paths': ['/tmp', '/var/log']},
@@ -44,7 +44,8 @@ def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any
         'ip_lookup': {'max_requests': 500, 'cooldown': 30},
     }
 
-    policy = policies.get(operation_type, {})
+    # Policy lookup (currently unused but available for future enforcement)
+    # policy = _policies.get(operation_type, {})
 
     # For now, allow all operations but log them
     result = {

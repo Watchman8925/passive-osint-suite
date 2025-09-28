@@ -18,12 +18,12 @@ from typing import Any, Dict, List, Optional
 
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
     from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate,
                                     Spacer, Table, TableStyle)
-    from reportlab.platypus.flowables import KeepTogether, PageBreak
+    # from reportlab.platypus.flowables import KeepTogether, PageBreak  # Unused
 
     REPORTLAB_AVAILABLE = True
 except ImportError:
@@ -39,7 +39,6 @@ except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 try:
-    import plotly.graph_objects as go
     import plotly.io as pio
 
     try:
@@ -52,7 +51,7 @@ except ImportError:
     PLOTLY_AVAILABLE = False
 
 try:
-    import pandas as pd
+    # import pandas as pd  # Unused
 
     PANDAS_AVAILABLE = True
 except ImportError:

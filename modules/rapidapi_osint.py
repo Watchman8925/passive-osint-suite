@@ -3,7 +3,6 @@ RapidAPI OSINT Integration Module
 Provides access to various free RapidAPI services for OSINT gathering
 """
 
-import json
 from typing import Dict, List, Optional, Any
 from utils.osint_utils import OSINTUtils
 

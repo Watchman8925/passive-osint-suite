@@ -5,7 +5,6 @@ No API keys required - uses publicly available data sources
 """
 
 from utils.osint_utils import OSINTUtils
-import json
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 

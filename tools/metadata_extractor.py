@@ -12,13 +12,12 @@ This module provides local file analysis capabilities including:
 import os
 import hashlib
 import mimetypes
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 from pathlib import Path
 from PIL import Image, ExifTags
-import pandas as pd
 from datetime import datetime
 
-from osint_utils import OSINTUtils
+from utils.osint_utils import OSINTUtils
 
 
 class MetadataExtractor(OSINTUtils):
@@ -101,7 +100,7 @@ class MetadataExtractor(OSINTUtils):
                         if isinstance(value, bytes):
                             try:
                                 value = value.decode('utf-8', errors='ignore')
-                            except:
+                            except Exception:
                                 value = str(value)
                         metadata["exif"][tag_name] = str(value)
 

@@ -22,8 +22,8 @@ def get_tor_status() -> Dict[str, Any]:
         if result == 0:
             # Tor control port is open, try to get status
             try:
-                import stem
-                from stem import Signal
+                import stem  # noqa: F401
+                from stem import Signal  # noqa: F401
                 from stem.control import Controller
 
                 with Controller.from_port(port=9051) as controller:

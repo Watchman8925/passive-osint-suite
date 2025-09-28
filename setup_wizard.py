@@ -365,12 +365,12 @@ def check_dependencies():
     missing_deps = []
 
     try:
-        import questionary
+        import questionary  # noqa: F401
     except ImportError:
         missing_deps.append("questionary")
 
     try:
-        from rich.console import Console
+        from rich.console import Console  # noqa: F401
     except ImportError:
         missing_deps.append("rich")
 

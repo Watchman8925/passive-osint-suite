@@ -8,8 +8,7 @@ import logging
 import socket
 import subprocess
 import ipaddress
-from typing import Any, Dict, List, Optional, Set
-import re
+from typing import Any, Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
@@ -226,9 +225,7 @@ class LocalDNSEnumerator:
             except ValueError:
                 return {"network": network, "dns_servers": [], "scanned": False, "error": "Invalid network"}
 
-            # Common DNS server ports
-            dns_ports = [53, 5353]  # Standard DNS and mDNS
-
+            # Common DNS server ports: 53, 5353 (Standard DNS and mDNS)
             # Scan for DNS servers (basic implementation)
             potential_dns_servers: List[Dict[str, Any]] = []
 

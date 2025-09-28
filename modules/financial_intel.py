@@ -5,7 +5,7 @@ Banking records, asset searches, financial investigations
 
 import re
 from datetime import datetime
-from typing import Dict, Optional, Any
+from typing import Dict, Optional
 
 from utils.osint_utils import OSINTUtils
 from utils.result_normalizer import normalize_result

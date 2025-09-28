@@ -128,7 +128,7 @@ except Exception:
 # transport.sync_get is required by the module; import at runtime to avoid binding to
 # a potentially incompatible type stub (which can declare NoReturn). Expose sync_get
 # as a callable returning Any so static type checkers won't assert NoReturn.
-from typing import Any, Callable
+from typing import Any
 try:
     transport_mod = importlib.import_module("transport")
     # Assign the imported function directly (no variable annotation) so a later

@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from planner import Plan, PlannedTask, Planner
+from planner import Planner
 
 try:  # Optional import; advanced orchestrator
     from investigations.investigation_manager import InvestigationManager  # type: ignore

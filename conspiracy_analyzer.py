@@ -5,8 +5,7 @@ Advanced analysis for detecting conspiracy patterns in intelligence data.
 """
 
 import logging
-import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from datetime import datetime, timedelta
 from collections import Counter
 
@@ -199,7 +198,7 @@ class ConspiracyTheoryAnalyzer:
                         timestamps.append(datetime.fromisoformat(data[key].replace('Z', '+00:00')))
                     elif isinstance(data[key], datetime):
                         timestamps.append(data[key])
-                except:
+                except Exception:
                     pass
 
         if len(timestamps) > 1:
@@ -251,7 +250,7 @@ class ConspiracyTheoryAnalyzer:
             from urllib.parse import urlparse
             parsed = urlparse(url)
             return parsed.netloc.lower()
-        except:
+        except Exception:
             return url.lower()
 
     def detect_manipulation(self, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -286,7 +285,7 @@ class ConspiracyTheoryAnalyzer:
                         try:
                             if isinstance(source[key], str):
                                 timestamps.append(datetime.fromisoformat(source[key].replace('Z', '+00:00')))
-                        except:
+                        except Exception:
                             pass
 
             temporal_coordination = False

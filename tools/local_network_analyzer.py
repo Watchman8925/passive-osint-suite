@@ -12,16 +12,14 @@ This module provides local network analysis capabilities:
 
 import socket
 import subprocess
-import ipaddress
-import netaddr
 import platform
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any
 import psutil
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 
-from osint_utils import OSINTUtils
+from utils.osint_utils import OSINTUtils
 
 
 class LocalNetworkAnalyzer(OSINTUtils):
@@ -53,7 +51,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                             interface_info["addresses"]["ipv6"] = addr_list
                         elif addr_family == netifaces.AF_LINK:
                             interface_info["addresses"]["mac"] = addr_list
-                except:
+                except Exception:
                     pass
 
                 interfaces[interface] = interface_info
@@ -114,7 +112,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                             "exe": process.exe(),
                             "cmdline": process.cmdline()
                         }
-                    except:
+                    except Exception:
                         connection_info["process"] = {"name": "unknown"}
 
                 connections.append(connection_info)
@@ -124,7 +122,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         return connections
 
-    def scan_local_ports(self, host: str = "127.0.0.1", ports: List[int] = None) -> Dict[str, Any]:
+    def scan_local_ports(self, host: str = "127.0.0.1", ports: Optional[List[int]] = None) -> Dict[str, Any]:
         """Scan ports on a local host"""
         if ports is None:
             # Common ports to check
@@ -148,7 +146,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                     return {"port": port, "status": "open"}
                 else:
                     return {"port": port, "status": "closed"}
-            except:
+            except Exception:
                 return {"port": port, "status": "filtered"}
 
         with ThreadPoolExecutor(max_workers=50) as executor:
@@ -252,7 +250,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
             return banner[:200]  # Limit banner length
 
-        except:
+        except Exception:
             return None
 
     def analyze_network_traffic(self, duration: int = 10) -> Dict[str, Any]:
@@ -318,7 +316,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         return routes
 
-    def check_network_connectivity(self, targets: List[str] = None) -> Dict[str, Any]:
+    def check_network_connectivity(self, targets: Optional[List[str]] = None) -> Dict[str, Any]:
         """Check connectivity to various network targets"""
         if targets is None:
             targets = [
@@ -389,7 +387,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                         for line in f:
                             if line.startswith('nameserver'):
                                 dns_servers.append(line.split()[1])
-                except:
+                except Exception:
                     pass
 
         except Exception as e:

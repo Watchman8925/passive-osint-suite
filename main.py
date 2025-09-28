@@ -305,7 +305,6 @@ class OSINTSuite:
         )
         # Aggregate all JSON results in output dir
         import glob
-        import json
 
         output_dir = "output"
         files = glob.glob(f"{output_dir}/*.json")
@@ -322,7 +321,6 @@ class OSINTSuite:
     def visualize_data_menu(self):
         """Visualize data from results as tables and charts (passive, OPSEC safe)."""
         import glob
-        import json
 
         import matplotlib.pyplot as plt
         import pandas as pd
@@ -391,7 +389,6 @@ class OSINTSuite:
     def network_map_menu(self):
         """Visualize relationships as a passive network map (no active scanning, OPSEC safe)."""
         import glob
-        import json
 
         import matplotlib.pyplot as plt
         import networkx as nx
@@ -457,7 +454,6 @@ class OSINTSuite:
     def case_file_menu(self):
         """Manage a passive case file: aggregate, annotate, and export results (OPSEC safe)."""
         import glob
-        import json
 
         output_dir = "output"
         files = glob.glob(f"{output_dir}/*.json")
@@ -1002,7 +998,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.domain_recon.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report, f"domain_report_{domain.replace('.', '_')}", format="txt"
                 )
     def email_intelligence_menu(self):
@@ -1038,7 +1034,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.email_intel.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report,
                     f"email_report_{email.replace('@', '_at_').replace('.', '_')}",
                     format="txt",
@@ -1075,7 +1071,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.ip_intel.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report, f"ip_report_{ip_address.replace('.', '_')}", format="txt"
                 )
     def company_intelligence_menu(self):
@@ -1113,7 +1109,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.company_intel.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report,
                     f"company_report_{company_name.replace(' ', '_')}",
                     format="txt",
@@ -1159,7 +1155,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.flight_intel.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report,
                     f"flight_report_{identifier.replace('-', '_')}",
                     format="txt",
@@ -1210,7 +1206,7 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.passive_search.generate_report()
-                report_file = self.utils.save_results(
+                self.utils.save_results(
                     report,
                     f"search_report_{target.replace('@', '_at_').replace('.', '_').replace(' ', '_')}",
                     format="txt",
@@ -1272,10 +1268,10 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.crypto_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report, f"crypto_report_{currency}_{address[:16]}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze cryptocurrency address[/red]")
         console.print("Target types:")

@@ -5,10 +5,9 @@ Advanced cross-referencing of intelligence data across multiple sources.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
-from collections import defaultdict, Counter
+from typing import Any, Dict, List
+from collections import defaultdict
 import re
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +152,7 @@ class CrossReferenceEngine:
                         'value': domain,
                         'confidence': 0.8
                     })
-            except:
+            except Exception:
                 pass
 
         # Extract potential person names (basic - capitalized words)

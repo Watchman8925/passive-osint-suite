@@ -722,10 +722,10 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.domain_recon.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report, f"domain_report_{domain.replace('.', '_')}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze domain[/red]")
 
@@ -757,12 +757,12 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.email_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report,
                     f"email_report_{email.replace('@', '_at_').replace('.', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze email[/red]")
 
@@ -794,10 +794,10 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.ip_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report, f"ip_report_{ip_address.replace('.', '_')}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze IP address[/red]")
 
@@ -832,12 +832,12 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.company_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report,
                     f"company_report_{company_name.replace(' ', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze company[/red]")
 
@@ -878,12 +878,12 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.flight_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report,
                     f"flight_report_{identifier.replace('-', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze aircraft[/red]")
 
@@ -928,12 +928,12 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.passive_search.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report,
                     f"search_report_{target.replace('@', '_at_').replace('.', '_').replace(' ', '_')}",
                     format="txt",
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to perform passive search[/red]")
 
@@ -990,10 +990,10 @@ class OSINTSuite:
             # Generate report
             if Confirm.ask("Generate detailed report?"):
                 report = self.crypto_intel.generate_report()
-                report_file = self.utils.save_results(
+                saved_path = self.utils.save_results(
                     report, f"crypto_report_{currency}_{address[:16]}", format="txt"
                 )
-                console.print(f"[green]Report saved to: {report_file}[/green]")
+                console.print(f"[green]Report saved to: {saved_path}[/green]")
         else:
             console.print("[red]Failed to analyze cryptocurrency address[/red]")
 
@@ -2274,7 +2274,7 @@ class OSINTSuite:
         case_name = Prompt.ask("Enter investigation case name")
         try:
             if "bellingcat_toolkit" in self.modules:
-                investigation = self.modules["bellingcat_toolkit"].start_investigation(case_name)
+                self.modules["bellingcat_toolkit"].start_investigation(case_name)
                 console.print(f"[green]Investigation '{case_name}' started successfully[/green]")
             else:
                 console.print("[red]Bellingcat toolkit module not available[/red]")

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Set
 
 try:
     from neo4j import AsyncDriver, AsyncGraphDatabase
-    from neo4j.exceptions import ServiceUnavailable
+    # from neo4j.exceptions import ServiceUnavailable  # Unused
 
     NEO4J_AVAILABLE = True
 except ImportError:
@@ -596,7 +596,6 @@ class GraphDatabaseAdapter:
 
         # Domain to IP relationships
         if "domain_data" in data and "ip_data" in data:
-            domain_info = data["domain_data"]
             ip_info = data["ip_data"]
 
             domain_entity = next((e for e in entities if e.type == "domain"), None)

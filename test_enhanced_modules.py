@@ -13,7 +13,7 @@ def test_rapidapi_module():
     print("Testing RapidAPI OSINT Module...")
     try:
         from modules.rapidapi_osint import RapidAPIOSINTModule
-        rapidapi = RapidAPIOSINTModule()
+        _rapidapi = RapidAPIOSINTModule()
 
         # Test database info
         # info = rapidapi.get_database_info('us_cisa_known_exploited')

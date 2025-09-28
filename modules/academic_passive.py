@@ -96,8 +96,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_google_scholar(self, query, limit=10):
         """Search Google Scholar"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://scholar.google.com/scholar?q={urllib.parse.quote(query)}"
         papers = []
@@ -152,8 +150,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_semantic_scholar(self, query, limit=10):
         """Search Semantic Scholar"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://www.semanticscholar.org/search?q={urllib.parse.quote(query)}"
         papers = []
@@ -202,8 +198,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_arxiv(self, query, limit=10):
         """Search arXiv"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://arxiv.org/search/?query={urllib.parse.quote(query)}&searchtype=all"
         papers = []
@@ -257,8 +251,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_pubmed(self, query, limit=10):
         """Search PubMed"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://pubmed.ncbi.nlm.nih.gov/?term={urllib.parse.quote(query)}"
         papers = []
@@ -307,8 +299,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_researchgate(self, query, limit=10):
         """Search ResearchGate"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://www.researchgate.net/search/publication?q={urllib.parse.quote(query)}"
         papers = []
@@ -352,8 +342,6 @@ class AcademicPassive(OSINTUtils):
 
     def search_academia_edu(self, query, limit=10):
         """Search Academia.edu"""
-        import urllib.parse
-        from bs4 import BeautifulSoup
 
         search_url = f"https://www.academia.edu/search?q={urllib.parse.quote(query)}"
         papers = []

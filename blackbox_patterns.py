@@ -5,19 +5,17 @@ Machine learning-based pattern recognition for intelligence analysis.
 """
 
 import logging
+import importlib.util
 import re
-from typing import Any, Dict, List, Optional
-from collections import Counter, defaultdict
-import math
+from typing import Any, Dict, List
+from collections import Counter
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-try:
-    import numpy as np
-    HAS_NUMPY = True
-except ImportError:
-    HAS_NUMPY = False
+# Optional numpy support (not required). Detect availability without importing at type-check time.
+HAS_NUMPY = importlib.util.find_spec("numpy") is not None
+if not HAS_NUMPY:
     logger.warning("numpy not available - advanced ML features disabled")
 
 class BlackboxPatternEngine:

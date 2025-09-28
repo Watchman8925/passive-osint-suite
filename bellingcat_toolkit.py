@@ -7,17 +7,16 @@ Integration with Bellingcat's open-source investigation tools and methodologies.
 import logging
 import re
 import requests
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import hashlib
-import json
+import importlib.util
 
 logger = logging.getLogger(__name__)
 
 try:
-    from PIL import Image, ExifTags
-    HAS_PIL = True
-except ImportError:
+    HAS_PIL = importlib.util.find_spec("PIL") is not None
+except Exception:
     HAS_PIL = False
 
 class BellingcatToolkit:
@@ -427,7 +426,8 @@ class BellingcatToolkit:
                     # Basic content analysis (could be enhanced)
                     profile_info["content_length"] = len(response.content)
                     profile_info["has_content"] = len(response.content) > 1000
-                except:
+                except Exception:
+                    # Ignore content fetch errors; HEAD already provided existence/status
                     pass
 
             return profile_info

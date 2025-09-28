@@ -974,7 +974,7 @@ class RealTimeIntelligenceFeed:
             if hasattr(self, "scheduler") and self.scheduler.running:
                 try:
                     self.scheduler.remove_job(f"feed_{feed_name}")
-                except:
+                except Exception:
                     pass  # Job might not exist
 
             del self.feed_sources[feed_name]

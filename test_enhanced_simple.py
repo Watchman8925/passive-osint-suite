@@ -4,15 +4,10 @@ Simple test for enhanced OSINT modules core functionality
 Tests without full OSINTUtils dependencies
 """
 
-import sys
 import os
-import json
 from urllib.parse import urlparse, parse_qs, quote_plus
-import random
 import re
-import hashlib
 import socket
-import ipaddress
 from datetime import datetime
 
 
@@ -175,7 +170,7 @@ def test_free_tools_functionality():
                 print("✓ DNS lookup working")
             else:
                 print("✗ DNS lookup failed")
-        except:
+        except Exception:
             print("✗ DNS lookup failed (network issue)")
 
         print("✓ Free tools functionality OK")
