@@ -57,7 +57,8 @@ coverage.xml
 *~
 .vscode/settings.json
 .devcontainer/
-.github/
+# Allow GitHub workflows for CI/CD
+# .github/  # uncomment to ignore workflows (we want to track them)
 *.md.bak
 temp/
 tmp/

@@ -40,11 +40,7 @@ python scripts/security_audit.py
 python main.py
 ```
 
-### Alternative Launch Methods
-
 ```bash
-# Quick health check before starting
-./monitor_system.sh
 
 # Run setup wizard only (for existing installations)
 ./install_universal.sh --wizard
