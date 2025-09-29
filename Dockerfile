@@ -18,7 +18,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages with better caching and error handling
-RUN pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
+RUN python -m pip install --no-cache-dir --user --upgrade "pip==25.2" setuptools wheel && \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Create cache directory for models (they will be downloaded at runtime)
@@ -28,14 +28,16 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
 # Production stage
 FROM python:3.12-slim AS production
 
-# Install runtime dependencies (include libexpat1 and upgrade it to mitigate CVE)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    tor \
+# Upgrade base packages and install minimal runtime deps (remove tor; rely on tor-proxy container)
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
     curl \
     procps \
+    ca-certificates \
     libexpat1 \
-    && apt-get install -y --only-upgrade libexpat1 \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure latest secure pip in production environment
+RUN python -m pip install --no-cache-dir --upgrade "pip==25.2" setuptools wheel
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint
@@ -52,9 +54,6 @@ COPY --chown=osint:osint . .
 RUN mkdir -p /app/output/encrypted /app/output/audit /app/output/logs /app/logs /app/policies \
     && chown -R osint:osint /app \
     && chown -R osint:osint /home/osint
-
-# Configure Tor
-COPY --chown=osint:osint docker/torrc /etc/tor/torrc
 
 # Switch to non-root user
 USER osint
