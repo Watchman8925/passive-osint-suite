@@ -1,13 +1,13 @@
 # Multi-stage Docker build for OSINT Suite
 FROM python:3.12-slim as builder
 
-# Install system dependencies
+# Install system dependencies for building
 RUN apt-get update && apt-get install -y \
     build-essential \
     libffi-dev \
     libssl-dev \
-    tor \
-    linux-headers-generic \
+    git \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -16,7 +16,14 @@ RUN useradd --create-home --shell /bin/bash osint
 # Set up Python environment
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Install Python packages with better caching and error handling
+RUN pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --user -r requirements.txt
+
+# Create cache directory for models (they will be downloaded at runtime)
+RUN mkdir -p /home/osint/.cache/huggingface && \
+    chown -R osint:osint /home/osint/.cache
 
 # Production stage
 FROM python:3.12-slim as production
@@ -25,21 +32,24 @@ FROM python:3.12-slim as production
 RUN apt-get update && apt-get install -y \
     tor \
     curl \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint
 
-# Copy Python packages from builder
+# Copy Python packages and cache from builder
 COPY --from=builder /root/.local /home/osint/.local
+COPY --from=builder /home/osint/.cache /home/osint/.cache
 
 # Set up application
 WORKDIR /app
 COPY --chown=osint:osint . .
 
-# Create required directories
+# Create required directories with proper permissions
 RUN mkdir -p output/encrypted output/audit output/logs logs policies \
-    && chown -R osint:osint /app
+    && chown -R osint:osint /app \
+    && chown -R osint:osint /home/osint
 
 # Configure Tor
 COPY --chown=osint:osint docker/torrc /etc/tor/torrc
@@ -52,10 +62,11 @@ ENV PATH=/home/osint/.local/bin:$PATH
 ENV PYTHONPATH=/app
 ENV OSINT_USE_KEYRING=false
 ENV OSINT_TEST_MODE=false
+ENV HF_HOME=/home/osint/.cache/huggingface
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+# Enhanced health check for analysis modules
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+    CMD python -c "from modules import MODULE_REGISTRY; print(f'Health: {len(MODULE_REGISTRY)} modules loaded')" || exit 1
 
 # Expose API port
 EXPOSE 8000

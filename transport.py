@@ -86,8 +86,11 @@ class Transport:
             return self.transport.post(url, **kwargs)
 
 
-# Global transport instance
-_transport = Transport()
+# Global transport instance with Tor proxy for anonymity
+_transport = Transport(proxy_url="socks5h://127.0.0.1:9050")
+
+# Export transport instance for DoH client compatibility
+transport = _transport
 
 
 def sync_get(url: str, **kwargs) -> requests.Response:

@@ -499,6 +499,8 @@ class RealTimeIntelligenceFeed:
 
         if isinstance(data, list):  # HaveIBeenPwned breaches
             for breach in data:
+                if not isinstance(breach, dict):
+                    continue
                 breach_name = breach.get("Name", "")
                 breach_date = breach.get("BreachDate", "")
 
@@ -511,15 +513,15 @@ class RealTimeIntelligenceFeed:
                         alert = IntelligenceAlert(
                             alert_id=f"breach_alert_{breach_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                             title=f"New Data Breach: {breach_name}",
-                            description=f"New breach discovered: {breach.get('Description', '')}",
+                            description=f"New breach discovered: {breach.get('Description', '') if isinstance(breach, dict) else ''}",
                             severity=AlertSeverity.HIGH,
                             feed_type=FeedType.BREACH,
                             target=breach_name,
                             indicators={
                                 "breach_name": breach_name,
                                 "breach_date": breach_date,
-                                "compromised_accounts": breach.get("PwnCount", 0),
-                                "compromised_data": breach.get("DataClasses", []),
+                                "compromised_accounts": breach.get("PwnCount", 0) if isinstance(breach, dict) else 0,
+                                "compromised_data": breach.get("DataClasses", []) if isinstance(breach, dict) else [],
                             },
                             source=feed.name,
                             confidence=0.95,

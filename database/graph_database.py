@@ -78,7 +78,7 @@ class GraphDatabaseAdapter:
         self.uri = uri
         self.user = user
         self.password = password
-        self.driver: Optional[AsyncDriver] = None
+        self.driver: Optional[Any] = None
         self.connected = False
 
     async def connect(self) -> bool:

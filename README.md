@@ -1,24 +1,44 @@
-# Autonomous OSINT Suite
+# Passive OSINT Suite
 
-A comprehensive, autonomous Open Source Intelligence (OSINT) gathering suite with enterprise-grade security, anonymity, and operational security features. Now enhanced with **RapidAPI integrations**, **free tools**, **pre-seeded databases**, and a **modern web interface**.
+A comprehensive, production-ready Open Source Intelligence (OSINT) gathering suite with enterprise-grade security, anonymity, and operational security features. Designed for autonomous intelligence collection with modern web interface, API integration, and advanced analysis capabilities.
 
 ## 🚀 Quick Start
 
-### One-Command Setup (Recommended)
+### Automated Setup (Recommended)
 
 ```bash
-# Clone and setup everything automatically
-git clone <repository-url>
-cd osint-suite
+# 1. Run the comprehensive setup script
+./setup.sh
 
-# Run the universal installer (includes health checks and setup wizard)
-./install_universal.sh
+# 2. Start the OSINT suite
+python main.py
 
-# Launch with the intelligent quick start menu
-./start_osint_suite.sh
+# 3. Or use the web interface
+python -m api.api_server
 ```
 
-Then visit **<http://localhost:3000>** for the web interface!
+Then visit **[http://localhost:8000](http://localhost:8000)** for the API docs or **[http://localhost:3000](http://localhost:3000)** for the web interface!
+
+### Manual Setup
+
+```bash
+# 1. Create Python virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env with your API keys and configuration
+
+# 4. Run security audit
+python scripts/security_audit.py
+
+# 5. Start the application
+python main.py
+```
 
 ### Alternative Launch Methods
 
@@ -47,161 +67,395 @@ For complete installation instructions, usage guides, and API documentation, see
 
 ## ✨ Key Features
 
-### 🔒 **Security & Anonymity**
-- Tor integration with circuit hygiene
-- DNS over HTTPS via Tor
-- Query obfuscation and anti-fingerprinting
-- OPSEC policy enforcement
+### 🔒 **Security & Privacy**
+- Comprehensive security audit and hardening
+- Encrypted configuration and sensitive data handling
+- Secure file permissions and access controls
+- Environment-based configuration management
+- Vulnerability scanning and dependency checking
 
-### 🕵️ **Intelligence Gathering**
-- **15+ RapidAPI Services** - Free-tier access to premium intelligence APIs
-- **Government Databases** - CISA, FBI, OFAC, NOAA, USGS, and more (no API keys required)
-- **Free Local Tools** - File analysis, URL inspection, pattern extraction
-- **Enhanced Google Dorking** - Multi-engine search with comprehensive patterns
-- **Bellingcat Toolkit** - Investigative journalism tools
+### 🕵️ **Intelligence Gathering & Analysis**
+- **Domain Intelligence** - WHOIS, DNS enumeration, SSL certificate analysis
+- **Network Analysis** - Local network discovery and enumeration
+- **Metadata Extraction** - File analysis and information extraction
+- **Bellingcat Toolkit** - Open source investigation tools and methodologies
+- **Pattern Detection** - Hidden pattern analysis and blackbox investigation
+- **Machine Learning Analysis** - Advanced pattern recognition for threat detection
+- **Cross-Reference Engine** - Multi-source data correlation and entity linking
+- **Conspiracy Analysis** - Advanced conspiracy theory pattern detection and validation
+- **Local LLM Integration** - Offline AI analysis with Transformers backend
 
-### 🌐 **Modern Web Interface**
-- React/Vite frontend with real-time updates
-- AI-powered analysis and investigation management
-- Interactive data visualization and mapping
-- Export capabilities (JSON, CSV, PDF, Excel)
+### 🌐 **Modern Architecture**
+- FastAPI backend with comprehensive REST API
+- Modular capability system with plugin architecture
+- Real-time processing and async operations
+- Comprehensive logging and monitoring
+- Docker containerization support
 
 ### 🔧 **Enterprise Features**
-- FastAPI backend with WebSocket support
-- Redis caching and Elasticsearch indexing
-- Immutable audit trails and result encryption
-- Role-based access control (RBAC)
+- Automated setup and configuration scripts
+- Comprehensive health checking and monitoring
+- Security audit and compliance tools
+- Production-ready deployment configurations
+- Extensive documentation and user guides
 
-## �️ **Deployment & Monitoring**
+## ⚙️ **Production Deployment**
 
-### **Universal Installer**
-- **Environment Detection**: Automatic OS, architecture, and dependency detection
-- **Health Checks**: Comprehensive validation of all components before startup
-- **Setup Wizard**: Guided configuration for API keys, security settings, and preferences
-- **Error Recovery**: Automatic troubleshooting and rollback capabilities
+### **Automated Setup**
+- **Cross-Platform Support**: Linux, macOS, Windows with automatic OS detection
+- **Dependency Management**: Automatic installation of Python, Docker, and system dependencies
+- **Environment Configuration**: Guided setup with secure key generation
+- **Health Validation**: Comprehensive pre-flight checks and system validation
 
-### **Intelligent Launcher**
-- **Quick Start Menu**: Interactive menu for different launch modes
-- **Health Validation**: Pre-launch health checks with issue detection
-- **Multiple Interfaces**: Web, CLI, direct command, and quick investigation modes
-- **Documentation Access**: Built-in help and documentation viewer
+### **Security & Hardening**
+- **Security Audit**: Built-in security scanner for vulnerabilities and misconfigurations
+- **File Permissions**: Automatic security hardening with proper file permissions
+- **Secret Management**: Environment-based configuration with encrypted storage
+- **Compliance Checks**: PEP8 compliance, dependency vulnerability scanning
 
-### **System Monitoring**
-- **Continuous Health Monitoring**: Background daemon for system health tracking
-- **Alert System**: Automatic alerts for disk space, memory, and component failures
-- **Resource Tracking**: CPU, memory, network, and storage monitoring
-- **Log Management**: Automatic log rotation and size monitoring
+### **Monitoring & Operations**
+- **Health Monitoring**: Continuous system health and performance monitoring
+- **Logging System**: Structured logging with automatic rotation and archival
+- **Docker Support**: Production-ready containerization with monitoring stack
+- **API Documentation**: Automatic OpenAPI documentation and testing interface
 
-## �📦 What's Included
+## 📦 What's Included
 
-- **30+ OSINT Modules** across 15+ categories
-- **Web Application** with modern React interface
-- **REST API** with automatic documentation
-- **CLI Tools** for all major functions
-- **Security Framework** with Tor integration
-- **Investigation Management** and case tracking
+- **48+ Intelligence Modules**: Domain analysis, network enumeration, metadata extraction, social media intelligence
+- **Advanced Analysis Engines**: Bellingcat toolkit, pattern detection, cross-reference correlation, conspiracy analysis
+- **Local LLM Integration**: Offline AI analysis with microsoft/DialoGPT-medium and google/flan-t5-large models
+- **Security Framework**: Comprehensive audit tools, secure configuration management, 21+ security checks
+- **REST API**: FastAPI backend with automatic OpenAPI documentation and 8000+ endpoint
+- **Automation Tools**: Setup scripts, health monitoring, deployment automation, Docker orchestration
+- **Development Tools**: Security audit, ruff linting, testing framework, Docker containerization
 
 ## 🛠️ Quick Module Examples
 
 ```python
-# Enhanced modules (new!)
-from modules import get_module
+# Main OSINT Suite Interface
+from osint_suite import OSINTSuite
 
-# RapidAPI integration
-rapidapi = get_module('rapidapi_osint')
-results = rapidapi.comprehensive_person_search(email="target@example.com")
+suite = OSINTSuite()
 
-# Government databases (free)
-db = get_module('preseeded_databases')
-vulns = db.search_cisa_vulnerabilities("CVE-2023")
+# Domain Intelligence
+domain_info = suite.whois_lookup("example.com")
+dns_records = suite.dns_enumeration("example.com")
+ssl_info = suite.ssl_certificate_analysis("example.com")
 
-# Local analysis tools
-tools = get_module('free_tools')
-metadata = tools.extract_file_metadata("document.pdf")
+# Network Analysis
+network_scan = suite.local_network_scan()
+dns_enum = suite.local_dns_enumeration()
 
-# Advanced dorking
-dorking = get_module('search_engine_dorking')
-results = dorking.comprehensive_dorking_search("example.com")
+# File Analysis
+metadata = suite.extract_metadata("document.pdf")
+patterns = suite.detect_hidden_patterns("data.txt")
+
+# Advanced Analysis
+correlations = suite.cross_reference_analysis(targets)
+conspiracy_data = suite.conspiracy_analysis(evidence)
 ```
 
-## 🔗 Links
+### CLI Usage
 
-- **Web Interface**: <http://localhost:3001> (after setup)
-- **API Documentation**: <http://localhost:8001/docs> (after setup)
-- **GitHub Repository**: [Link to repository]
+```bash
+# Run comprehensive domain analysis
+python main.py --target example.com --modules whois,dns,ssl
 
----
+# Extract metadata from files
+python main.py --extract-metadata --file document.pdf
 
-**Ready to get started?** Run `./start_simple.sh` and visit <http://localhost:3001>!
+# Run security audit
+python scripts/security_audit.py
+
+# Start API server
+python -m api.api_server
+```
+
+## � Installation & Configuration
+
+### System Requirements
+
+- **Python**: 3.8+ (3.12 recommended)
+- **Operating System**: Linux, macOS, Windows (WSL recommended for Windows)
+- **Memory**: 4GB RAM minimum (8GB recommended)
+- **Storage**: 2GB free space
+- **Network**: Internet connection for external API calls
+
+### Environment Configuration
+
+1. **Copy environment template:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure essential settings:**
+   ```bash
+   # Security settings
+   SECRET_KEY=your-secret-key-here
+   MASTER_ENCRYPTION_KEY=your-encryption-key-here
+   
+   # API configurations
+   OSINT_API_KEY=your-api-key
+   WHOIS_API_KEY=your-whois-key
+   
+   # Database settings
+   DATABASE_URL=sqlite:///./osint_suite.db
+   REDIS_URL=redis://localhost:6379
+   
+   # Security settings
+   ENABLE_TOR=true
+   ENABLE_VPN_CHECK=true
+   MAX_CONCURRENT_REQUESTS=10
+   ```
+
+3. **Generate secure keys:**
+   ```bash
+   # The setup script will generate these automatically
+   ./setup.sh --generate-keys
+   ```
+
+### Security Hardening
+
+Run the security audit to ensure proper configuration:
+
+```bash
+python scripts/security_audit.py
+```
+
+This will check for:
+- Hardcoded secrets and API keys
+- File permission issues  
+- Dependency vulnerabilities
+- Docker security configurations
+- Environment variable setup
+
+## 🌐 API Documentation
+
+### REST API Endpoints
+
+Start the API server:
+```bash
+python -m api.api_server
+```
+
+Access API documentation at: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+**Key Endpoints:**
+- `GET /api/health` - System health check
+- `POST /api/whois` - WHOIS domain lookup
+- `POST /api/dns` - DNS enumeration
+- `POST /api/ssl` - SSL certificate analysis
+- `POST /api/metadata` - File metadata extraction
+- `GET /api/capabilities` - List available capabilities
+
+### WebSocket Support
+
+Real-time updates available via WebSocket at `ws://localhost:8000/ws`
+
+### Authentication
+
+API supports multiple authentication methods:
+- API Key authentication
+- JWT tokens
+- Basic authentication (development only)
+
+## 🔧 Advanced Configuration
+
+### Docker Deployment
+
+```bash
+# Build and start with Docker Compose
+docker-compose up -d
+
+# Start with monitoring stack
+docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Custom Modules
+
+Create custom capabilities by extending the base capability class:
+
+```python
+from capabilities.registry import register_capability
+from capabilities.definitions import BaseCapability
+
+@register_capability("custom_analysis")
+class CustomAnalysis(BaseCapability):
+    def execute(self, target, **kwargs):
+        # Your custom analysis logic here
+        return {"results": "custom analysis data"}
+```
 
 ## 🛠️ Troubleshooting
 
 ### Health Checks & Diagnostics
 
-**Run comprehensive health checks:**
+**Run system health check:**
 ```bash
-# Full health check with detailed component validation
-./install_universal.sh --health-check
-
-# Quick health check
-./monitor_system.sh
-
-# Generate health report
-./monitor_system.sh --report
-
-# View recent alerts
-./monitor_system.sh --alerts
+python health_check.py
 ```
 
-**Common Issues & Solutions:**
-
-- **Python environment issues**: Run `./install_universal.sh` to reinstall
-- **Missing dependencies**: The installer will detect and fix automatically
-- **Configuration problems**: Run `./install_universal.sh --wizard` to reconfigure
-- **Network issues**: Check `./monitor_system.sh` for connectivity status
-
-### System Monitoring
-
-**Start background monitoring:**
+**Run security audit:**
 ```bash
-# Monitor system health continuously
-./monitor_system.sh --daemon
-
-# Check logs for issues
-tail -f logs/monitoring.log
-tail -f logs/alerts.log
+python scripts/security_audit.py
 ```
 
-### Dev Container Recovery Mode
-
-If you see "This codespace is currently running in recovery mode due to a configuration error":
-
-1. **Run the rebuild script** (safest option):
-   ```bash
-   ./rebuild_container.sh
-   ```
-
-2. **Or manually rebuild** using VS Code Command Palette:
-   - `Ctrl+Shift+P` → "Dev Containers: Rebuild Container"
-
-3. **Wait for rebuild** - this takes ~2-3 minutes for the minimal setup
-
-**What the rebuild does:**
-- ✅ Installs Python 3.12 with core packages only
-- ✅ Sets up Git and essential tools
-- ✅ Installs VS Code extensions
-- ✅ Makes scripts executable
-- ✅ **Node.js and full ML packages install automatically on first run**
-
-### First Run Setup
-
-After container rebuild, run:
+**Check system dependencies:**
 ```bash
-./install_universal.sh
+./setup.sh --check-deps
 ```
 
-This will automatically:
-- Detect your environment and install dependencies
-- Run comprehensive health checks
-- Launch the setup wizard for configuration
-- Validate all components before completion
+### Common Issues & Solutions
+
+#### **Python Environment Issues**
+```bash
+# Recreate virtual environment
+python -m venv venv --clear
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### **Missing Dependencies**
+```bash
+# Auto-install system dependencies
+./setup.sh --install-deps
+
+# Manual dependency check
+python -c "import sys; print(sys.version)"
+```
+
+#### **Configuration Problems**
+```bash
+# Regenerate configuration
+cp .env.example .env
+./setup.sh --configure
+
+# Check configuration validity
+python -c "from config.ini import *; print('Config OK')"
+```
+
+#### **Permission Issues**
+```bash
+# Fix file permissions
+chmod 755 setup.sh
+chmod 600 config/config.ini
+chmod 600 .env
+```
+
+#### **API Server Issues**
+```bash
+# Check if port is in use
+netstat -tulpn | grep :8000
+
+# Start with debug mode
+python -m api.api_server --debug
+
+# Check API health
+curl http://localhost:8000/api/health
+```
+
+### Logging & Debugging
+
+**Check application logs:**
+```bash
+tail -f logs/osint_suite.log
+tail -f logs/api.log
+tail -f logs/security.log
+```
+
+**Enable debug mode:**
+```bash
+export LOG_LEVEL=DEBUG
+python main.py --debug
+```
+
+**Clear logs and cache:**
+```bash
+rm -rf logs/*.log
+rm -rf __pycache__/
+```
+
+### Performance Optimization
+
+**Monitor resource usage:**
+```bash
+# Check system resources
+htop
+df -h
+free -h
+
+# Monitor Python processes
+ps aux | grep python
+```
+
+**Database maintenance:**
+```bash
+# SQLite maintenance (if using SQLite)
+sqlite3 osint_suite.db "VACUUM;"
+
+# Clear temporary files
+find . -name "*.tmp" -delete
+find . -name "*.cache" -delete
+```
+
+### Getting Help
+
+- **Check logs first**: Most issues are logged in `logs/` directory
+- **Run health check**: `python health_check.py` provides comprehensive diagnostics  
+- **Security audit**: `python scripts/security_audit.py` identifies security issues
+- **Configuration validation**: Ensure `.env` file is properly configured
+- **Dependencies**: Run `./setup.sh --check-deps` to verify all dependencies
+
+## 🤝 Contributing
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd passive-osint-suite
+
+# Setup development environment
+./setup.sh --dev
+
+# Install development dependencies
+pip install -r requirements.txt
+
+# Run tests
+python -m pytest tests/
+
+# Run linting
+ruff check .
+```
+
+### Code Standards
+
+- **PEP8 Compliance**: All code must pass `ruff check`
+- **Security**: Run `python scripts/security_audit.py` before commits
+- **Testing**: Add tests for new capabilities
+- **Documentation**: Update README and docstrings
+
+### Adding New Capabilities
+
+1. Create capability in `capabilities/` directory
+2. Register in `capabilities/registry.py`
+3. Add tests in `tests/`
+4. Update documentation
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links & Resources
+
+- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs) (when running)
+- **Health Check**: `python health_check.py`
+- **Security Audit**: `python scripts/security_audit.py`
+- **Setup Script**: `./setup.sh`
+
+---
+
+**Ready to get started?** Run `./setup.sh` and then `python main.py`!

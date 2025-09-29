@@ -18,12 +18,16 @@ web/dist/
 .parcel-cache/
 *.tsbuildinfo
 .DS_Store
+security/master.key
+security/encryption.key
 .idea/
 .vscode/
 *.log
 *.enc
 secrets.enc
 encryption.key
+config/config.ini
+config.ini
 .sfdx/
 *.shoo
 nohup.out

@@ -2,7 +2,7 @@
 Metadata Extraction and File Analysis Module
 
 This module provides local file analysis capabilities including:
-- EXIF data extraction from images
+- Metadata extraction from images
 - File type detection
 - Basic file hashing
 - Content analysis
@@ -12,9 +12,15 @@ This module provides local file analysis capabilities including:
 import os
 import hashlib
 import mimetypes
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from pathlib import Path
-from PIL import Image, ExifTags
+try:
+    from PIL import Image, ExifTags  # type: ignore
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    Image = None  # type: ignore
+    ExifTags = None  # type: ignore
 from datetime import datetime
 
 from utils.osint_utils import OSINTUtils
@@ -84,6 +90,9 @@ class MetadataExtractor(OSINTUtils):
     def _extract_image_metadata(self, file_path: str) -> Dict[str, Any]:
         """Extract EXIF and other metadata from images"""
         try:
+            if not PIL_AVAILABLE or Image is None:
+                return {"error": "PIL not available for image processing"}
+                
             with Image.open(file_path) as img:
                 metadata = {
                     "format": img.format,
@@ -96,7 +105,7 @@ class MetadataExtractor(OSINTUtils):
                 if hasattr(img, '_getexif') and img._getexif():
                     exif_data = img._getexif()
                     for tag, value in exif_data.items():
-                        tag_name = ExifTags.TAGS.get(tag, tag)
+                        tag_name = ExifTags.TAGS.get(tag, tag) if ExifTags and ExifTags.TAGS else str(tag)
                         if isinstance(value, bytes):
                             try:
                                 value = value.decode('utf-8', errors='ignore')
@@ -116,12 +125,10 @@ class MetadataExtractor(OSINTUtils):
             # Basic text file analysis
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
-                metadata.update({
-                    "line_count": len(content.split('\n')),
-                    "word_count": len(content.split()),
-                    "char_count": len(content),
-                    "encoding": "utf-8"
-                })
+                metadata["line_count"] = str(len(content.split('\n')))
+                metadata["word_count"] = str(len(content.split()))
+                metadata["char_count"] = str(len(content))
+                metadata["encoding"] = "utf-8"
 
                 # Check for potential sensitive information
                 sensitive_patterns = {
@@ -129,7 +136,7 @@ class MetadataExtractor(OSINTUtils):
                     "phones": len(self._find_phone_numbers(content)),
                     "urls": len(self._find_urls(content))
                 }
-                metadata["sensitive_data"] = sensitive_patterns
+                metadata["sensitive_data"] = str(sensitive_patterns)
 
         except UnicodeDecodeError:
             # Binary file or different encoding
@@ -208,8 +215,9 @@ Detailed Results:
 
         return report
 
-    def _format_size(self, size_bytes: int) -> str:
+    def _format_size(self, size_bytes: Union[int, float]) -> str:
         """Format file size in human readable format"""
+        size_bytes = float(size_bytes)
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.1f} {unit}"

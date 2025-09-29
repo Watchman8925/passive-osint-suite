@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from bs4 import BeautifulSoup
-from blackbox_patterns import BlackboxPatternEngine
+# Lazy import to avoid circular dependencies
 from local_llm_engine import LocalLLMEngine
 from transport import Transport, sync_get, ProxiedTransport
 
@@ -99,7 +99,7 @@ class CrossReferenceEngine:
         self.sources = {}
         self.transport = Transport()
         self.llm_engine = LocalLLMEngine()
-        self.pattern_engine = BlackboxPatternEngine()
+        self.pattern_engine = None  # Lazy load to avoid circular imports
 
         # Initialize intelligence sources
         self._initialize_sources()
@@ -109,6 +109,24 @@ class CrossReferenceEngine:
 
         # Initialize hidden pattern detection
         self._initialize_hidden_patterns()
+
+    def _get_pattern_engine(self):
+        """Lazy load pattern engine to avoid circular imports"""
+        if self.pattern_engine is None:
+            try:
+                from .blackbox_patterns import BlackboxPatternEngine
+                self.pattern_engine = BlackboxPatternEngine()
+            except ImportError:
+                try:
+                    from blackbox_patterns import BlackboxPatternEngine
+                    self.pattern_engine = BlackboxPatternEngine()
+                except ImportError:
+                    # Fallback no-op engine
+                    class NoOpPatternEngine:
+                        def analyze_patterns(self, *args, **kwargs):
+                            return {"patterns": [], "confidence": 0.0}
+                    self.pattern_engine = NoOpPatternEngine()
+        return self.pattern_engine
 
     def _initialize_sources(self):
         """Initialize comprehensive intelligence sources."""
@@ -921,14 +939,15 @@ class CrossReferenceEngine:
                     "timestamp": hit.timestamp.isoformat(),
                     "query": query,
                 }
-                patterns = self.pattern_engine.analyze_patterns(pattern_input)
+                patterns = self._get_pattern_engine().analyze_patterns(str(pattern_input))
                 # Normalize patterns to a list of strings regardless of return type
                 normalized_patterns: List[str] = []
                 for p in (patterns or []):
                     if hasattr(p, "pattern_type"):
                         normalized_patterns.append(str(getattr(p, "pattern_type")))
                     elif isinstance(p, dict) and "pattern_type" in p:
-                        normalized_patterns.append(str(p["pattern_type"]))
+                        if isinstance(p, dict) and "pattern_type" in p:
+                            normalized_patterns.append(str(p["pattern_type"]))
                     else:
                         normalized_patterns.append(str(p))
                 hit.patterns_detected = normalized_patterns

@@ -52,10 +52,10 @@ from .patent_passive import PatentPassive
 import importlib
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('conspiracy_analyzer')
+    module = importlib.import_module('analysis.conspiracy_analyzer')
     ConspiracyTheoryAnalyzer = getattr(module, 'ConspiracyTheoryAnalyzer', None)
     if ConspiracyTheoryAnalyzer is None:
-        raise ImportError("ConspiracyTheoryAnalyzer not found in conspiracy_analyzer")
+        raise ImportError("ConspiracyTheoryAnalyzer not found in analysis.conspiracy_analyzer")
 except Exception as e:
     print(f"Warning: Could not import ConspiracyTheoryAnalyzer: {e}")
     ConspiracyTheoryAnalyzer = None
@@ -63,10 +63,10 @@ except Exception as e:
 # Import additional specialized modules from root directory
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('hidden_pattern_detector')
+    module = importlib.import_module('analysis.hidden_pattern_detector')
     HiddenPatternDetector = getattr(module, 'HiddenPatternDetector', None)
     if HiddenPatternDetector is None:
-        raise ImportError("HiddenPatternDetector not found in hidden_pattern_detector")
+        raise ImportError("HiddenPatternDetector not found in analysis.hidden_pattern_detector")
 except Exception as e:
     print(f"Warning: Could not import HiddenPatternDetector: {e}")
     HiddenPatternDetector = None
@@ -92,20 +92,20 @@ except Exception as e:
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('cross_reference_engine')
+    module = importlib.import_module('analysis.cross_reference_engine')
     CrossReferenceEngine = getattr(module, 'CrossReferenceEngine', None)
     if CrossReferenceEngine is None:
-        raise ImportError("CrossReferenceEngine not found in cross_reference_engine")
+        raise ImportError("CrossReferenceEngine not found in analysis.cross_reference_engine")
 except Exception as e:
     print(f"Warning: Could not import CrossReferenceEngine: {e}")
     CrossReferenceEngine = None
 
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
-    module = importlib.import_module('blackbox_patterns')
+    module = importlib.import_module('analysis.blackbox_patterns')
     BlackboxPatternEngine = getattr(module, 'BlackboxPatternEngine', None)
     if BlackboxPatternEngine is None:
-        raise ImportError("BlackboxPatternEngine not found in blackbox_patterns")
+        raise ImportError("BlackboxPatternEngine not found in analysis.blackbox_patterns")
 except Exception as e:
     print(f"Warning: Could not import BlackboxPatternEngine: {e}")
     BlackboxPatternEngine = None
@@ -429,7 +429,8 @@ CATEGORIES = {
     'aviation': ['flight_intel'],
     'crypto': ['crypto_intel'],
     'code': ['github_search', 'code_analysis', 'gitlab_passive', 'bitbucket_passive'],
-    'patent': ['patent_passive']
+        'patent': ['patent_passive'],
+        'analysis': ['bellingcat_toolkit', 'blackbox_patterns', 'conspiracy_analyzer', 'cross_reference_engine', 'hidden_pattern_detector']
 }
 
 def get_module(module_name: str) -> Any:

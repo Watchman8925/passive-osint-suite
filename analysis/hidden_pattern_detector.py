@@ -28,27 +28,7 @@ import networkx as nx
 from analysis.cross_reference_engine import CrossReferenceEngine, CrossReferenceHit
 from core.local_llm_engine import create_local_llm_engine
 
-# Optional blackbox pattern engine (fallback to no-op if unavailable)
-try:
-    import blackbox_patterns  # type: ignore[import-not-found]
-except Exception:
-    blackbox_patterns = None  # type: ignore[assignment]
-
-def _fallback_blackbox_pattern_engine():
-    class _NoopPatternEngine:
-        active = False
-        async def analyze(self, *args, **kwargs):
-            return {}
-    return _NoopPatternEngine()
-
-if blackbox_patterns is not None:
-    create_blackbox_pattern_engine = getattr(
-        blackbox_patterns,
-        "create_blackbox_pattern_engine",
-        _fallback_blackbox_pattern_engine,
-    )  # type: ignore[attr-defined]
-else:
-    create_blackbox_pattern_engine = _fallback_blackbox_pattern_engine
+# Avoid circular imports - use lazy loading if needed
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +101,7 @@ class HiddenPatternDetector:
     def __init__(self):
         self.cross_ref_engine = CrossReferenceEngine()
         self.llm_engine = create_local_llm_engine()
-        self.pattern_engine = create_blackbox_pattern_engine()
+        self.pattern_engine = None  # Lazy load to avoid circular imports
 
         # Initialize detection algorithms
         self.detection_algorithms: Dict[str, Dict[str, Any]] = {}
@@ -135,6 +115,27 @@ class HiddenPatternDetector:
 
         # Initialize truth-seeking algorithms
         self._initialize_truth_algorithms()
+
+    def _get_pattern_engine(self):
+        """Lazy load pattern engine to avoid circular imports"""
+        if self.pattern_engine is None:
+            try:
+                from .blackbox_patterns import BlackboxPatternEngine
+                self.pattern_engine = BlackboxPatternEngine()
+            except ImportError:
+                try:
+                    from blackbox_patterns import BlackboxPatternEngine
+                    self.pattern_engine = BlackboxPatternEngine()
+                except ImportError:
+                    # Fallback no-op engine
+                    class NoOpPatternEngine:
+                        def analyze_patterns(self, *args, **kwargs):
+                            return {"patterns": [], "confidence": 0.0}
+                        async def analyze(self, *args, **kwargs):
+                            return {}
+                        active = False
+                    self.pattern_engine = NoOpPatternEngine()
+        return self.pattern_engine
 
     def _initialize_algorithms(self):
         """Initialize sophisticated detection algorithms."""
