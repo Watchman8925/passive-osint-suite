@@ -28,11 +28,13 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
 # Production stage
 FROM python:3.12-slim AS production
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies (include libexpat1 and upgrade it to mitigate CVE)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tor \
     curl \
     procps \
+    libexpat1 \
+    && apt-get install -y --only-upgrade libexpat1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
