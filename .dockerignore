@@ -1,0 +1,43 @@
+# Reduce Docker build context size and speed up builds
+# Local Python/VS Code artifacts
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.vscode/
+.idea/
+*.egg-info/
+*.ipynb_checkpoints/
+
+# Environment and local config
+.env
+.env.*
+*.log
+*.tmp
+.DS_Store
+
+# Frontend build/deps (reinstallable)
+web/node_modules/
+web/dist/
+node_modules/
+dist/
+build/
+
+# Caches
+.cache/
+.hypothesis/
+
+# Runtime output that should be host-mounted, not baked into the image
+logs/
+output/
+# Keep policies in the image; they’re small and needed at runtime
+# policies/
+# Data/artifacts not required in the image (kept on host)
+evidence/
+investigations/
+
+# Git
+.git/
+.gitignore
