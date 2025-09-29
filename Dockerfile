@@ -47,7 +47,7 @@ WORKDIR /app
 COPY --chown=osint:osint . .
 
 # Create required directories with proper permissions
-RUN mkdir -p output/encrypted output/audit output/logs logs policies \
+RUN mkdir -p /app/output/encrypted /app/output/audit /app/output/logs /app/logs /app/policies \
     && chown -R osint:osint /app \
     && chown -R osint:osint /home/osint
 
