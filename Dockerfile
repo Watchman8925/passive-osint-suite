@@ -1,5 +1,5 @@
 # Multi-stage Docker build for OSINT Suite
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -26,7 +26,7 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
     chown -R osint:osint /home/osint/.cache
 
 # Production stage
-FROM python:3.12-slim as production
+FROM python:3.12-slim AS production
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
