@@ -64,3 +64,8 @@ coverage.xml
 temp/
 tmp/
 
+
+# Ruff cache
+.ruff_cache/
+**/.ruff_cache/
+
