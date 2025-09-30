@@ -25,21 +25,36 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from security.api_key_manager import APIConfigurationManager  # type: ignore
+
 # Import our existing modules
-from analysis.cross_reference_engine import ConspiracyTheory, CrossReferenceEngine, CrossReferenceHit  # type: ignore
+from analysis.cross_reference_engine import (
+    ConspiracyTheory,
+    CrossReferenceEngine,
+    CrossReferenceHit,
+)  # type: ignore
 from analysis.hidden_pattern_detector import HiddenPattern, HiddenPatternDetector  # type: ignore
 from core.local_llm_engine import create_local_llm_engine  # type: ignore
 
+
 # Subclass to add missing method
 class FixedCrossReferenceEngine(CrossReferenceEngine):
-    async def cross_reference_search(self, query: str, target_sources: Optional[List[str]] = None, search_mode: str = "comprehensive") -> List[CrossReferenceHit]:
+    async def cross_reference_search(
+        self,
+        query: str,
+        target_sources: Optional[List[str]] = None,
+        search_mode: str = "comprehensive",
+    ) -> List[CrossReferenceHit]:
         # Call the parent implementation
-        return await self.cross_reference_search(query, target_sources=target_sources, search_mode=search_mode)
+        return await self.cross_reference_search(
+            query, target_sources=target_sources, search_mode=search_mode
+        )
 
 
 # Subclass to add missing method for pattern detection
 class FixedHiddenPatternDetector(HiddenPatternDetector):
-    async def detect_hidden_patterns(self, data_sources: List[Any], detection_modes: Optional[List[str]] = None) -> List[HiddenPattern]:
+    async def detect_hidden_patterns(
+        self, data_sources: List[Any], detection_modes: Optional[List[str]] = None
+    ) -> List[HiddenPattern]:
         """
         Compatibility wrapper that tries common method names on the base detector
         and adapts call styles, returning an empty list if not available.
@@ -63,12 +78,15 @@ class FixedHiddenPatternDetector(HiddenPatternDetector):
                         result = await result
                     # Ensure we return a list of HiddenPattern
                     if isinstance(result, list):
-                        return [item for item in result if isinstance(item, HiddenPattern)]
+                        return [
+                            item for item in result if isinstance(item, HiddenPattern)
+                        ]
                     return []
             return []
         except Exception as e:
             logger.debug(f"Pattern detection fallback failed: {e}")
             return []
+
 
 logger = logging.getLogger(__name__)
 

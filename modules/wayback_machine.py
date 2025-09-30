@@ -12,16 +12,20 @@ class WaybackMachine(OSINTUtils):
         """
         api_url = f"https://web.archive.org/cdx/search/cdx?url={url}&output=json&fl=timestamp,original&collapse=digest"
         try:
-            resp = self.request_with_fallback('get', api_url, timeout=30, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", api_url, timeout=30, allow_fallback=True
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 snapshots = []
                 for entry in data[1:]:
                     timestamp, original = entry
-                    snapshots.append({
-                        "timestamp": timestamp,
-                        "snapshot_url": f"https://web.archive.org/web/{timestamp}/{original}"
-                    })
+                    snapshots.append(
+                        {
+                            "timestamp": timestamp,
+                            "snapshot_url": f"https://web.archive.org/web/{timestamp}/{original}",
+                        }
+                    )
                 return {"status": "success", "snapshots": snapshots}
             else:
                 return {"status": "error", "error": f"HTTP {resp.status_code}"}

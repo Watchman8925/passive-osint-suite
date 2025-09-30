@@ -14,16 +14,24 @@ class SocialMediaFootprint(OSINTUtils):
         # Twitter
         twitter_url = f"https://twitter.com/{name_or_handle}"
         try:
-            resp = self.request_with_fallback('get', twitter_url, timeout=15, allow_fallback=True)
-            if resp.status_code == 200 and 'profile' in resp.text:
+            resp = self.request_with_fallback(
+                "get", twitter_url, timeout=15, allow_fallback=True
+            )
+            if resp.status_code == 200 and "profile" in resp.text:
                 profiles.append({"platform": "Twitter", "url": twitter_url})
         except Exception as e:
             profiles.append({"platform": "Twitter", "error": str(e)})
         # Reddit
         reddit_url = f"https://www.reddit.com/user/{name_or_handle}"
         try:
-            resp = self.request_with_fallback('get', reddit_url, timeout=15, headers={"User-Agent": "Mozilla/5.0"}, allow_fallback=True)
-            if resp.status_code == 200 and 'Reddit' in resp.text:
+            resp = self.request_with_fallback(
+                "get",
+                reddit_url,
+                timeout=15,
+                headers={"User-Agent": "Mozilla/5.0"},
+                allow_fallback=True,
+            )
+            if resp.status_code == 200 and "Reddit" in resp.text:
                 profiles.append({"platform": "Reddit", "url": reddit_url})
         except Exception as e:
             profiles.append({"platform": "Reddit", "error": str(e)})

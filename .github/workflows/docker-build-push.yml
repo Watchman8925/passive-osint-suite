@@ -63,17 +63,29 @@ jobs:
           provenance: mode=max
           sbom: true
 
-      - name: Cosign sign (keyless)
+      - name: Cosign sign all tags (keyless)
         env:
           COSIGN_EXPERIMENTAL: 1
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          # Sign the canonical latest tag
-          cosign sign --yes $IMAGE_NAME:latest
+          set -euo pipefail
+          echo "Signing tags:\n$TAGS"
+          # Normalize to newline-delimited list and sign each
+          echo "$TAGS" | tr ' ' '\n' | while read -r ref; do
+            [[ -z "$ref" ]] && continue
+            echo "cosign sign --yes $ref"
+            cosign sign --yes "$ref"
+          done
 
-      - name: Cosign verify
+      - name: Cosign verify all tags
         env:
           COSIGN_EXPERIMENTAL: 1
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          cosign verify $IMAGE_NAME:latest
+          set -euo pipefail
+          echo "Verifying tags:\n$TAGS"
+          echo "$TAGS" | tr ' ' '\n' | while read -r ref; do
+            [[ -z "$ref" ]] && continue
+            echo "cosign verify $ref"
+            cosign verify "$ref"
+          done

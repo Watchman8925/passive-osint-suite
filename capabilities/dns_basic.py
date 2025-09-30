@@ -7,6 +7,7 @@ from .definitions import CapabilityResult
 
 # Very lightweight DNS A record lookup (blocking). In future convert to async & add error handling.
 
+
 def execute(context: Dict[str, Any], domain: str) -> CapabilityResult:
     result = CapabilityResult.start("dns_basic")
     try:
@@ -20,18 +21,22 @@ def execute(context: Dict[str, Any], domain: str) -> CapabilityResult:
             # Partial failure allowed
             result.metrics["lookup_error"] = str(e)
         # Entities
-        result.produced_entities.append({
-            "type": "domain",
-            "value": domain,
-            "addresses": addresses,
-        })
+        result.produced_entities.append(
+            {
+                "type": "domain",
+                "value": domain,
+                "addresses": addresses,
+            }
+        )
         # Relationships (domain -> ip)
         for ip in addresses:
-            result.produced_relationships.append({
-                "type": "RESOLVES_TO",
-                "source": ("domain", domain),
-                "target": ("ip", ip),
-            })
+            result.produced_relationships.append(
+                {
+                    "type": "RESOLVES_TO",
+                    "source": ("domain", domain),
+                    "target": ("ip", ip),
+                }
+            )
         result.metrics["ip_count"] = len(addresses)
         return result.mark_complete(True)
     except Exception as e:  # noqa: BLE001

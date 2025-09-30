@@ -9,7 +9,8 @@ import sys
 from datetime import datetime
 
 # Add security module to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'security'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "security"))
+
 
 def test_rbac_manager():
     """Test RBAC Manager functionality"""
@@ -28,7 +29,7 @@ def test_rbac_manager():
         username="test_admin",
         password="secure_password123",
         email="admin@test.com",
-        full_name="Test Administrator"
+        full_name="Test Administrator",
     )
 
     print(f"✓ Created user: {user.username} (ID: {user.id})")
@@ -55,6 +56,7 @@ def test_rbac_manager():
 
     return True
 
+
 def test_data_access_control():
     """Test Data Access Control functionality"""
     print("\n🛡️ Testing Data Access Control...")
@@ -70,7 +72,7 @@ def test_data_access_control():
         name="test_intelligence",
         classification="confidential",
         owner_id="test_user_123",
-        content={"intel": "Test intelligence data"}
+        content={"intel": "Test intelligence data"},
     )
 
     print(f"✓ Created data object: {data_obj.name} (ID: {data_obj.id})")
@@ -84,6 +86,7 @@ def test_data_access_control():
         return False
 
     return True
+
 
 def test_security_monitor():
     """Test Security Monitor functionality"""
@@ -101,10 +104,12 @@ def test_security_monitor():
         event_type="test_event",
         severity="low",
         user_id="test_user",
-        details={"test": "validation"}
+        details={"test": "validation"},
     )
 
-    print(f"✓ Logged security event (total events: {len(security_monitor.security_events)})")
+    print(
+        f"✓ Logged security event (total events: {len(security_monitor.security_events)})"
+    )
 
     # Generate a security report
     report = security_monitor.get_security_report(days=1)
@@ -115,7 +120,7 @@ def test_security_monitor():
         security_monitor.log_security_event(
             event_type="authentication_failed",
             severity="medium",
-            ip_address="192.168.1.100"
+            ip_address="192.168.1.100",
         )
 
     # Check if alert was generated
@@ -123,6 +128,7 @@ def test_security_monitor():
     print(f"✓ Generated {alerts} security alert(s)")
 
     return True
+
 
 def test_security_api():
     """Test Security API components"""
@@ -134,13 +140,14 @@ def test_security_api():
 
     # Test token creation
     from security.rbac_manager import User
+
     user = User(
         id="test123",
         username="testuser",
         email="test@example.com",
         full_name="Test User",
         is_active=True,
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
 
     token = controller.create_access_token(user)
@@ -148,13 +155,14 @@ def test_security_api():
 
     # Test token verification
     payload = controller.verify_token(token)
-    if payload and payload['sub'] == user.id:
+    if payload and payload["sub"] == user.id:
         print("✓ Token verification successful")
     else:
         print("✗ Token verification failed")
         return False
 
     return True
+
 
 def test_integration():
     """Test integration between components"""
@@ -176,7 +184,7 @@ def test_integration():
         username="integration_test",
         password="test123",
         email="integration@test.com",
-        full_name="Integration Test User"
+        full_name="Integration Test User",
     )
 
     # Create data
@@ -184,7 +192,7 @@ def test_integration():
         name="integration_data",
         classification="confidential",
         owner_id=user.id,
-        content={"test": "integration data"}
+        content={"test": "integration data"},
     )
 
     # Check access
@@ -195,13 +203,14 @@ def test_integration():
         event_type="data_access",
         severity="low",
         user_id=user.id,
-        details={"data_id": data_obj.id, "action": "read"}
+        details={"data_id": data_obj.id, "action": "read"},
     )
 
     print("✓ User created, data protected, access logged")
     print(f"✓ Integration test: {'PASSED' if can_access else 'FAILED'}")
 
     return can_access
+
 
 def main():
     """Run all validation tests"""
@@ -213,7 +222,7 @@ def main():
         ("Data Access Control", test_data_access_control),
         ("Security Monitor", test_security_monitor),
         ("Security API", test_security_api),
-        ("Integration", test_integration)
+        ("Integration", test_integration),
     ]
 
     passed = 0
@@ -238,6 +247,7 @@ def main():
     else:
         print("⚠️  Some components need attention.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

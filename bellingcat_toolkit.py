@@ -19,6 +19,7 @@ try:
 except Exception:
     HAS_PIL = False
 
+
 class BellingcatToolkit:
     """Bellingcat-style open source investigation toolkit"""
 
@@ -31,17 +32,17 @@ class BellingcatToolkit:
         self.reverse_image_services = [
             "https://www.google.com/searchbyimage",
             "https://yandex.com/images/search",
-            "https://tineye.com/search"
+            "https://tineye.com/search",
         ]
 
         # Social media platforms for investigation
         self.social_platforms = {
-            'twitter': 'https://twitter.com/',
-            'facebook': 'https://facebook.com/',
-            'instagram': 'https://instagram.com/',
-            'tiktok': 'https://tiktok.com/@',
-            'youtube': 'https://youtube.com/user/',
-            'telegram': 'https://t.me/'
+            "twitter": "https://twitter.com/",
+            "facebook": "https://facebook.com/",
+            "instagram": "https://instagram.com/",
+            "tiktok": "https://tiktok.com/@",
+            "youtube": "https://youtube.com/user/",
+            "telegram": "https://t.me/",
         }
 
         logger.info("BellingcatToolkit initialized with OSINT investigation tools")
@@ -55,7 +56,7 @@ class BellingcatToolkit:
                 "metadata": {},
                 "reverse_search": {},
                 "forensic_analysis": {},
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
 
             # Download and analyze media
@@ -90,7 +91,7 @@ class BellingcatToolkit:
     def _download_media(self, url: str) -> Optional[bytes]:
         """Download media from URL"""
         try:
-            headers = {'User-Agent': self.user_agent}
+            headers = {"User-Agent": self.user_agent}
             response = requests.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             return response.content
@@ -100,7 +101,7 @@ class BellingcatToolkit:
 
     def _is_image_url(self, url: str) -> bool:
         """Check if URL points to an image"""
-        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+        image_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]
         return any(url.lower().endswith(ext) for ext in image_extensions)
 
     def _extract_media_metadata(self, media_data: bytes, url: str) -> Dict[str, Any]:
@@ -108,27 +109,32 @@ class BellingcatToolkit:
         metadata = {
             "file_size": len(media_data),
             "file_hash": hashlib.sha256(media_data).hexdigest(),
-            "url": url
+            "url": url,
         }
 
         try:
             # Try to identify file type
             if HAS_PIL and self._is_image_url(url):
                 from io import BytesIO
-                from PIL import Image, ExifTags  # Import here to avoid issues if PIL not available
+                from PIL import (
+                    Image,
+                    ExifTags,
+                )  # Import here to avoid issues if PIL not available
 
                 image = Image.open(BytesIO(media_data))
 
-                metadata.update({
-                    "format": image.format,
-                    "width": image.width,
-                    "height": image.height,
-                    "mode": image.mode,
-                    "is_animated": getattr(image, 'is_animated', False)
-                })
+                metadata.update(
+                    {
+                        "format": image.format,
+                        "width": image.width,
+                        "height": image.height,
+                        "mode": image.mode,
+                        "is_animated": getattr(image, "is_animated", False),
+                    }
+                )
 
                 # Extract EXIF data
-                if hasattr(image, '_getexif') and image._getexif():  # type: ignore
+                if hasattr(image, "_getexif") and image._getexif():  # type: ignore
                     exif_data = {}
                     exif_dict = image._getexif()  # type: ignore
                     for tag, value in exif_dict.items():
@@ -146,17 +152,24 @@ class BellingcatToolkit:
 
         return metadata
 
-    def _extract_gps_from_exif(self, exif_data: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    def _extract_gps_from_exif(
+        self, exif_data: Dict[str, Any]
+    ) -> Optional[Dict[str, float]]:
         """Extract GPS coordinates from EXIF data"""
         try:
-            gps_tags = ['GPSLatitude', 'GPSLongitude', 'GPSLatitudeRef', 'GPSLongitudeRef']
+            gps_tags = [
+                "GPSLatitude",
+                "GPSLongitude",
+                "GPSLatitudeRef",
+                "GPSLongitudeRef",
+            ]
 
             if not all(tag in exif_data for tag in gps_tags):
                 return None
 
             def convert_to_degrees(value_str: str) -> float:
                 # Parse GPS coordinate string like "(41, 53, 34.12)"
-                parts = re.findall(r'[\d.]+', value_str)
+                parts = re.findall(r"[\d.]+", value_str)
                 if len(parts) >= 3:
                     degrees = float(parts[0])
                     minutes = float(parts[1])
@@ -164,12 +177,12 @@ class BellingcatToolkit:
                     return degrees + (minutes / 60.0) + (seconds / 3600.0)
                 return 0.0
 
-            lat = convert_to_degrees(exif_data['GPSLatitude'])
-            lon = convert_to_degrees(exif_data['GPSLongitude'])
+            lat = convert_to_degrees(exif_data["GPSLatitude"])
+            lon = convert_to_degrees(exif_data["GPSLongitude"])
 
-            if exif_data.get('GPSLatitudeRef') == 'S':
+            if exif_data.get("GPSLatitudeRef") == "S":
                 lat = -lat
-            if exif_data.get('GPSLongitudeRef') == 'W':
+            if exif_data.get("GPSLongitudeRef") == "W":
                 lon = -lon
 
             return {"latitude": lat, "longitude": lon}
@@ -183,22 +196,26 @@ class BellingcatToolkit:
         results = {
             "google_search_url": f"https://www.google.com/searchbyimage?image_url={image_url}",
             "yandex_search_url": f"https://yandex.com/images/search?url={image_url}&rpt=imageview",
-            "tineye_search_url": f"https://tineye.com/search?url={image_url}"
+            "tineye_search_url": f"https://tineye.com/search?url={image_url}",
         }
 
         # Note: Actual API calls would require API keys and are not implemented here
         # to avoid rate limiting and API key requirements
-        results["note"] = "Reverse image search URLs generated - manual checking required"
+        results["note"] = (
+            "Reverse image search URLs generated - manual checking required"
+        )
 
         return results
 
-    def _perform_forensic_analysis(self, media_data: bytes, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _perform_forensic_analysis(
+        self, media_data: bytes, metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Perform forensic analysis on media"""
         forensic: Dict[str, Any] = {
             "file_integrity": "unknown",
             "manipulation_indicators": [],
             "compression_artifacts": False,
-            "metadata_consistency": True
+            "metadata_consistency": True,
         }
 
         try:
@@ -207,11 +224,15 @@ class BellingcatToolkit:
             if file_size > 0:
                 # Very small files might be suspicious
                 if file_size < 100:
-                    forensic["manipulation_indicators"].append("Unusually small file size")
+                    forensic["manipulation_indicators"].append(
+                        "Unusually small file size"
+                    )
 
                 # Very large files might indicate steganography
                 if file_size > 50 * 1024 * 1024:  # 50MB
-                    forensic["manipulation_indicators"].append("Unusually large file size")
+                    forensic["manipulation_indicators"].append(
+                        "Unusually large file size"
+                    )
 
             # Check for metadata inconsistencies
             if metadata.get("width") and metadata.get("height"):
@@ -226,22 +247,29 @@ class BellingcatToolkit:
             if exif:
                 # Check if software field indicates editing
                 software = exif.get("Software", "").lower()
-                if any(edit_tool in software for edit_tool in ["photoshop", "gimp", "paint", "editor"]):
-                    forensic["manipulation_indicators"].append("Image edited with software")
+                if any(
+                    edit_tool in software
+                    for edit_tool in ["photoshop", "gimp", "paint", "editor"]
+                ):
+                    forensic["manipulation_indicators"].append(
+                        "Image edited with software"
+                    )
 
         except Exception as e:
             logger.warning(f"Forensic analysis failed: {e}")
 
         return forensic
 
-    def _cross_reference_media(self, media_data: bytes, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _cross_reference_media(
+        self, media_data: bytes, metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Cross-reference media with known sources"""
         cross_ref: Dict[str, Any] = {
             "known_sources": [],
             "similar_images": [],
             "social_media_presence": [],
             "hash_checked": False,
-            "location_analysis": {}
+            "location_analysis": {},
         }
 
         try:
@@ -250,7 +278,9 @@ class BellingcatToolkit:
             if file_hash:
                 # This would typically query hash databases
                 cross_ref["hash_checked"] = True
-                cross_ref["hash_databases"] = ["Placeholder - would check against known image databases"]
+                cross_ref["hash_databases"] = [
+                    "Placeholder - would check against known image databases"
+                ]
 
             # Check GPS coordinates against known locations
             gps = metadata.get("gps_coordinates")
@@ -274,19 +304,21 @@ class BellingcatToolkit:
                 "image_url": image_url,
                 "geolocation_methods": [],
                 "possible_locations": [],
-                "confidence": 0.0
+                "confidence": 0.0,
             }
 
             # Method 1: EXIF GPS data
             gps = metadata.get("gps_coordinates")
             if gps:
                 geolocation["geolocation_methods"].append("exif_gps")
-                geolocation["possible_locations"].append({
-                    "coordinates": gps,
-                    "method": "exif_gps",
-                    "confidence": 0.9,
-                    "source": "Image EXIF data"
-                })
+                geolocation["possible_locations"].append(
+                    {
+                        "coordinates": gps,
+                        "method": "exif_gps",
+                        "confidence": 0.9,
+                        "source": "Image EXIF data",
+                    }
+                )
                 geolocation["confidence"] = max(geolocation["confidence"], 0.9)
 
             # Method 2: Reverse image search locations
@@ -296,7 +328,7 @@ class BellingcatToolkit:
                 # This would parse search results for location data
                 geolocation["reverse_search_urls"] = [
                     reverse_search.get("google_search_url"),
-                    reverse_search.get("yandex_search_url")
+                    reverse_search.get("yandex_search_url"),
                 ]
 
             # Method 3: Visual landmarks recognition (placeholder)
@@ -326,7 +358,7 @@ class BellingcatToolkit:
                 "coordinates": gps,
                 "hemisphere": "Northern" if lat >= 0 else "Southern",
                 "latitude_band": self._get_latitude_band(lat),
-                "estimated_country": self._estimate_country(lat, lon)
+                "estimated_country": self._estimate_country(lat, lon),
             }
 
             return location_info
@@ -360,7 +392,9 @@ class BellingcatToolkit:
         else:
             return "Unknown/Other region"
 
-    def _identify_visual_landmarks(self, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _identify_visual_landmarks(
+        self, metadata: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Identify visual landmarks (placeholder for computer vision)"""
         # This would require computer vision libraries like OpenCV
         # For now, return empty list
@@ -372,7 +406,9 @@ class BellingcatToolkit:
         # For now, return None
         return None
 
-    def investigate_social_media(self, username: str, platforms: Optional[List[str]] = None) -> Dict[str, Any]:
+    def investigate_social_media(
+        self, username: str, platforms: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Investigate social media presence using Bellingcat techniques"""
         try:
             if platforms is None:
@@ -383,7 +419,7 @@ class BellingcatToolkit:
                 "platforms_checked": platforms,
                 "profiles_found": [],
                 "cross_platform_analysis": {},
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
 
             for platform in platforms:
@@ -396,7 +432,9 @@ class BellingcatToolkit:
 
             # Cross-platform analysis
             if len(investigation["profiles_found"]) > 1:
-                cross_analysis = self._analyze_cross_platform_presence(investigation["profiles_found"])
+                cross_analysis = self._analyze_cross_platform_presence(
+                    investigation["profiles_found"]
+                )
                 investigation["cross_platform_analysis"] = cross_analysis
 
             return investigation
@@ -408,21 +446,25 @@ class BellingcatToolkit:
     def _check_social_profile(self, profile_url: str, platform: str) -> Dict[str, Any]:
         """Check if a social media profile exists"""
         try:
-            headers = {'User-Agent': self.user_agent}
-            response = requests.head(profile_url, headers=headers, timeout=self.timeout, allow_redirects=True)
+            headers = {"User-Agent": self.user_agent}
+            response = requests.head(
+                profile_url, headers=headers, timeout=self.timeout, allow_redirects=True
+            )
 
             profile_info = {
                 "platform": platform,
                 "url": profile_url,
                 "exists": response.status_code == 200,
                 "status_code": response.status_code,
-                "last_checked": datetime.now().isoformat()
+                "last_checked": datetime.now().isoformat(),
             }
 
             # Try to get additional info from the page
             if response.status_code == 200:
                 try:
-                    response = requests.get(profile_url, headers=headers, timeout=self.timeout)
+                    response = requests.get(
+                        profile_url, headers=headers, timeout=self.timeout
+                    )
                     # Basic content analysis (could be enhanced)
                     profile_info["content_length"] = len(response.content)
                     profile_info["has_content"] = len(response.content) > 1000
@@ -437,16 +479,18 @@ class BellingcatToolkit:
                 "platform": platform,
                 "url": profile_url,
                 "exists": False,
-                "error": str(e)
+                "error": str(e),
             }
 
-    def _analyze_cross_platform_presence(self, profiles: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _analyze_cross_platform_presence(
+        self, profiles: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Analyze cross-platform social media presence"""
         analysis: Dict[str, Any] = {
             "total_platforms": len(profiles),
             "consistency_score": 0.0,
             "activity_patterns": [],
-            "risk_indicators": []
+            "risk_indicators": [],
         }
 
         try:
@@ -470,7 +514,9 @@ class BellingcatToolkit:
                 analysis["risk_indicators"].append("Heavy multi-platform presence")
 
             if not consistent_username:
-                analysis["risk_indicators"].append("Inconsistent usernames across platforms")
+                analysis["risk_indicators"].append(
+                    "Inconsistent usernames across platforms"
+                )
 
         except Exception as e:
             logger.warning(f"Cross-platform analysis failed: {e}")

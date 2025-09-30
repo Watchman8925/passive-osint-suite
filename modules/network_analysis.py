@@ -12,27 +12,37 @@ import re
 
 logger = logging.getLogger(__name__)
 
+
 class NetworkAnalysisEngine:
     """Network analysis engine using open source tools"""
 
     def __init__(self):
         self.tools = {
-            'tshark': self._check_tool('tshark'),
-            'tcpdump': self._check_tool('tcpdump'),
-            'zeek': self._check_tool('zeek'),
-            'p0f': self._check_tool('p0f')
+            "tshark": self._check_tool("tshark"),
+            "tcpdump": self._check_tool("tcpdump"),
+            "zeek": self._check_tool("zeek"),
+            "p0f": self._check_tool("p0f"),
         }
 
     def _check_tool(self, tool_name: str) -> bool:
         """Check if a tool is available"""
         try:
-            subprocess.run([tool_name, '--help' if tool_name != 'zeek' else '--version'],
-                         capture_output=True, timeout=5)
+            subprocess.run(
+                [tool_name, "--help" if tool_name != "zeek" else "--version"],
+                capture_output=True,
+                timeout=5,
+            )
             return True
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        except (
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            subprocess.CalledProcessError,
+        ):
             return False
 
-    def analyze_pcap_file(self, pcap_path: str, analysis_type: str = 'summary') -> Dict[str, Any]:
+    def analyze_pcap_file(
+        self, pcap_path: str, analysis_type: str = "summary"
+    ) -> Dict[str, Any]:
         """
         Analyze a PCAP file using tshark
 
@@ -43,7 +53,7 @@ class NetworkAnalysisEngine:
         Returns:
             Dictionary containing analysis results
         """
-        if not self.tools['tshark']:
+        if not self.tools["tshark"]:
             return {"error": "tshark not available"}
 
         if not os.path.exists(pcap_path):
@@ -52,71 +62,81 @@ class NetworkAnalysisEngine:
         results: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "analysis_type": analysis_type,
-            "results": {}
+            "results": {},
         }
 
         try:
-            if analysis_type == 'summary':
+            if analysis_type == "summary":
                 # Basic packet summary
                 result = subprocess.run(
-                    ['tshark', '-r', pcap_path, '-q', '-z', 'io,stat,0'],
+                    ["tshark", "-r", pcap_path, "-q", "-z", "io,stat,0"],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 if result.returncode == 0:
-                    results["results"]["summary"] = self._parse_tshark_output(result.stdout)
+                    results["results"]["summary"] = self._parse_tshark_output(
+                        result.stdout
+                    )
 
-            elif analysis_type == 'conversations':
+            elif analysis_type == "conversations":
                 # Conversation statistics
                 result = subprocess.run(
-                    ['tshark', '-r', pcap_path, '-q', '-z', 'conv,tcp'],
+                    ["tshark", "-r", pcap_path, "-q", "-z", "conv,tcp"],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 if result.returncode == 0:
-                    results["results"]["conversations"] = self._parse_conversations(result.stdout)
+                    results["results"]["conversations"] = self._parse_conversations(
+                        result.stdout
+                    )
 
-            elif analysis_type == 'endpoints':
+            elif analysis_type == "endpoints":
                 # Endpoint statistics
                 result = subprocess.run(
-                    ['tshark', '-r', pcap_path, '-q', '-z', 'endpoints,tcp'],
+                    ["tshark", "-r", pcap_path, "-q", "-z", "endpoints,tcp"],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 if result.returncode == 0:
-                    results["results"]["endpoints"] = self._parse_endpoints(result.stdout)
+                    results["results"]["endpoints"] = self._parse_endpoints(
+                        result.stdout
+                    )
 
-            elif analysis_type == 'protocols':
+            elif analysis_type == "protocols":
                 # Protocol hierarchy
                 result = subprocess.run(
-                    ['tshark', '-r', pcap_path, '-q', '-z', 'io,phs'],
+                    ["tshark", "-r", pcap_path, "-q", "-z", "io,phs"],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 if result.returncode == 0:
-                    results["results"]["protocols"] = self._parse_protocols(result.stdout)
+                    results["results"]["protocols"] = self._parse_protocols(
+                        result.stdout
+                    )
 
             # Extract basic packet info
             result = subprocess.run(
-                ['tshark', '-r', pcap_path, '-T', 'json'],
+                ["tshark", "-r", pcap_path, "-T", "json"],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             if result.returncode == 0:
                 try:
                     packets = json.loads(result.stdout)
                     results["results"]["packet_count"] = len(packets)
-                    results["results"]["sample_packets"] = packets[:5] if packets else []
+                    results["results"]["sample_packets"] = (
+                        packets[:5] if packets else []
+                    )
                 except json.JSONDecodeError:
                     results["results"]["packet_count"] = 0
 
@@ -127,12 +147,12 @@ class NetworkAnalysisEngine:
 
     def _parse_tshark_output(self, output: str) -> Dict[str, Any]:
         """Parse tshark summary output"""
-        lines = output.split('\n')
+        lines = output.split("\n")
         summary = {}
 
         for line in lines:
-            if '=' in line:
-                key, value = line.split('=', 1)
+            if "=" in line:
+                key, value = line.split("=", 1)
                 summary[key.strip()] = value.strip()
 
         return summary
@@ -140,22 +160,22 @@ class NetworkAnalysisEngine:
     def _parse_conversations(self, output: str) -> List[Dict[str, Any]]:
         """Parse conversation statistics"""
         conversations = []
-        lines = output.split('\n')
+        lines = output.split("\n")
 
         # Skip header lines
         data_started = False
         for line in lines:
-            if line.startswith('TCP Conversations'):
+            if line.startswith("TCP Conversations"):
                 data_started = True
                 continue
-            if data_started and line.strip() and not line.startswith('='):
-                parts = re.split(r'\s+', line.strip())
+            if data_started and line.strip() and not line.startswith("="):
+                parts = re.split(r"\s+", line.strip())
                 if len(parts) >= 6:
                     conv = {
                         "source": parts[0],
                         "destination": parts[2],
                         "packets": int(parts[4]) if parts[4].isdigit() else 0,
-                        "bytes": int(parts[5]) if parts[5].isdigit() else 0
+                        "bytes": int(parts[5]) if parts[5].isdigit() else 0,
                     }
                     conversations.append(conv)
 
@@ -164,21 +184,21 @@ class NetworkAnalysisEngine:
     def _parse_endpoints(self, output: str) -> List[Dict[str, Any]]:
         """Parse endpoint statistics"""
         endpoints = []
-        lines = output.split('\n')
+        lines = output.split("\n")
 
         data_started = False
         for line in lines:
-            if line.startswith('TCP Endpoints'):
+            if line.startswith("TCP Endpoints"):
                 data_started = True
                 continue
-            if data_started and line.strip() and not line.startswith('='):
-                parts = re.split(r'\s+', line.strip())
+            if data_started and line.strip() and not line.startswith("="):
+                parts = re.split(r"\s+", line.strip())
                 if len(parts) >= 4:
                     endpoint = {
                         "address": parts[0],
                         "port": parts[1],
                         "packets": int(parts[2]) if parts[2].isdigit() else 0,
-                        "bytes": int(parts[3]) if parts[3].isdigit() else 0
+                        "bytes": int(parts[3]) if parts[3].isdigit() else 0,
                     }
                     endpoints.append(endpoint)
 
@@ -187,19 +207,19 @@ class NetworkAnalysisEngine:
     def _parse_protocols(self, output: str) -> Dict[str, Any]:
         """Parse protocol hierarchy"""
         protocols = {}
-        lines = output.split('\n')
+        lines = output.split("\n")
 
         for line in lines:
-            if '%' in line and 'Protocol' not in line:
+            if "%" in line and "Protocol" not in line:
                 parts = line.split()
                 if len(parts) >= 3:
-                    protocol = ' '.join(parts[:-2])
+                    protocol = " ".join(parts[:-2])
                     percentage = parts[-2]
                     packets = parts[-1]
 
                     protocols[protocol] = {
                         "percentage": percentage,
-                        "packets": int(packets) if packets.isdigit() else 0
+                        "packets": int(packets) if packets.isdigit() else 0,
                     }
 
         return protocols
@@ -214,55 +234,74 @@ class NetworkAnalysisEngine:
         Returns:
             Dictionary containing HTTP traffic analysis
         """
-        if not self.tools['tshark']:
+        if not self.tools["tshark"]:
             return {"error": "tshark not available"}
 
         try:
             # Extract HTTP requests
             result = subprocess.run(
-                ['tshark', '-r', pcap_path, '-Y', 'http.request',
-                 '-T', 'fields', '-e', 'http.request.method',
-                 '-e', 'http.request.uri', '-e', 'http.host'],
+                [
+                    "tshark",
+                    "-r",
+                    pcap_path,
+                    "-Y",
+                    "http.request",
+                    "-T",
+                    "fields",
+                    "-e",
+                    "http.request.method",
+                    "-e",
+                    "http.request.uri",
+                    "-e",
+                    "http.host",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             http_requests = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         if len(parts) >= 3:
                             request = {
                                 "method": parts[0],
                                 "uri": parts[1],
-                                "host": parts[2]
+                                "host": parts[2],
                             }
                             http_requests.append(request)
 
             # Extract HTTP responses
             result = subprocess.run(
-                ['tshark', '-r', pcap_path, '-Y', 'http.response',
-                 '-T', 'fields', '-e', 'http.response.code',
-                 '-e', 'http.response.phrase'],
+                [
+                    "tshark",
+                    "-r",
+                    pcap_path,
+                    "-Y",
+                    "http.response",
+                    "-T",
+                    "fields",
+                    "-e",
+                    "http.response.code",
+                    "-e",
+                    "http.response.phrase",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             http_responses = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         if len(parts) >= 2:
-                            response = {
-                                "code": parts[0],
-                                "phrase": parts[1]
-                            }
+                            response = {"code": parts[0], "phrase": parts[1]}
                             http_responses.append(response)
 
             return {
@@ -271,7 +310,7 @@ class NetworkAnalysisEngine:
                 "http_requests": http_requests,
                 "http_responses": http_responses,
                 "request_count": len(http_requests),
-                "response_count": len(http_responses)
+                "response_count": len(http_responses),
             }
 
         except subprocess.TimeoutExpired:
@@ -287,52 +326,68 @@ class NetworkAnalysisEngine:
         Returns:
             Dictionary containing DNS traffic analysis
         """
-        if not self.tools['tshark']:
+        if not self.tools["tshark"]:
             return {"error": "tshark not available"}
 
         try:
             # Extract DNS queries
             result = subprocess.run(
-                ['tshark', '-r', pcap_path, '-Y', 'dns.flags.response == 0',
-                 '-T', 'fields', '-e', 'dns.qry.name', '-e', 'dns.qry.type'],
+                [
+                    "tshark",
+                    "-r",
+                    pcap_path,
+                    "-Y",
+                    "dns.flags.response == 0",
+                    "-T",
+                    "fields",
+                    "-e",
+                    "dns.qry.name",
+                    "-e",
+                    "dns.qry.type",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             dns_queries = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         if len(parts) >= 2:
-                            query = {
-                                "name": parts[0],
-                                "type": parts[1]
-                            }
+                            query = {"name": parts[0], "type": parts[1]}
                             dns_queries.append(query)
 
             # Extract DNS responses
             result = subprocess.run(
-                ['tshark', '-r', pcap_path, '-Y', 'dns.flags.response == 1',
-                 '-T', 'fields', '-e', 'dns.qry.name', '-e', 'dns.a'],
+                [
+                    "tshark",
+                    "-r",
+                    pcap_path,
+                    "-Y",
+                    "dns.flags.response == 1",
+                    "-T",
+                    "fields",
+                    "-e",
+                    "dns.qry.name",
+                    "-e",
+                    "dns.a",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             dns_responses = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         if len(parts) >= 2:
-                            response = {
-                                "name": parts[0],
-                                "address": parts[1]
-                            }
+                            response = {"name": parts[0], "address": parts[1]}
                             dns_responses.append(response)
 
             return {
@@ -341,7 +396,7 @@ class NetworkAnalysisEngine:
                 "dns_queries": dns_queries,
                 "dns_responses": dns_responses,
                 "query_count": len(dns_queries),
-                "response_count": len(dns_responses)
+                "response_count": len(dns_responses),
             }
 
         except subprocess.TimeoutExpired:
@@ -357,14 +412,14 @@ class NetworkAnalysisEngine:
         Returns:
             Dictionary containing anomaly detection results
         """
-        analysis = self.analyze_pcap_file(pcap_path, 'summary')
+        analysis = self.analyze_pcap_file(pcap_path, "summary")
         if "error" in analysis:
             return analysis
 
         anomalies: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "anomalies": [],
-            "risk_score": 0
+            "risk_score": 0,
         }
 
         # Check for suspicious patterns
@@ -375,13 +430,17 @@ class NetworkAnalysisEngine:
 
                 # Check for high-volume connections
                 for conv in conversations:
-                    if isinstance(conv, dict) and conv.get("packets", 0) > 10000:  # Arbitrary threshold
-                        anomalies["anomalies"].append({
-                            "type": "high_volume_connection",
-                            "description": f"High packet count: {conv.get('source', 'unknown')} -> {conv.get('destination', 'unknown')}",
-                            "severity": "medium",
-                            "data": conv
-                        })
+                    if (
+                        isinstance(conv, dict) and conv.get("packets", 0) > 10000
+                    ):  # Arbitrary threshold
+                        anomalies["anomalies"].append(
+                            {
+                                "type": "high_volume_connection",
+                                "description": f"High packet count: {conv.get('source', 'unknown')} -> {conv.get('destination', 'unknown')}",
+                                "severity": "medium",
+                                "data": conv,
+                            }
+                        )
                         anomalies["risk_score"] += 2
 
         # Check protocols
@@ -391,18 +450,20 @@ class NetworkAnalysisEngine:
                 protocols = protocols_data
 
                 # Flag unusual protocols
-                suspicious_protocols = ['icmp', 'unknown']
+                suspicious_protocols = ["icmp", "unknown"]
                 for protocol, data in protocols.items():
                     if isinstance(data, dict) and isinstance(protocol, str):
                         protocol_lower = protocol.lower()
                         if any(susp in protocol_lower for susp in suspicious_protocols):
                             if data.get("packets", 0) > 100:
-                                anomalies["anomalies"].append({
-                                    "type": "suspicious_protocol",
-                                    "description": f"Unusual protocol activity: {protocol}",
-                                    "severity": "low",
-                                    "data": data
-                                })
+                                anomalies["anomalies"].append(
+                                    {
+                                        "type": "suspicious_protocol",
+                                        "description": f"Unusual protocol activity: {protocol}",
+                                        "severity": "low",
+                                        "data": data,
+                                    }
+                                )
                                 anomalies["risk_score"] += 1
 
         return anomalies
@@ -420,14 +481,22 @@ class NetworkAnalysisEngine:
         analysis: Dict[str, Any] = {
             "pcap_file": pcap_path,
             "timestamp": None,  # Would be set by caller
-            "analyses": {}
+            "analyses": {},
         }
 
         # Basic packet analysis
-        analysis["analyses"]["packet_summary"] = self.analyze_pcap_file(pcap_path, 'summary')
-        analysis["analyses"]["conversations"] = self.analyze_pcap_file(pcap_path, 'conversations')
-        analysis["analyses"]["endpoints"] = self.analyze_pcap_file(pcap_path, 'endpoints')
-        analysis["analyses"]["protocols"] = self.analyze_pcap_file(pcap_path, 'protocols')
+        analysis["analyses"]["packet_summary"] = self.analyze_pcap_file(
+            pcap_path, "summary"
+        )
+        analysis["analyses"]["conversations"] = self.analyze_pcap_file(
+            pcap_path, "conversations"
+        )
+        analysis["analyses"]["endpoints"] = self.analyze_pcap_file(
+            pcap_path, "endpoints"
+        )
+        analysis["analyses"]["protocols"] = self.analyze_pcap_file(
+            pcap_path, "protocols"
+        )
 
         # Protocol-specific analysis
         analysis["analyses"]["http_traffic"] = self.extract_http_traffic(pcap_path)

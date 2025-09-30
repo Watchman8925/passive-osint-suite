@@ -14,7 +14,7 @@ from unittest.mock import patch
 import jwt
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from security.data_access_control import DataObject, data_access_control
 from security.rbac_manager import User, rbac_manager
@@ -45,7 +45,7 @@ class TestRBACManager(unittest.TestCase):
             password="testpass123",
             email="test@example.com",
             full_name="Test User",
-            role="user"
+            role="user",
         )
 
         self.assertIsNotNone(user)
@@ -62,7 +62,7 @@ class TestRBACManager(unittest.TestCase):
             password="testpass123",
             email="test@example.com",
             full_name="Test User",
-            role="user"
+            role="user",
         )
 
         # Test successful authentication
@@ -82,7 +82,7 @@ class TestRBACManager(unittest.TestCase):
             password="admin123",
             email="admin@example.com",
             full_name="Admin User",
-            role="admin"
+            role="admin",
         )
 
         # Create regular user
@@ -91,7 +91,7 @@ class TestRBACManager(unittest.TestCase):
             password="user123",
             email="user@example.com",
             full_name="Regular User",
-            role="user"
+            role="user",
         )
 
         # Test admin permissions
@@ -109,7 +109,7 @@ class TestRBACManager(unittest.TestCase):
             password="pass123",
             email="session@example.com",
             full_name="Session User",
-            role="user"
+            role="user",
         )
 
         # Create session
@@ -125,6 +125,7 @@ class TestRBACManager(unittest.TestCase):
         rbac_manager.invalidate_session(session.session_id)
         invalid_session = rbac_manager.validate_session(session.session_id)
         self.assertIsNone(invalid_session)
+
 
 class TestDataAccessControl(unittest.TestCase):
     """Test Data Access Control functionality"""
@@ -143,7 +144,7 @@ class TestDataAccessControl(unittest.TestCase):
             data_type="intelligence_report",
             classification="confidential",
             owner_id="user123",
-            content={"report": "Test report content"}
+            content={"report": "Test report content"},
         )
 
         self.assertIsNotNone(data_obj)
@@ -158,7 +159,7 @@ class TestDataAccessControl(unittest.TestCase):
             data_type="intelligence",
             classification="secret",
             owner_id="owner123",
-            content={"secret": "classified information"}
+            content={"secret": "classified information"},
         )
 
         # Test owner access
@@ -166,7 +167,9 @@ class TestDataAccessControl(unittest.TestCase):
         self.assertTrue(can_access)
 
         # Test unauthorized access
-        can_access_unauth = data_access_control.check_access("hacker123", data_obj.id, "read")
+        can_access_unauth = data_access_control.check_access(
+            "hacker123", data_obj.id, "read"
+        )
         self.assertFalse(can_access_unauth)
 
     def test_data_retention(self):
@@ -181,7 +184,7 @@ class TestDataAccessControl(unittest.TestCase):
             owner_id="user123",
             created_at=past_date,
             retention_days=30,
-            content={"old": "data"}
+            content={"old": "data"},
         )
         data_access_control.data_objects[data_obj.id] = data_obj
 
@@ -190,6 +193,7 @@ class TestDataAccessControl(unittest.TestCase):
 
         # Check if old data was removed
         self.assertNotIn("old_data", data_access_control.data_objects)
+
 
 class TestSecurityMonitor(unittest.TestCase):
     """Test Security Monitor functionality"""
@@ -208,7 +212,7 @@ class TestSecurityMonitor(unittest.TestCase):
             event_type="test_event",
             severity="medium",
             user_id="user123",
-            details={"test": "data"}
+            details={"test": "data"},
         )
 
         # Check event was logged
@@ -226,7 +230,7 @@ class TestSecurityMonitor(unittest.TestCase):
                 event_type="authentication_failed",
                 severity="medium",
                 ip_address="192.168.1.100",
-                details={"attempt": i}
+                details={"attempt": i},
             )
 
         # Check for alert generation
@@ -253,6 +257,7 @@ class TestSecurityMonitor(unittest.TestCase):
         self.assertIn("risk_assessment", report)
         self.assertEqual(report["total_events"], 3)
 
+
 class TestSecurityAPI(unittest.TestCase):
     """Test Security API functionality"""
 
@@ -271,7 +276,7 @@ class TestSecurityAPI(unittest.TestCase):
             role="user",
             is_active=True,
             created_at=datetime.now(),
-            last_login=None
+            last_login=None,
         )
 
         # Create token
@@ -288,18 +293,15 @@ class TestSecurityAPI(unittest.TestCase):
         """Test expired token verification"""
         # Create token that expires immediately
         expire = datetime.utcnow() - timedelta(hours=1)
-        to_encode = {
-            "sub": "test123",
-            "exp": expire,
-            "type": "access"
-        }
+        to_encode = {"sub": "test123", "exp": expire, "type": "access"}
 
-        with patch('security.security_api.JWT_SECRET', 'test_secret'):
-            token = jwt.encode(to_encode, 'test_secret', algorithm='HS256')
+        with patch("security.security_api.JWT_SECRET", "test_secret"):
+            token = jwt.encode(to_encode, "test_secret", algorithm="HS256")
 
             # Verify should return None for expired token
             payload = self.controller.verify_token(token)
             self.assertIsNone(payload)
+
 
 class TestSecurityIntegration(unittest.TestCase):
     """Test security components integration"""
@@ -321,7 +323,7 @@ class TestSecurityIntegration(unittest.TestCase):
             password="securepass123",
             email="workflow@example.com",
             full_name="Workflow User",
-            role="analyst"
+            role="analyst",
         )
 
         # 2. Authenticate user
@@ -338,7 +340,7 @@ class TestSecurityIntegration(unittest.TestCase):
             data_type="intelligence",
             classification="confidential",
             owner_id=user.id,
-            content={"intel": "Test intelligence data"}
+            content={"intel": "Test intelligence data"},
         )
 
         # 5. Check access permissions
@@ -350,7 +352,7 @@ class TestSecurityIntegration(unittest.TestCase):
             "data_access",
             severity="low",
             user_id=user.id,
-            details={"data_id": data_obj.id, "action": "read"}
+            details={"data_id": data_obj.id, "action": "read"},
         )
 
         # 7. Verify event was logged
@@ -364,7 +366,7 @@ class TestSecurityIntegration(unittest.TestCase):
                 "access_denied",
                 severity="medium",
                 ip_address="192.168.1.100",
-                details={"resource": "sensitive_data", "attempt": i}
+                details={"resource": "sensitive_data", "attempt": i},
             )
 
         # 2. Check for alerts
@@ -379,6 +381,7 @@ class TestSecurityIntegration(unittest.TestCase):
         # 5. Verify report contains incident information
         self.assertIn("suspicious_data_access", report["events_by_type"])
 
+
 class TestSecurityConfiguration(unittest.TestCase):
     """Test security configuration and persistence"""
 
@@ -390,6 +393,7 @@ class TestSecurityConfiguration(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures"""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_monitor_configuration_save_load(self):
@@ -398,7 +402,7 @@ class TestSecurityConfiguration(unittest.TestCase):
         monitor = security_monitor.__class__(self.config_path)
 
         # Modify configuration
-        monitor.thresholds['failed_logins_per_hour'] = 10
+        monitor.thresholds["failed_logins_per_hour"] = 10
         monitor.log_security_event("test_config", "low")
 
         # Save configuration
@@ -409,10 +413,11 @@ class TestSecurityConfiguration(unittest.TestCase):
         new_monitor.load_config()
 
         # Verify configuration was loaded
-        self.assertEqual(new_monitor.thresholds['failed_logins_per_hour'], 10)
+        self.assertEqual(new_monitor.thresholds["failed_logins_per_hour"], 10)
         self.assertEqual(len(new_monitor.security_events), 1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Setup test environment
     logging.basicConfig(level=logging.INFO)
 

@@ -20,6 +20,7 @@ Future Extension:
 - When advanced manager is activated, adapter can map lightweight records into
   the richer model and launch tasks / sync progress.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -87,6 +88,7 @@ class SimpleInvestigation:
                 return datetime.fromisoformat(v)
             except Exception:
                 return None
+
         return SimpleInvestigation(
             id=data["id"],
             advanced_id=data.get("advanced_id"),
@@ -162,7 +164,7 @@ class PersistentInvestigationStore:
         tags: List[str],
         owner_id: str,
         scheduled_start: Optional[datetime],
-        auto_reporting: bool
+        auto_reporting: bool,
     ) -> str:
         async with self._lock:
             inv_id = str(uuid4())
@@ -191,19 +193,21 @@ class PersistentInvestigationStore:
                     # Map simple priority string to advanced enum if possible
                     adv_priority = priority
                     try:
-                        if hasattr(self.advanced_manager, 'Priority'):
+                        if hasattr(self.advanced_manager, "Priority"):
                             # Not used; fallback
                             pass
                         else:
-                            from investigation_manager import \
-                                Priority as AdvPriority  # type: ignore
+                            from investigation_manager import Priority as AdvPriority  # type: ignore
+
                             mapping = {
-                                'low': AdvPriority.LOW,
-                                'medium': AdvPriority.MEDIUM,
-                                'high': AdvPriority.HIGH,
-                                'critical': AdvPriority.CRITICAL,
+                                "low": AdvPriority.LOW,
+                                "medium": AdvPriority.MEDIUM,
+                                "high": AdvPriority.HIGH,
+                                "critical": AdvPriority.CRITICAL,
                             }
-                            adv_priority = mapping.get(priority.lower(), AdvPriority.MEDIUM)  # type: ignore
+                            adv_priority = mapping.get(
+                                priority.lower(), AdvPriority.MEDIUM
+                            )  # type: ignore
                     except Exception:  # pragma: no cover
                         pass
                     adv_id = await self.advanced_manager.create_investigation(
@@ -229,7 +233,7 @@ class PersistentInvestigationStore:
         limit: int = 50,
         status_filter: Optional[str] = None,
         include_archived: bool = False,
-        include_meta: bool = False
+        include_meta: bool = False,
     ) -> Any:
         async with self._lock:
             items = [r for r in self._items.values() if r.owner_id == owner_id]
@@ -243,7 +247,7 @@ class PersistentInvestigationStore:
                     items = []
             total = len(items)
             items.sort(key=lambda r: r.created_at, reverse=True)
-            sliced = items[skip: skip + limit]
+            sliced = items[skip : skip + limit]
             data = [r.to_dict() for r in sliced]
             if include_meta:
                 return {
@@ -296,12 +300,18 @@ class PersistentInvestigationStore:
                             break
                         except TypeError:
                             try:
-                                plan = alt_builder(investigation_id, inv.investigation_type, inv.targets)
+                                plan = alt_builder(
+                                    investigation_id,
+                                    inv.investigation_type,
+                                    inv.targets,
+                                )
                                 break
                             except Exception:
                                 continue
                 if plan is None:
-                    raise AttributeError("Planner has no callable build_plan/plan/create_plan")
+                    raise AttributeError(
+                        "Planner has no callable build_plan/plan/create_plan"
+                    )
             self._persist_plan(investigation_id, plan)
         except Exception as e:  # pragma: no cover
             logger.error(f"Planner build failed: {e}")
@@ -350,9 +360,9 @@ class PersistentInvestigationStore:
                 started_at_iso = None
                 completed_at_iso = None
                 if adv_inv:
-                    if getattr(adv_inv, 'started_at', None):
+                    if getattr(adv_inv, "started_at", None):
                         started_at_iso = adv_inv.started_at.isoformat()
-                    if getattr(adv_inv, 'completed_at', None):
+                    if getattr(adv_inv, "completed_at", None):
                         completed_at_iso = adv_inv.completed_at.isoformat()
                 return {
                     "investigation_id": investigation_id,
@@ -382,7 +392,7 @@ class PersistentInvestigationStore:
                 "completed_at": (
                     inv2.completed_at.isoformat() if inv2.completed_at else None
                 ),
-                "summary": "Orchestration not yet integrated"
+                "summary": "Orchestration not yet integrated",
             }
 
     async def get_tasks(
@@ -411,28 +421,42 @@ class PersistentInvestigationStore:
             try:
                 adv_inv = await self.advanced_manager.get_investigation(adv_id)
                 if not adv_inv:
-                    return {"investigation_id": investigation_id, "tasks": [], "total": 0}
+                    return {
+                        "investigation_id": investigation_id,
+                        "tasks": [],
+                        "total": 0,
+                    }
                 rows = []
                 for t_id, task in adv_inv.tasks.items():  # type: ignore[attr-defined]
                     try:
-                        rows.append({
-                            "id": t_id,
-                            "name": task.name,
-                            "type": task.task_type,
-                            "status": task.status.value,
-                            "progress": task.progress,
-                            "targets": task.targets,
-                            "priority": getattr(task.priority, "name", str(task.priority)),
-                            "dependencies": task.dependencies,
-                            "created_at": task.created_at.isoformat() if task.created_at else None,
-                            "started_at": task.started_at.isoformat() if task.started_at else None,
-                            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                            "estimated_duration": task.estimated_duration,
-                            "actual_duration": task.actual_duration,
-                            "retry_count": task.retry_count,
-                            "max_retries": task.max_retries,
-                            "error": task.error,
-                        })
+                        rows.append(
+                            {
+                                "id": t_id,
+                                "name": task.name,
+                                "type": task.task_type,
+                                "status": task.status.value,
+                                "progress": task.progress,
+                                "targets": task.targets,
+                                "priority": getattr(
+                                    task.priority, "name", str(task.priority)
+                                ),
+                                "dependencies": task.dependencies,
+                                "created_at": task.created_at.isoformat()
+                                if task.created_at
+                                else None,
+                                "started_at": task.started_at.isoformat()
+                                if task.started_at
+                                else None,
+                                "completed_at": task.completed_at.isoformat()
+                                if task.completed_at
+                                else None,
+                                "estimated_duration": task.estimated_duration,
+                                "actual_duration": task.actual_duration,
+                                "retry_count": task.retry_count,
+                                "max_retries": task.max_retries,
+                                "error": task.error,
+                            }
+                        )
                     except Exception as inner_e:  # pragma: no cover
                         logger.error(f"Task serialization failed: {inner_e}")
                 total = len(rows)
@@ -443,7 +467,7 @@ class PersistentInvestigationStore:
                     rows = [r for r in rows if r["type"].lower() == task_type.lower()]
                 filtered = len(rows)
                 rows.sort(key=lambda r: (r.get("created_at") or ""), reverse=True)
-                window = rows[skip: skip + limit]
+                window = rows[skip : skip + limit]
                 base = {
                     "investigation_id": investigation_id,
                     "tasks": window,
@@ -478,14 +502,14 @@ class PersistentInvestigationStore:
             return
         try:
             adv_inv = await self.advanced_manager.get_investigation(inv.advanced_id)
-            if adv_inv and getattr(adv_inv, 'tasks', {}):
+            if adv_inv and getattr(adv_inv, "tasks", {}):
                 return  # already has tasks
             mapping = {
-                'domain': 'domain_recon',
-                'ip': 'ip_intelligence',
-                'email': 'email_intelligence',
-                'company': 'company_intelligence',
-                'person': 'passive_search',
+                "domain": "domain_recon",
+                "ip": "ip_intelligence",
+                "email": "email_intelligence",
+                "company": "company_intelligence",
+                "person": "passive_search",
             }
             primary = mapping.get(inv.investigation_type.lower())
             # Add primary task
@@ -497,11 +521,11 @@ class PersistentInvestigationStore:
                     targets=inv.targets,
                 )
             # Add passive_search if not already primary
-            if primary != 'passive_search':
+            if primary != "passive_search":
                 await self.advanced_manager.add_task(
                     inv.advanced_id,
                     name="Passive Surface Scan",
-                    task_type='passive_search',
+                    task_type="passive_search",
                     targets=inv.targets,
                 )
         except Exception as e:  # pragma: no cover
@@ -518,7 +542,7 @@ class PersistentInvestigationStore:
         logger.info(
             "Advanced InvestigationManager attached (bridge pending integration)."
         )
-    
+
     # ------------------------------------------------------------------
     # Soft delete / archive
     # ------------------------------------------------------------------
@@ -536,7 +560,9 @@ class PersistentInvestigationStore:
     # ------------------------------------------------------------------
     # Demo Helpers (no-advanced-manager synthetic tasks)
     # ------------------------------------------------------------------
-    async def seed_demo_tasks(self, investigation_id: str, owner_id: str) -> Dict[str, Any]:
+    async def seed_demo_tasks(
+        self, investigation_id: str, owner_id: str
+    ) -> Dict[str, Any]:
         """Create synthetic tasks for demo when advanced manager is unavailable.
 
         Stores a lightweight tasks JSON alongside investigation file for UI demo.
@@ -595,13 +621,15 @@ class PersistentInvestigationStore:
             else:
                 iterable = raw_tasks or []
             for t in iterable:
-                tasks_list.append({
-                    "id": getattr(t, "id", None),
-                    "capability_id": getattr(t, "capability_id", None),
-                    "inputs": getattr(t, "inputs", {}),
-                    "depends_on": getattr(t, "depends_on", []),
-                    "status": getattr(t, "status", "planned"),
-                })
+                tasks_list.append(
+                    {
+                        "id": getattr(t, "id", None),
+                        "capability_id": getattr(t, "capability_id", None),
+                        "inputs": getattr(t, "inputs", {}),
+                        "depends_on": getattr(t, "depends_on", []),
+                        "status": getattr(t, "status", "planned"),
+                    }
+                )
             data = {
                 "investigation_id": getattr(plan, "investigation_id", investigation_id),
                 "tasks": tasks_list,
@@ -618,6 +646,7 @@ class PersistentInvestigationStore:
                 raw = json.loads(pf.read_text())
                 tasks = {}
                 from types import SimpleNamespace
+
                 for t in raw.get("tasks", []):
                     # Construct a simple task-like object rather than calling the
                     # external PlannedTask constructor which may have a different signature.
@@ -639,7 +668,11 @@ class PersistentInvestigationStore:
             builder = getattr(planner, builder_name, None)
             if callable(builder):
                 try:
-                    plan = builder(investigation_id=inv.id, investigation_type=inv.investigation_type, targets=inv.targets)
+                    plan = builder(
+                        investigation_id=inv.id,
+                        investigation_type=inv.investigation_type,
+                        targets=inv.targets,
+                    )
                 except TypeError:
                     try:
                         plan = builder(inv.id, inv.investigation_type, inv.targets)
@@ -652,12 +685,17 @@ class PersistentInvestigationStore:
         if plan is None:
             # Fallback to an empty plan representation if planner couldn't produce one.
             from types import SimpleNamespace
+
             plan = SimpleNamespace(investigation_id=inv.id, tasks={})
         # Ensure we return a normalized object with .tasks as a dict
         raw_tasks = getattr(plan, "tasks", None)
         if isinstance(raw_tasks, dict):
             norm_tasks = raw_tasks
-        elif raw_tasks is not None and hasattr(raw_tasks, "__iter__") and not isinstance(raw_tasks, dict):
+        elif (
+            raw_tasks is not None
+            and hasattr(raw_tasks, "__iter__")
+            and not isinstance(raw_tasks, dict)
+        ):
             norm_tasks = {}
             for t in raw_tasks:
                 if t is None:
@@ -669,13 +707,17 @@ class PersistentInvestigationStore:
         else:
             norm_tasks = {}
         from types import SimpleNamespace
-        plan = SimpleNamespace(investigation_id=getattr(plan, "investigation_id", inv.id), tasks=norm_tasks)
+
+        plan = SimpleNamespace(
+            investigation_id=getattr(plan, "investigation_id", inv.id), tasks=norm_tasks
+        )
         self._persist_plan(inv.id, plan)
         return plan
 
     def _cap_name(self, capability_id: str) -> str:
         try:
             from capabilities import REGISTRY
+
             cap = REGISTRY.get(capability_id)
             if cap:
                 return cap.name

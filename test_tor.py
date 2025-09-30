@@ -5,14 +5,17 @@ Test Tor integration for anonymity features
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from transport import get_tor_status, sync_validate_tor_connection
+
     TRANSPORT_AVAILABLE = True
 except ImportError as e:
     print(f"❌ Transport module not available: {e}")
     TRANSPORT_AVAILABLE = False
+
 
 def test_tor_status():
     """Test Tor status detection"""
@@ -31,6 +34,7 @@ def test_tor_status():
         print(f"❌ Tor status test failed: {e}")
         return False
 
+
 def test_tor_connection():
     """Test Tor connection validation"""
     if not TRANSPORT_AVAILABLE:
@@ -48,6 +52,7 @@ def test_tor_connection():
         print(f"❌ Tor connection test failed: {e}")
         return False
 
+
 def check_tor_installation():
     """Check if Tor is installed"""
     import subprocess
@@ -55,7 +60,7 @@ def check_tor_installation():
     print("🧪 Checking Tor installation...")
 
     try:
-        result = subprocess.run(['which', 'tor'], capture_output=True, text=True)
+        result = subprocess.run(["which", "tor"], capture_output=True, text=True)
         if result.returncode == 0:
             print("   ✅ Tor is installed")
             return True
@@ -66,6 +71,7 @@ def check_tor_installation():
     except Exception as e:
         print(f"❌ Tor installation check failed: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("Tor Integration Test")

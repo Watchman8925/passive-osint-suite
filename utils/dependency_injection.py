@@ -19,18 +19,15 @@ class DependencyInjector:
         """Build map of module dependencies"""
         return {
             # Email intelligence depends on domain reconnaissance
-            'emailintelligence': ['domain_recon'],
-
+            "emailintelligence": ["domain_recon"],
             # Web scraper might depend on other modules
-            'webscraper': [],
-
+            "webscraper": [],
             # IP intelligence might use domain recon for reverse lookups
-            'ipintelligence': [],
-
+            "ipintelligence": [],
             # Add more dependencies as needed
-            'companyintelligence': ['domain_recon'],
-            'socialmediafootprint': ['emailintelligence'],
-            'passivesearchintelligence': ['webscraper', 'github_search']
+            "companyintelligence": ["domain_recon"],
+            "socialmediafootprint": ["emailintelligence"],
+            "passivesearchintelligence": ["webscraper", "github_search"],
         }
 
     def get_dependencies(self, module_name: str) -> List[str]:
@@ -53,7 +50,9 @@ class DependencyInjector:
                 setattr(module_instance, dep_name, dep_instance)
                 module_instance.logger.info(f"Injected dependency: {dep_name}")
             except Exception as e:
-                module_instance.logger.warning(f"Failed to inject dependency {dep_name}: {e}")
+                module_instance.logger.warning(
+                    f"Failed to inject dependency {dep_name}: {e}"
+                )
 
     def _get_or_create_dependency(self, dep_name: str):
         """Get or create a dependency instance"""
@@ -65,7 +64,7 @@ class DependencyInjector:
             raise ValueError(f"Dependency '{dep_name}' not found")
 
         module_info = MODULE_REGISTRY[dep_name]
-        instance = cast(Callable[[], Any], module_info['class'])()
+        instance = cast(Callable[[], Any], module_info["class"])()
         self._injection_cache[dep_name] = instance
         return instance
 
@@ -123,6 +122,7 @@ class DependencyInjector:
 
         return invalid_deps
 
+
 class ModuleFactory:
     """Factory for creating modules with dependency injection"""
 
@@ -139,7 +139,7 @@ class ModuleFactory:
                 raise ValueError(f"Module '{module_name}' not found")
 
             module_info = MODULE_REGISTRY[module_name]
-            instance = cast(Callable[[], Any], module_info['class'])()
+            instance = cast(Callable[[], Any], module_info["class"])()
 
             # Inject dependencies
             self.injector.inject_dependencies(instance)
@@ -150,9 +150,11 @@ class ModuleFactory:
             print(f"Failed to create module {module_name}: {e}")
             return None
 
+
 # Global instances
 dependency_injector = DependencyInjector()
 module_factory = ModuleFactory()
+
 
 def get_module_with_dependencies(module_name: str):
     """Get a module instance with dependencies injected"""

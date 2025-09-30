@@ -11,25 +11,33 @@ from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
 
+
 class DigitalForensicsAnalyzer:
     """Digital forensics analyzer using open source tools"""
 
     def __init__(self):
         self.tools = {
-            'exiftool': self._check_tool('exiftool'),
-            'tesseract': self._check_tool('tesseract'),
-            'zbarimg': self._check_tool('zbarimg'),
-            'pdfid': self._check_tool('pdfid.py'),
-            'oledump': self._check_tool('oledump.py')
+            "exiftool": self._check_tool("exiftool"),
+            "tesseract": self._check_tool("tesseract"),
+            "zbarimg": self._check_tool("zbarimg"),
+            "pdfid": self._check_tool("pdfid.py"),
+            "oledump": self._check_tool("oledump.py"),
         }
 
     def _check_tool(self, tool_name: str) -> bool:
         """Check if a tool is available"""
         try:
-            subprocess.run([tool_name, '--help' if tool_name != 'pdfid.py' else '-h'],
-                         capture_output=True, timeout=5)
+            subprocess.run(
+                [tool_name, "--help" if tool_name != "pdfid.py" else "-h"],
+                capture_output=True,
+                timeout=5,
+            )
             return True
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        except (
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            subprocess.CalledProcessError,
+        ):
             return False
 
     def extract_metadata(self, file_path: str) -> Dict[str, Any]:
@@ -42,7 +50,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing extracted metadata
         """
-        if not self.tools['exiftool']:
+        if not self.tools["exiftool"]:
             return {"error": "ExifTool not available"}
 
         if not os.path.exists(file_path):
@@ -50,10 +58,10 @@ class DigitalForensicsAnalyzer:
 
         try:
             result = subprocess.run(
-                ['exiftool', '-j', '-a', '-u', file_path],
+                ["exiftool", "-j", "-a", "-u", file_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode == 0:
@@ -61,7 +69,7 @@ class DigitalForensicsAnalyzer:
                 return {
                     "success": True,
                     "metadata": metadata[0] if metadata else {},
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
             else:
                 return {"error": f"ExifTool error: {result.stderr}"}
@@ -69,7 +77,9 @@ class DigitalForensicsAnalyzer:
         except (subprocess.TimeoutExpired, json.JSONDecodeError) as e:
             return {"error": f"Metadata extraction failed: {str(e)}"}
 
-    def extract_text_from_image(self, image_path: str, lang: str = 'eng') -> Dict[str, Any]:
+    def extract_text_from_image(
+        self, image_path: str, lang: str = "eng"
+    ) -> Dict[str, Any]:
         """
         Extract text from images using Tesseract OCR
 
@@ -80,7 +90,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing extracted text
         """
-        if not self.tools['tesseract']:
+        if not self.tools["tesseract"]:
             return {"error": "Tesseract not available"}
 
         if not os.path.exists(image_path):
@@ -88,10 +98,10 @@ class DigitalForensicsAnalyzer:
 
         try:
             result = subprocess.run(
-                ['tesseract', image_path, 'stdout', '-l', lang],
+                ["tesseract", image_path, "stdout", "-l", lang],
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             if result.returncode == 0:
@@ -99,7 +109,7 @@ class DigitalForensicsAnalyzer:
                     "success": True,
                     "text": result.stdout.strip(),
                     "image_path": image_path,
-                    "language": lang
+                    "language": lang,
                 }
             else:
                 return {"error": f"Tesseract error: {result.stderr}"}
@@ -117,7 +127,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing detected codes
         """
-        if not self.tools['zbarimg']:
+        if not self.tools["zbarimg"]:
             return {"error": "Zbar not available"}
 
         if not os.path.exists(image_path):
@@ -125,18 +135,18 @@ class DigitalForensicsAnalyzer:
 
         try:
             result = subprocess.run(
-                ['zbarimg', '--quiet', '--xml', image_path],
+                ["zbarimg", "--quiet", "--xml", image_path],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             codes = []
             if result.returncode == 0 and result.stdout:
                 # Parse XML output for codes
-                lines = result.stdout.split('\n')
+                lines = result.stdout.split("\n")
                 for line in lines:
-                    if '<symbol' in line and 'data=' in line:
+                    if "<symbol" in line and "data=" in line:
                         # Extract data from XML
                         start = line.find('data="') + 6
                         end = line.find('"', start)
@@ -147,7 +157,7 @@ class DigitalForensicsAnalyzer:
                 "success": True,
                 "codes": codes,
                 "count": len(codes),
-                "image_path": image_path
+                "image_path": image_path,
             }
 
         except subprocess.TimeoutExpired:
@@ -163,7 +173,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing PDF analysis results
         """
-        if not self.tools['pdfid']:
+        if not self.tools["pdfid"]:
             return {"error": "pdfid not available"}
 
         if not os.path.exists(pdf_path):
@@ -171,26 +181,19 @@ class DigitalForensicsAnalyzer:
 
         try:
             result = subprocess.run(
-                ['pdfid.py', pdf_path],
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["pdfid.py", pdf_path], capture_output=True, text=True, timeout=30
             )
 
             if result.returncode == 0:
                 # Parse pdfid output
                 analysis = {}
-                lines = result.stdout.split('\n')
+                lines = result.stdout.split("\n")
                 for line in lines:
-                    if ':' in line and len(line.split(':')) == 2:
-                        key, value = line.split(':', 1)
+                    if ":" in line and len(line.split(":")) == 2:
+                        key, value = line.split(":", 1)
                         analysis[key.strip()] = value.strip()
 
-                return {
-                    "success": True,
-                    "analysis": analysis,
-                    "pdf_path": pdf_path
-                }
+                return {"success": True, "analysis": analysis, "pdf_path": pdf_path}
             else:
                 return {"error": f"pdfid error: {result.stderr}"}
 
@@ -207,7 +210,7 @@ class DigitalForensicsAnalyzer:
         Returns:
             Dictionary containing document analysis
         """
-        if not self.tools['oledump']:
+        if not self.tools["oledump"]:
             return {"error": "oledump not available"}
 
         if not os.path.exists(doc_path):
@@ -215,24 +218,21 @@ class DigitalForensicsAnalyzer:
 
         try:
             result = subprocess.run(
-                ['oledump.py', doc_path],
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["oledump.py", doc_path], capture_output=True, text=True, timeout=30
             )
 
             streams = []
             if result.returncode == 0:
-                lines = result.stdout.split('\n')
+                lines = result.stdout.split("\n")
                 for line in lines:
-                    if line.strip() and not line.startswith('ole'):
+                    if line.strip() and not line.startswith("ole"):
                         streams.append(line.strip())
 
             return {
                 "success": True,
                 "streams": streams,
                 "stream_count": len(streams),
-                "document_path": doc_path
+                "document_path": doc_path,
             }
 
         except subprocess.TimeoutExpired:
@@ -251,7 +251,7 @@ class DigitalForensicsAnalyzer:
         results: Dict[str, Any] = {
             "file_path": file_path,
             "file_exists": os.path.exists(file_path),
-            "analyses": {}
+            "analyses": {},
         }
 
         if not results["file_exists"]:
@@ -264,22 +264,25 @@ class DigitalForensicsAnalyzer:
         results["analyses"]["metadata"] = self.extract_metadata(file_path)
 
         # Image-specific analysis
-        if ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif']:
+        if ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"]:
             results["analyses"]["ocr"] = self.extract_text_from_image(file_path)
             results["analyses"]["barcodes"] = self.scan_qr_barcodes(file_path)
 
         # PDF analysis
-        elif ext == '.pdf':
+        elif ext == ".pdf":
             results["analyses"]["pdf_analysis"] = self.analyze_pdf(file_path)
 
         # Office document analysis
-        elif ext in ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
-            results["analyses"]["office_analysis"] = self.analyze_office_document(file_path)
+        elif ext in [".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"]:
+            results["analyses"]["office_analysis"] = self.analyze_office_document(
+                file_path
+            )
 
         return results
 
-    def batch_analyze_directory(self, directory_path: str,
-                              file_extensions: Optional[List[str]] = None) -> Dict[str, Any]:
+    def batch_analyze_directory(
+        self, directory_path: str, file_extensions: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Analyze all files in a directory
 
@@ -296,7 +299,7 @@ class DigitalForensicsAnalyzer:
         results: Dict[str, Any] = {
             "directory": directory_path,
             "files_analyzed": 0,
-            "results": []
+            "results": [],
         }
 
         for root, dirs, files in os.walk(directory_path):

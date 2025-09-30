@@ -12,34 +12,47 @@ import socket
 
 logger = logging.getLogger(__name__)
 
+
 class DNSIntelligenceEngine:
     """DNS intelligence engine using open source tools"""
 
     def __init__(self):
         self.tools = {
-            'dnsrecon': self._check_tool('dnsrecon'),
-            'dig': self._check_tool('dig'),
-            'nslookup': self._check_tool('nslookup'),
-            'host': self._check_tool('host'),
-            'amass': self._check_tool('amass'),
-            'shuffledns': self._check_tool('shuffledns'),
-            'puredns': self._check_tool('puredns'),
-            'alterx': self._check_tool('alterx'),
-            'gotator': self._check_tool('gotator'),
-            'dnsgen': self._check_tool('dnsgen'),
-            'dnstwist': self._check_tool('dnstwist')
+            "dnsrecon": self._check_tool("dnsrecon"),
+            "dig": self._check_tool("dig"),
+            "nslookup": self._check_tool("nslookup"),
+            "host": self._check_tool("host"),
+            "amass": self._check_tool("amass"),
+            "shuffledns": self._check_tool("shuffledns"),
+            "puredns": self._check_tool("puredns"),
+            "alterx": self._check_tool("alterx"),
+            "gotator": self._check_tool("gotator"),
+            "dnsgen": self._check_tool("dnsgen"),
+            "dnstwist": self._check_tool("dnstwist"),
         }
 
     def _check_tool(self, tool_name: str) -> bool:
         """Check if a tool is available"""
         try:
-            subprocess.run([tool_name, '--help' if tool_name not in ['dig', 'nslookup', 'host'] else '-h'],
-                         capture_output=True, timeout=5)
+            subprocess.run(
+                [
+                    tool_name,
+                    "--help" if tool_name not in ["dig", "nslookup", "host"] else "-h",
+                ],
+                capture_output=True,
+                timeout=5,
+            )
             return True
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        except (
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            subprocess.CalledProcessError,
+        ):
             return False
 
-    def dns_reconnaissance(self, domain: str, recon_type: str = 'standard') -> Dict[str, Any]:
+    def dns_reconnaissance(
+        self, domain: str, recon_type: str = "standard"
+    ) -> Dict[str, Any]:
         """
         Perform DNS reconnaissance using dnsrecon
 
@@ -50,29 +63,24 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing DNS reconnaissance results
         """
-        if not self.tools['dnsrecon']:
+        if not self.tools["dnsrecon"]:
             return {"error": "dnsrecon not available"}
 
         try:
-            cmd = ['dnsrecon', '-d', domain, '--json']
+            cmd = ["dnsrecon", "-d", domain, "--json"]
 
-            if recon_type == 'brute':
-                cmd.extend(['-D', '/usr/share/dnsrecon/namelist.txt', '-t', 'brt'])
-            elif recon_type == 'axfr':
-                cmd.extend(['-t', 'axfr'])
-            elif recon_type == 'all':
-                cmd.extend(['-t', 'std,brt,axfr,srv,zonewalk'])
+            if recon_type == "brute":
+                cmd.extend(["-D", "/usr/share/dnsrecon/namelist.txt", "-t", "brt"])
+            elif recon_type == "axfr":
+                cmd.extend(["-t", "axfr"])
+            elif recon_type == "all":
+                cmd.extend(["-t", "std,brt,axfr,srv,zonewalk"])
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
             records = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
                         try:
@@ -90,7 +98,7 @@ class DNSIntelligenceEngine:
                 "recon_type": recon_type,
                 "total_records": len(records),
                 "records": records,
-                "categorized": categorized
+                "categorized": categorized,
             }
 
         except subprocess.TimeoutExpired:
@@ -116,11 +124,11 @@ class DNSIntelligenceEngine:
             "SOA": [],
             "SRV": [],
             "PTR": [],
-            "other": []
+            "other": [],
         }
 
         for record in records:
-            record_type = record.get('type', 'other')
+            record_type = record.get("type", "other")
             if record_type in categories:
                 categories[record_type].append(record)
             else:
@@ -138,24 +146,21 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing passive DNS results
         """
-        results: Dict[str, Any] = {
-            "domain": domain,
-            "passive_sources": {}
-        }
+        results: Dict[str, Any] = {"domain": domain, "passive_sources": {}}
 
         # Try dnsrecon passive enumeration
-        if self.tools['dnsrecon']:
+        if self.tools["dnsrecon"]:
             try:
                 result = subprocess.run(
-                    ['dnsrecon', '-d', domain, '-t', 'std', '--json'],
+                    ["dnsrecon", "-d", domain, "-t", "std", "--json"],
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 passive_records = []
                 if result.returncode == 0 and result.stdout:
-                    lines = result.stdout.strip().split('\n')
+                    lines = result.stdout.strip().split("\n")
                     for line in lines:
                         if line.strip():
                             try:
@@ -166,26 +171,26 @@ class DNSIntelligenceEngine:
 
                 results["passive_sources"]["dnsrecon"] = {
                     "records": passive_records,
-                    "count": len(passive_records)
+                    "count": len(passive_records),
                 }
 
             except subprocess.TimeoutExpired:
                 results["passive_sources"]["dnsrecon"] = {"error": "timeout"}
 
         # Try dig for basic enumeration
-        if self.tools['dig']:
+        if self.tools["dig"]:
             try:
                 result = subprocess.run(
-                    ['dig', domain, 'ANY', '+noall', '+answer'],
+                    ["dig", domain, "ANY", "+noall", "+answer"],
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
                 )
 
                 if result.returncode == 0:
                     results["passive_sources"]["dig"] = {
                         "output": result.stdout.strip(),
-                        "success": True
+                        "success": True,
                     }
 
             except subprocess.TimeoutExpired:
@@ -193,7 +198,9 @@ class DNSIntelligenceEngine:
 
         return results
 
-    def subdomain_enumeration(self, domain: str, wordlist_path: Optional[str] = None) -> Dict[str, Any]:
+    def subdomain_enumeration(
+        self, domain: str, wordlist_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Perform subdomain enumeration
 
@@ -204,37 +211,42 @@ class DNSIntelligenceEngine:
         Returns:
             Dictionary containing subdomain enumeration results
         """
-        results: Dict[str, Any] = {
-            "domain": domain,
-            "subdomains": [],
-            "sources": {}
-        }
+        results: Dict[str, Any] = {"domain": domain, "subdomains": [], "sources": {}}
 
         # Use dnsrecon for subdomain brute force if wordlist available
-        if self.tools['dnsrecon'] and wordlist_path and os.path.exists(wordlist_path):
+        if self.tools["dnsrecon"] and wordlist_path and os.path.exists(wordlist_path):
             try:
                 result = subprocess.run(
-                    ['dnsrecon', '-d', domain, '-D', wordlist_path, '-t', 'brt', '--json'],
+                    [
+                        "dnsrecon",
+                        "-d",
+                        domain,
+                        "-D",
+                        wordlist_path,
+                        "-t",
+                        "brt",
+                        "--json",
+                    ],
                     capture_output=True,
                     text=True,
-                    timeout=600
+                    timeout=600,
                 )
 
                 subdomains = []
                 if result.returncode == 0 and result.stdout:
-                    lines = result.stdout.strip().split('\n')
+                    lines = result.stdout.strip().split("\n")
                     for line in lines:
                         if line.strip():
                             try:
                                 record = json.loads(line)
-                                if record.get('type') == 'A' and 'name' in record:
-                                    subdomains.append(record['name'])
+                                if record.get("type") == "A" and "name" in record:
+                                    subdomains.append(record["name"])
                             except json.JSONDecodeError:
                                 continue
 
                 results["sources"]["dnsrecon_brute"] = {
                     "subdomains": list(set(subdomains)),
-                    "count": len(set(subdomains))
+                    "count": len(set(subdomains)),
                 }
                 results["subdomains"].extend(subdomains)
 
@@ -242,30 +254,27 @@ class DNSIntelligenceEngine:
                 results["sources"]["dnsrecon_brute"] = {"error": "timeout"}
 
         # Try host command for basic enumeration
-        if self.tools['host']:
+        if self.tools["host"]:
             try:
                 result = subprocess.run(
-                    ['host', '-l', domain],
-                    capture_output=True,
-                    text=True,
-                    timeout=60
+                    ["host", "-l", domain], capture_output=True, text=True, timeout=60
                 )
 
                 if result.returncode == 0 and result.stdout:
                     # Parse host output for subdomains
-                    lines = result.stdout.split('\n')
+                    lines = result.stdout.split("\n")
                     host_subdomains = []
                     for line in lines:
-                        if 'domain name pointer' in line:
+                        if "domain name pointer" in line:
                             parts = line.split()
                             if len(parts) > 0:
-                                subdomain = parts[0].rstrip('.')
-                                if subdomain.endswith(f'.{domain}'):
+                                subdomain = parts[0].rstrip(".")
+                                if subdomain.endswith(f".{domain}"):
                                     host_subdomains.append(subdomain)
 
                     results["sources"]["host"] = {
                         "subdomains": host_subdomains,
-                        "count": len(host_subdomains)
+                        "count": len(host_subdomains),
                     }
                     results["subdomains"].extend(host_subdomains)
 
@@ -291,17 +300,17 @@ class DNSIntelligenceEngine:
         permutations = []
 
         # Basic permutation techniques
-        base_domain = domain.replace('www.', '').split('.')[0]
-        tld = '.'.join(domain.split('.')[1:]) if '.' in domain else 'com'
+        base_domain = domain.replace("www.", "").split(".")[0]
+        tld = ".".join(domain.split(".")[1:]) if "." in domain else "com"
 
         # Character substitution
         substitutions = {
-            'a': ['4', '@'],
-            'e': ['3'],
-            'i': ['1', '!'],
-            'o': ['0'],
-            's': ['5', '$'],
-            't': ['7']
+            "a": ["4", "@"],
+            "e": ["3"],
+            "i": ["1", "!"],
+            "o": ["0"],
+            "s": ["5", "$"],
+            "t": ["7"],
         }
 
         # Generate substitutions
@@ -317,7 +326,7 @@ class DNSIntelligenceEngine:
 
         # Character omission
         for i in range(len(base_domain)):
-            perm = base_domain[:i] + base_domain[i+1:]
+            perm = base_domain[:i] + base_domain[i + 1 :]
             if len(perm) > 2:
                 permutations.append(f"{perm}.{tld}")
 
@@ -335,7 +344,7 @@ class DNSIntelligenceEngine:
             "base_domain": domain,
             "total_permutations": len(valid_perms),
             "permutations": valid_perms[:200],  # Limit for performance
-            "techniques": ["substitution", "omission", "repetition", "missing_dot"]
+            "techniques": ["substitution", "omission", "repetition", "missing_dot"],
         }
 
     def dns_zone_transfer_check(self, domain: str) -> Dict[str, Any]:
@@ -352,40 +361,54 @@ class DNSIntelligenceEngine:
             "domain": domain,
             "zone_transfer_possible": False,
             "nameservers": [],
-            "vulnerable_servers": []
+            "vulnerable_servers": [],
         }
 
         # Get nameservers first
         try:
             ns_result = subprocess.run(
-                ['dig', 'NS', domain, '+short'],
+                ["dig", "NS", domain, "+short"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if ns_result.returncode == 0 and ns_result.stdout:
-                nameservers = [ns.strip('.') for ns in ns_result.stdout.strip().split('\n') if ns.strip()]
+                nameservers = [
+                    ns.strip(".")
+                    for ns in ns_result.stdout.strip().split("\n")
+                    if ns.strip()
+                ]
                 results["nameservers"] = nameservers
 
                 # Try zone transfer on each nameserver
                 for ns in nameservers:
                     try:
                         axfr_result = subprocess.run(
-                            ['dig', '@' + ns, 'AXFR', domain],
+                            ["dig", "@" + ns, "AXFR", domain],
                             capture_output=True,
                             text=True,
-                            timeout=30
+                            timeout=30,
                         )
 
-                        if axfr_result.returncode == 0 and 'Transfer failed' not in axfr_result.stdout:
+                        if (
+                            axfr_result.returncode == 0
+                            and "Transfer failed" not in axfr_result.stdout
+                        ):
                             # Check if we got actual zone data
-                            if 'SOA' in axfr_result.stdout and len(axfr_result.stdout) > 100:
+                            if (
+                                "SOA" in axfr_result.stdout
+                                and len(axfr_result.stdout) > 100
+                            ):
                                 results["zone_transfer_possible"] = True
-                                results["vulnerable_servers"].append({
-                                    "server": ns,
-                                    "data": axfr_result.stdout[:2000]  # Limit output
-                                })
+                                results["vulnerable_servers"].append(
+                                    {
+                                        "server": ns,
+                                        "data": axfr_result.stdout[
+                                            :2000
+                                        ],  # Limit output
+                                    }
+                                )
 
                     except subprocess.TimeoutExpired:
                         continue
@@ -412,14 +435,10 @@ class DNSIntelligenceEngine:
                 "ip_address": ip_address,
                 "hostname": hostname[0],
                 "aliases": hostname[1],
-                "addresses": hostname[2]
+                "addresses": hostname[2],
             }
         except (socket.herror, socket.gaierror) as e:
-            return {
-                "success": False,
-                "ip_address": ip_address,
-                "error": str(e)
-            }
+            return {"success": False, "ip_address": ip_address, "error": str(e)}
 
     def comprehensive_dns_analysis(self, domain: str) -> Dict[str, Any]:
         """
@@ -434,11 +453,11 @@ class DNSIntelligenceEngine:
         analysis: Dict[str, Any] = {
             "domain": domain,
             "timestamp": None,  # Would be set by caller
-            "analyses": {}
+            "analyses": {},
         }
 
         # DNS reconnaissance
-        analysis["analyses"]["dns_recon"] = self.dns_reconnaissance(domain, 'standard')
+        analysis["analyses"]["dns_recon"] = self.dns_reconnaissance(domain, "standard")
 
         # Passive DNS enumeration
         analysis["analyses"]["passive_dns"] = self.passive_dns_enumeration(domain)
@@ -447,7 +466,9 @@ class DNSIntelligenceEngine:
         analysis["analyses"]["subdomains"] = self.subdomain_enumeration(domain)
 
         # Domain permutations
-        analysis["analyses"]["permutations"] = self.domain_permutation_generation(domain)
+        analysis["analyses"]["permutations"] = self.domain_permutation_generation(
+            domain
+        )
 
         # Zone transfer check
         analysis["analyses"]["zone_transfer"] = self.dns_zone_transfer_check(domain)

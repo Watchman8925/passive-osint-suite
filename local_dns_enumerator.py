@@ -18,10 +18,12 @@ try:
     import dns.resolver
     import dns.query
     import dns.zone
+
     HAS_DNSPYTHON = True
 except ImportError:
     HAS_DNSPYTHON = False
     logger.warning("dnspython not available - advanced DNS features disabled")
+
 
 class LocalDNSEnumerator:
     """Advanced local DNS enumerator"""
@@ -32,13 +34,33 @@ class LocalDNSEnumerator:
         self.max_workers = 10
 
         # Common DNS record types to check
-        self.record_types = ['A', 'AAAA', 'MX', 'NS', 'SOA', 'TXT', 'CNAME', 'PTR']
+        self.record_types = ["A", "AAAA", "MX", "NS", "SOA", "TXT", "CNAME", "PTR"]
 
         # Common subdomain prefixes to try
         self.common_prefixes = [
-            'www', 'mail', 'ftp', 'admin', 'test', 'dev', 'staging', 'api',
-            'vpn', 'remote', 'portal', 'webmail', 'smtp', 'pop', 'imap',
-            'ns1', 'ns2', 'dns1', 'dns2', 'gw', 'gateway', 'router', 'dhcp'
+            "www",
+            "mail",
+            "ftp",
+            "admin",
+            "test",
+            "dev",
+            "staging",
+            "api",
+            "vpn",
+            "remote",
+            "portal",
+            "webmail",
+            "smtp",
+            "pop",
+            "imap",
+            "ns1",
+            "ns2",
+            "dns1",
+            "dns2",
+            "gw",
+            "gateway",
+            "router",
+            "dhcp",
         ]
 
         logger.info("LocalDNSEnumerator initialized with DNS enumeration capabilities")
@@ -51,7 +73,7 @@ class LocalDNSEnumerator:
                 "records": {},
                 "subdomains": [],
                 "enumerated": True,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             # Enumerate different record types
@@ -71,7 +93,13 @@ class LocalDNSEnumerator:
 
         except Exception as e:
             logger.error(f"Failed to enumerate domain {domain}: {e}")
-            return {"domain": domain, "records": {}, "subdomains": [], "enumerated": False, "error": str(e)}
+            return {
+                "domain": domain,
+                "records": {},
+                "subdomains": [],
+                "enumerated": False,
+                "error": str(e),
+            }
 
     def _query_dns_records(self, domain: str, record_type: str) -> List[Dict[str, Any]]:
         """Query specific DNS record type"""
@@ -88,24 +116,28 @@ class LocalDNSEnumerator:
                     record_data = {
                         "type": record_type,
                         "value": str(answer),
-                        "ttl": getattr(answer, 'ttl', None)
+                        "ttl": getattr(answer, "ttl", None),
                     }
                     records.append(record_data)
             else:
                 # Fallback using system dig if available
                 try:
                     result = subprocess.run(
-                        ['dig', domain, record_type, '+short'],
-                        capture_output=True, text=True, timeout=self.timeout
+                        ["dig", domain, record_type, "+short"],
+                        capture_output=True,
+                        text=True,
+                        timeout=self.timeout,
                     )
                     if result.returncode == 0 and result.stdout.strip():
-                        for line in result.stdout.strip().split('\n'):
+                        for line in result.stdout.strip().split("\n"):
                             if line.strip():
-                                records.append({
-                                    "type": record_type,
-                                    "value": line.strip(),
-                                    "ttl": None
-                                })
+                                records.append(
+                                    {
+                                        "type": record_type,
+                                        "value": line.strip(),
+                                        "ttl": None,
+                                    }
+                                )
                 except (subprocess.TimeoutExpired, FileNotFoundError):
                     pass
 
@@ -126,14 +158,17 @@ class LocalDNSEnumerator:
                 return {
                     "subdomain": subdomain,
                     "resolved": True,
-                    "ip": socket.gethostbyname(subdomain)
+                    "ip": socket.gethostbyname(subdomain),
                 }
             except socket.gaierror:
                 return None
 
         # Check common prefixes
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(check_subdomain, prefix) for prefix in self.common_prefixes]
+            futures = [
+                executor.submit(check_subdomain, prefix)
+                for prefix in self.common_prefixes
+            ]
 
             for future in as_completed(futures):
                 result = future.result()
@@ -145,12 +180,14 @@ class LocalDNSEnumerator:
     def _analyze_dns_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze DNS enumeration results"""
         analysis: Dict[str, Any] = {
-            "record_count": sum(len(records) for records in results.get("records", {}).values()),
+            "record_count": sum(
+                len(records) for records in results.get("records", {}).values()
+            ),
             "subdomain_count": len(results.get("subdomains", [])),
             "has_mx": bool(results.get("records", {}).get("MX")),
             "has_ns": bool(results.get("records", {}).get("NS")),
             "has_aaaa": bool(results.get("records", {}).get("AAAA")),
-            "security_indicators": []
+            "security_indicators": [],
         }
 
         # Check for security indicators
@@ -172,7 +209,9 @@ class LocalDNSEnumerator:
             analysis["security_indicators"].append("No DMARC record")
 
         # Check for DKIM selector
-        dkim_records = self._query_dns_records(f"default._domainkey.{results['domain']}", "TXT")
+        dkim_records = self._query_dns_records(
+            f"default._domainkey.{results['domain']}", "TXT"
+        )
         if dkim_records:
             analysis["security_indicators"].append("DKIM configured")
         else:
@@ -204,7 +243,7 @@ class LocalDNSEnumerator:
             return {
                 "unique_networks": len(networks),
                 "networks": list(networks),
-                "geographic_distribution": "analysis_not_implemented"  # Could be enhanced
+                "geographic_distribution": "analysis_not_implemented",  # Could be enhanced
             }
         except Exception as e:
             return {"error": str(e)}
@@ -216,14 +255,19 @@ class LocalDNSEnumerator:
                 "network": network,
                 "dns_servers": [],
                 "scanned": True,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             # Parse network
             try:
                 net = ipaddress.ip_network(network, strict=False)
             except ValueError:
-                return {"network": network, "dns_servers": [], "scanned": False, "error": "Invalid network"}
+                return {
+                    "network": network,
+                    "dns_servers": [],
+                    "scanned": False,
+                    "error": "Invalid network",
+                }
 
             # Common DNS server ports: 53, 5353 (Standard DNS and mDNS)
             # Scan for DNS servers (basic implementation)
@@ -233,35 +277,40 @@ class LocalDNSEnumerator:
             if net.num_addresses > 1:
                 gateway_ip = str(net.network_address + 1)  # Usually .1
                 if self._test_dns_server(gateway_ip):
-                    potential_dns_servers.append({
-                        "ip": gateway_ip,
-                        "type": "gateway",
-                        "responsive": True
-                    })
+                    potential_dns_servers.append(
+                        {"ip": gateway_ip, "type": "gateway", "responsive": True}
+                    )
 
             # Check other common DNS server locations
             for offset in [1, 2, 10, 100]:
                 if offset < net.num_addresses:
                     test_ip = str(net.network_address + offset)
                     if self._test_dns_server(test_ip):
-                        potential_dns_servers.append({
-                            "ip": test_ip,
-                            "type": "common_location",
-                            "responsive": True
-                        })
+                        potential_dns_servers.append(
+                            {
+                                "ip": test_ip,
+                                "type": "common_location",
+                                "responsive": True,
+                            }
+                        )
 
             results["dns_servers"] = potential_dns_servers
             results["analysis"] = {
                 "server_count": len(potential_dns_servers),
                 "network_size": net.num_addresses,
-                "scan_coverage": "partial"  # Only checking common locations
+                "scan_coverage": "partial",  # Only checking common locations
             }
 
             return results
 
         except Exception as e:
             logger.error(f"Failed to scan network {network}: {e}")
-            return {"network": network, "dns_servers": [], "scanned": False, "error": str(e)}
+            return {
+                "network": network,
+                "dns_servers": [],
+                "scanned": False,
+                "error": str(e),
+            }
 
     def _test_dns_server(self, ip: str, timeout: float = 2.0) -> bool:
         """Test if an IP is running a DNS server"""
@@ -290,7 +339,7 @@ class LocalDNSEnumerator:
                 "domain": domain,
                 "zone_transfer_successful": False,
                 "records": [],
-                "vulnerable_nameservers": []
+                "vulnerable_nameservers": [],
             }
 
             if not HAS_DNSPYTHON:
@@ -299,13 +348,14 @@ class LocalDNSEnumerator:
 
             # Get nameservers
             ns_records = self._query_dns_records(domain, "NS")
-            nameservers = [record["value"].rstrip('.') for record in ns_records]
+            nameservers = [record["value"].rstrip(".") for record in ns_records]
 
             for ns in nameservers:
                 try:
                     # Try zone transfer
                     import dns.zone
                     import dns.query
+
                     zone = dns.zone.from_xfr(dns.query.xfr(ns, domain))
                     if zone:
                         results["zone_transfer_successful"] = True
@@ -314,11 +364,13 @@ class LocalDNSEnumerator:
                         # Extract records
                         for name, node in zone.nodes.items():
                             for rdataset in node.rdatasets:
-                                results["records"].append({
-                                    "name": str(name),
-                                    "type": rdataset.rdtype,
-                                    "data": [str(rdata) for rdata in rdataset]
-                                })
+                                results["records"].append(
+                                    {
+                                        "name": str(name),
+                                        "type": rdataset.rdtype,
+                                        "data": [str(rdata) for rdata in rdataset],
+                                    }
+                                )
 
                 except Exception as e:
                     logger.debug(f"Zone transfer failed for {ns}: {e}")
@@ -327,4 +379,8 @@ class LocalDNSEnumerator:
 
         except Exception as e:
             logger.error(f"Failed to enumerate zone for {domain}: {e}")
-            return {"domain": domain, "zone_transfer_successful": False, "error": str(e)}
+            return {
+                "domain": domain,
+                "zone_transfer_successful": False,
+                "error": str(e),
+            }

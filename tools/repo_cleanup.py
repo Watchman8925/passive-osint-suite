@@ -7,6 +7,7 @@ Emits a report to stdout and writes details to output/repo_cleanup_report.json.
 
 Safe by default: it NEVER deletes anything. Use the report to remove files manually.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -107,10 +108,15 @@ def analyze_repo(root: Path) -> Dict:
     sizes.sort(reverse=True)
     top_30 = sizes[:30]
 
-    dups = {h: paths for h, paths in hashes.items() if h != "<error>" and len(paths) > 1}
+    dups = {
+        h: paths for h, paths in hashes.items() if h != "<error>" and len(paths) > 1
+    }
 
     report = {
-        "top_largest": [{"path": path, "size": bytes, "size_h": human(bytes)} for bytes, path in top_30],
+        "top_largest": [
+            {"path": path, "size": bytes, "size_h": human(bytes)}
+            for bytes, path in top_30
+        ],
         "duplicates": dups,
         "generated_candidates": generated,
         "thresholds": {
@@ -134,7 +140,9 @@ def main() -> int:
         print(f"{item['size_h']:>9}  {item['path']}")
 
     dup_count = sum(len(v) for v in report["duplicates"].values())
-    print(f"\nDuplicate groups: {len(report['duplicates'])}  (files involved: {dup_count})")
+    print(
+        f"\nDuplicate groups: {len(report['duplicates'])}  (files involved: {dup_count})"
+    )
 
     print("\nGenerated artifact candidates (heuristic):")
     for p in report["generated_candidates"][:50]:

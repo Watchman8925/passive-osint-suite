@@ -6,13 +6,16 @@ Tests the new RapidAPI, pre-seeded databases, and free tools modules
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def test_rapidapi_module():
     """Test RapidAPI OSINT module"""
     print("Testing RapidAPI OSINT Module...")
     try:
         from modules.rapidapi_osint import RapidAPIOSINTModule
+
         _rapidapi = RapidAPIOSINTModule()
 
         # Test database info
@@ -31,6 +34,7 @@ def test_preseeded_databases():
     print("Testing Pre-seeded Databases Module...")
     try:
         from modules.preseeded_databases import PreSeededDatabases
+
         db = PreSeededDatabases()
 
         # Test database listing
@@ -38,7 +42,7 @@ def test_preseeded_databases():
         print(f"✓ Available databases: {len(databases)}")
 
         # Test database info
-        info = db.get_database_info('us_cisa_known_exploited')
+        info = db.get_database_info("us_cisa_known_exploited")
         print(f"✓ CISA database: {info['name'] if info else 'Not found'}")
 
         # Test statistics
@@ -56,6 +60,7 @@ def test_free_tools():
     print("Testing Free Tools Module...")
     try:
         from modules.free_tools import FreeToolsOSINT
+
         tools = FreeToolsOSINT()
 
         # Test system info
@@ -69,7 +74,9 @@ def test_free_tools():
         # Test pattern extraction
         test_text = "Contact john@example.com or visit http://test.com. IP: 192.168.1.1"
         patterns = tools.extract_patterns_from_text(test_text)
-        print(f"✓ Pattern extraction: emails={len(patterns['emails'])}, urls={len(patterns['urls'])}")
+        print(
+            f"✓ Pattern extraction: emails={len(patterns['emails'])}, urls={len(patterns['urls'])}"
+        )
 
         print("✓ Free tools module working")
 
@@ -82,6 +89,7 @@ def test_enhanced_dorking():
     print("Testing Enhanced Search Engine Dorking...")
     try:
         from modules.search_engine_dorking import SearchEngineDorking
+
         dorking = SearchEngineDorking()
 
         # Test dork pattern generation
@@ -103,14 +111,14 @@ def test_module_registry():
     print("Testing Module Registry...")
     try:
         # Import modules individually to avoid dependency issues
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'modules'))
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "modules"))
 
         # Check if our new modules exist as files
-        new_modules = ['rapidapi_osint', 'preseeded_databases', 'free_tools']
-        modules_dir = os.path.join(os.path.dirname(__file__), 'modules')
+        new_modules = ["rapidapi_osint", "preseeded_databases", "free_tools"]
+        modules_dir = os.path.join(os.path.dirname(__file__), "modules")
 
         for module_name in new_modules:
-            module_file = os.path.join(modules_dir, f'{module_name}.py')
+            module_file = os.path.join(modules_dir, f"{module_name}.py")
             if os.path.exists(module_file):
                 print(f"✓ Module file '{module_name}.py' exists")
             else:

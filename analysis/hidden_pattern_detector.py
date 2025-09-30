@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import networkx as nx
+
 # Import our existing modules
 from analysis.cross_reference_engine import CrossReferenceEngine, CrossReferenceHit
 from core.local_llm_engine import create_local_llm_engine
@@ -121,19 +122,24 @@ class HiddenPatternDetector:
         if self.pattern_engine is None:
             try:
                 from .blackbox_patterns import BlackboxPatternEngine
+
                 self.pattern_engine = BlackboxPatternEngine()
             except ImportError:
                 try:
                     from blackbox_patterns import BlackboxPatternEngine
+
                     self.pattern_engine = BlackboxPatternEngine()
                 except ImportError:
                     # Fallback no-op engine
                     class NoOpPatternEngine:
                         def analyze_patterns(self, *args, **kwargs):
                             return {"patterns": [], "confidence": 0.0}
+
                         async def analyze(self, *args, **kwargs):
                             return {}
+
                         active = False
+
                     self.pattern_engine = NoOpPatternEngine()
         return self.pattern_engine
 
@@ -446,7 +452,13 @@ class HiddenPatternDetector:
                     target["relationships"].extend(relationships)
 
             # Extract other data types
-            for key in ["events", "documents", "temporal_data", "geographic_data", "financial_data"]:
+            for key in [
+                "events",
+                "documents",
+                "temporal_data",
+                "geographic_data",
+                "financial_data",
+            ]:
                 if key in source and isinstance(source[key], list):
                     target[key].extend(source[key])
 
@@ -459,7 +471,11 @@ class HiddenPatternDetector:
             for key, value in source.items():
                 if key == "entities" and isinstance(value, set):
                     target[key].update(value)
-                elif key in target and isinstance(target[key], list) and isinstance(value, list):
+                elif (
+                    key in target
+                    and isinstance(target[key], list)
+                    and isinstance(value, list)
+                ):
                     target[key].extend(value)
                 elif key == "network_data" and isinstance(value, dict):
                     for k, v in value.items():
@@ -1384,9 +1400,7 @@ class HiddenPatternDetector:
             logger.warning(f"Misdirection detection failed: {e}")
             return []
 
-    async def _analyze_correlations(
-        self, data: Dict[str, Any]
-    ) -> List[HiddenPattern]:
+    async def _analyze_correlations(self, data: Dict[str, Any]) -> List[HiddenPattern]:
         """Analyze correlations between different data dimensions."""
         patterns = []
 
@@ -1404,8 +1418,10 @@ class HiddenPatternDetector:
             patterns.extend(entity_temporal_patterns)
 
             # Analyze geographic-financial correlations
-            geo_financial_patterns = await self._analyze_geographic_financial_correlations(
-                geographic_data, financial_data
+            geo_financial_patterns = (
+                await self._analyze_geographic_financial_correlations(
+                    geographic_data, financial_data
+                )
             )
             patterns.extend(geo_financial_patterns)
 
@@ -1451,7 +1467,9 @@ class HiddenPatternDetector:
 
             # Detect entities with multiple temporal associations
             for entity, temporal_items in entity_temporal_associations.items():
-                if len(temporal_items) >= 3:  # Entity appears with multiple time markers
+                if (
+                    len(temporal_items) >= 3
+                ):  # Entity appears with multiple time markers
                     pattern = HiddenPattern(
                         pattern_id=f"entity_temporal_corr_{len(patterns)}",
                         pattern_type="correlation_analysis",
@@ -1493,7 +1511,10 @@ class HiddenPatternDetector:
                     # In practice, you'd need structured data linking locations to amounts
                     # For now, detect patterns where high-value transactions correlate with locations
                     financial_str = str(financial_item).lower()
-                    if any(amount in financial_str for amount in ["million", "billion", "$"]):
+                    if any(
+                        amount in financial_str
+                        for amount in ["million", "billion", "$"]
+                    ):
                         geo_financial_associations[geo_item].append(financial_item)
 
             # Detect suspicious geographic-financial correlations
@@ -1501,8 +1522,11 @@ class HiddenPatternDetector:
                 if len(financial_items) >= 2:
                     # Calculate total financial volume (simplified)
                     high_value_count = sum(
-                        1 for item in financial_items
-                        if any(term in str(item).lower() for term in ["million", "billion"])
+                        1
+                        for item in financial_items
+                        if any(
+                            term in str(item).lower() for term in ["million", "billion"]
+                        )
                     )
 
                     if high_value_count >= 2:
@@ -1575,7 +1599,11 @@ class HiddenPatternDetector:
             return []
 
     async def _analyze_multi_dimensional_correlations(
-        self, entities: set, temporal_data: List[str], geographic_data: List[str], financial_data: List[str]
+        self,
+        entities: set,
+        temporal_data: List[str],
+        geographic_data: List[str],
+        financial_data: List[str],
     ) -> List[HiddenPattern]:
         """Analyze correlations across multiple dimensions simultaneously."""
         patterns = []
@@ -1587,9 +1615,27 @@ class HiddenPatternDetector:
             for entity in entities:
                 entity_str = str(entity)
                 multi_dim_entities[entity_str] = {
-                    "temporal_count": len([t for t in temporal_data if entity_str.lower() in str(t).lower()]),
-                    "geographic_count": len([g for g in geographic_data if entity_str.lower() in str(g).lower()]),
-                    "financial_count": len([f for f in financial_data if entity_str.lower() in str(f).lower()]),
+                    "temporal_count": len(
+                        [
+                            t
+                            for t in temporal_data
+                            if entity_str.lower() in str(t).lower()
+                        ]
+                    ),
+                    "geographic_count": len(
+                        [
+                            g
+                            for g in geographic_data
+                            if entity_str.lower() in str(g).lower()
+                        ]
+                    ),
+                    "financial_count": len(
+                        [
+                            f
+                            for f in financial_data
+                            if entity_str.lower() in str(f).lower()
+                        ]
+                    ),
                 }
 
             # Detect entities with correlations across multiple dimensions
@@ -1604,7 +1650,9 @@ class HiddenPatternDetector:
                         pattern_type="correlation_analysis",
                         pattern_name="Multi-Dimensional Correlation",
                         description=f"Entity {entity} shows correlations across multiple data dimensions",
-                        confidence_score=0.6 + (dimension_count * 0.1) + (total_correlations * 0.05),
+                        confidence_score=0.6
+                        + (dimension_count * 0.1)
+                        + (total_correlations * 0.05),
                         significance_level=0.8,
                         entities_involved=[entity],
                         evidence=[

@@ -22,8 +22,9 @@ def setup_logging():
     """Setup logging for testing"""
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
+
 
 def test_database_connection():
     """Test database connection and schema"""
@@ -38,6 +39,7 @@ def test_database_connection():
     except Exception as e:
         print(f"❌ Database setup failed: {e}")
         return None
+
 
 class MockDatabase:
     """Mock database for testing without PostgreSQL server"""
@@ -81,8 +83,9 @@ class MockDatabase:
         self.security_alerts.append(alert)
         return True
 
-    def load_access_policies(self, resource_type: str = None, resource_id: str = None,
-                           user_id: str = None) -> List:
+    def load_access_policies(
+        self, resource_type: str = None, resource_id: str = None, user_id: str = None
+    ) -> List:
         """Mock load access policies"""
         return []  # Return empty list for mock
 
@@ -91,8 +94,15 @@ class MockDatabase:
         if "COUNT" in query and "security_events" in query:
             return [{"count": len(self.security_events)}]
         elif "COUNT" in query and "security_alerts" in query:
-            return [{"count": len([a for a in self.security_alerts if a.status != 'resolved'])}]
+            return [
+                {
+                    "count": len(
+                        [a for a in self.security_alerts if a.status != "resolved"]
+                    )
+                }
+            ]
         return []
+
 
 def test_user_management(db):
     """Test user creation, authentication, and persistence"""
@@ -106,11 +116,14 @@ def test_user_management(db):
             email="test@example.com",
             full_name="Test User",
             roles=["analyst"],
-            permissions=[Permission.READ_INTELLIGENCE.value, Permission.VIEW_SENSITIVE.value],
+            permissions=[
+                Permission.READ_INTELLIGENCE.value,
+                Permission.VIEW_SENSITIVE.value,
+            ],
             is_active=True,
             created_at=datetime.now(),
             last_login=None,
-            security_clearance="sensitive"
+            security_clearance="sensitive",
         )
 
         # Save user to database
@@ -137,6 +150,7 @@ def test_user_management(db):
         print(f"❌ User management test failed: {e}")
         return False
 
+
 def test_session_management(db):
     """Test session creation and validation"""
     print("\n🔐 Testing session management...")
@@ -144,6 +158,7 @@ def test_session_management(db):
     try:
         # Create test session
         from security.rbac_manager import Session
+
         test_session = Session(
             session_id="test_session_001",
             user_id="test_user_001",
@@ -151,7 +166,7 @@ def test_session_management(db):
             user_agent="Test Agent",
             created_at=datetime.now(),
             expires_at=datetime.now() + timedelta(hours=1),
-            is_active=True
+            is_active=True,
         )
 
         # Save session
@@ -173,6 +188,7 @@ def test_session_management(db):
         print(f"❌ Session management test failed: {e}")
         return False
 
+
 def test_data_classification(db):
     """Test data classification and access control"""
     print("\n📁 Testing data classification...")
@@ -189,7 +205,7 @@ def test_data_classification(db):
             category="intelligence",
             owner_id="test_user_001",
             tags=["test", "intelligence"],
-            metadata={"source": "test", "priority": "high"}
+            metadata={"source": "test", "priority": "high"},
         )
 
         if not data_object:
@@ -209,6 +225,7 @@ def test_data_classification(db):
         print(f"❌ Data classification test failed: {e}")
         return False
 
+
 def test_security_monitoring(db):
     """Test security event logging and monitoring"""
     print("\n📊 Testing security monitoring...")
@@ -224,7 +241,7 @@ def test_security_monitoring(db):
             user_id="test_user_001",
             ip_address="127.0.0.1",
             user_agent="Test Agent",
-            details={"action": "login", "method": "password"}
+            details={"action": "login", "method": "password"},
         )
 
         # Generate security report
@@ -240,6 +257,7 @@ def test_security_monitoring(db):
         print(f"❌ Security monitoring test failed: {e}")
         return False
 
+
 def test_access_control():
     """Test access control permissions"""
     print("\n🚫 Testing access control...")
@@ -252,18 +270,19 @@ def test_access_control():
             email="analyst@example.com",
             full_name="Security Analyst",
             roles=["analyst"],
-            permissions=[Permission.READ_INTELLIGENCE.value, Permission.VIEW_SENSITIVE.value],
+            permissions=[
+                Permission.READ_INTELLIGENCE.value,
+                Permission.VIEW_SENSITIVE.value,
+            ],
             is_active=True,
             created_at=datetime.now(),
             last_login=None,
-            security_clearance="sensitive"
+            security_clearance="sensitive",
         )
 
         # Test access to sensitive data
         has_access = data_access_control.check_access(
-            user=test_user,
-            data_id="test_data_001",
-            action="read"
+            user=test_user, data_id="test_data_001", action="read"
         )
 
         if not has_access:
@@ -277,17 +296,33 @@ def test_access_control():
         print(f"❌ Access control test failed: {e}")
         return False
 
+
 def cleanup_test_data(db):
     """Clean up test data"""
     print("\n🧹 Cleaning up test data...")
 
     try:
         # Delete test data
-        db.execute_query("DELETE FROM security_events WHERE user_id IN ('test_user_001', 'test_user_002')", fetch=False)
-        db.execute_query("DELETE FROM security_alerts WHERE affected_users @> ARRAY['test_user_001']", fetch=False)
-        db.execute_query("DELETE FROM security_data_objects WHERE owner_id IN ('test_user_001', 'test_user_002')", fetch=False)
-        db.execute_query("DELETE FROM security_sessions WHERE user_id IN ('test_user_001', 'test_user_002')", fetch=False)
-        db.execute_query("DELETE FROM security_users WHERE id IN ('test_user_001', 'test_user_002')", fetch=False)
+        db.execute_query(
+            "DELETE FROM security_events WHERE user_id IN ('test_user_001', 'test_user_002')",
+            fetch=False,
+        )
+        db.execute_query(
+            "DELETE FROM security_alerts WHERE affected_users @> ARRAY['test_user_001']",
+            fetch=False,
+        )
+        db.execute_query(
+            "DELETE FROM security_data_objects WHERE owner_id IN ('test_user_001', 'test_user_002')",
+            fetch=False,
+        )
+        db.execute_query(
+            "DELETE FROM security_sessions WHERE user_id IN ('test_user_001', 'test_user_002')",
+            fetch=False,
+        )
+        db.execute_query(
+            "DELETE FROM security_users WHERE id IN ('test_user_001', 'test_user_002')",
+            fetch=False,
+        )
 
         print("✅ Test data cleanup completed")
         return True
@@ -295,6 +330,7 @@ def cleanup_test_data(db):
     except Exception as e:
         print(f"❌ Cleanup failed: {e}")
         return False
+
 
 def main():
     """Run all security framework integration tests"""
@@ -337,6 +373,7 @@ def main():
     else:
         print("⚠️  Some tests failed - check logs for details")
         return False
+
 
 if __name__ == "__main__":
     success = main()

@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from PIL import Image, ExifTags
+
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -21,10 +22,12 @@ except ImportError:
 
 try:
     import magic
+
     HAS_MAGIC = True
 except ImportError:
     HAS_MAGIC = False
     logger.warning("python-magic not available - file type detection limited")
+
 
 class MetadataExtractor:
     """Advanced metadata extractor for various file types"""
@@ -32,10 +35,10 @@ class MetadataExtractor:
     def __init__(self):
         self.enabled = True
         self.supported_formats = {
-            'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'],
-            'document': ['.pdf', '.doc', '.docx', '.txt', '.rtf'],
-            'audio': ['.mp3', '.wav', '.flac', '.aac', '.ogg'],
-            'video': ['.mp4', '.avi', '.mkv', '.mov', '.wmv']
+            "image": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+            "document": [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+            "audio": [".mp3", ".wav", ".flac", ".aac", ".ogg"],
+            "video": [".mp4", ".avi", ".mkv", ".mov", ".wmv"],
         }
         logger.info("MetadataExtractor initialized with full functionality")
 
@@ -54,7 +57,7 @@ class MetadataExtractor:
                 "modified_time": datetime.fromtimestamp(stat_info.st_mtime).isoformat(),
                 "created_time": datetime.fromtimestamp(stat_info.st_ctime).isoformat(),
                 "file_extension": os.path.splitext(file_path)[1].lower(),
-                "extracted": True
+                "extracted": True,
             }
 
             # Calculate file hash
@@ -67,16 +70,16 @@ class MetadataExtractor:
 
             # Extract format-specific metadata
             ext = file_info["file_extension"]
-            if ext in self.supported_formats['image']:
+            if ext in self.supported_formats["image"]:
                 file_info["metadata"] = self._extract_image_metadata(file_path)
                 file_info["file_type"] = "image"
-            elif ext in self.supported_formats['document']:
+            elif ext in self.supported_formats["document"]:
                 file_info["metadata"] = self._extract_document_metadata(file_path)
                 file_info["file_type"] = "document"
-            elif ext in self.supported_formats['audio']:
+            elif ext in self.supported_formats["audio"]:
                 file_info["metadata"] = self._extract_audio_metadata(file_path)
                 file_info["file_type"] = "audio"
-            elif ext in self.supported_formats['video']:
+            elif ext in self.supported_formats["video"]:
                 file_info["metadata"] = self._extract_video_metadata(file_path)
                 file_info["file_type"] = "video"
             else:
@@ -116,7 +119,7 @@ class MetadataExtractor:
                 metadata["mode"] = img.mode
 
                 # Extract EXIF data
-                if hasattr(img, '_getexif') and img._getexif() is not None:  # type: ignore
+                if hasattr(img, "_getexif") and img._getexif() is not None:  # type: ignore
                     exif_data = {}
                     exif_dict = img._getexif()  # type: ignore
                     for tag, value in exif_dict.items():
@@ -125,8 +128,8 @@ class MetadataExtractor:
                     metadata["exif"] = exif_data
 
                 # GPS data extraction
-                if 'exif' in metadata and metadata['exif']:
-                    gps_info = self._extract_gps_data(metadata['exif'])
+                if "exif" in metadata and metadata["exif"]:
+                    gps_info = self._extract_gps_data(metadata["exif"])
                     if gps_info:
                         metadata["gps"] = gps_info
 
@@ -135,10 +138,17 @@ class MetadataExtractor:
         except Exception as e:
             return {"error": f"Failed to extract image metadata: {str(e)}"}
 
-    def _extract_gps_data(self, exif_data: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    def _extract_gps_data(
+        self, exif_data: Dict[str, Any]
+    ) -> Optional[Dict[str, float]]:
         """Extract GPS coordinates from EXIF data"""
         try:
-            gps_tags = ['GPSLatitude', 'GPSLongitude', 'GPSLatitudeRef', 'GPSLongitudeRef']
+            gps_tags = [
+                "GPSLatitude",
+                "GPSLongitude",
+                "GPSLatitudeRef",
+                "GPSLongitudeRef",
+            ]
 
             if not all(tag in exif_data for tag in gps_tags):
                 return None
@@ -148,12 +158,12 @@ class MetadataExtractor:
                 d, m, s = value
                 return d + (m / 60.0) + (s / 3600.0)
 
-            lat = convert_to_degrees(eval(exif_data['GPSLatitude']))
-            lon = convert_to_degrees(eval(exif_data['GPSLongitude']))
+            lat = convert_to_degrees(eval(exif_data["GPSLatitude"]))
+            lon = convert_to_degrees(eval(exif_data["GPSLongitude"]))
 
-            if exif_data['GPSLatitudeRef'] == 'S':
+            if exif_data["GPSLatitudeRef"] == "S":
                 lat = -lat
-            if exif_data['GPSLongitudeRef'] == 'W':
+            if exif_data["GPSLongitudeRef"] == "W":
                 lon = -lon
 
             return {"latitude": lat, "longitude": lon}
@@ -168,15 +178,15 @@ class MetadataExtractor:
             metadata: Dict[str, Any] = {}
 
             # For text files, extract basic statistics
-            if file_path.lower().endswith('.txt'):
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            if file_path.lower().endswith(".txt"):
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
                     metadata["character_count"] = len(content)
-                    metadata["line_count"] = len(content.split('\n'))
+                    metadata["line_count"] = len(content.split("\n"))
                     metadata["word_count"] = len(content.split())
 
                     # Extract potential entities (basic)
-                    lines = content.split('\n')[:10]  # First 10 lines
+                    lines = content.split("\n")[:10]  # First 10 lines
                     metadata["sample_content"] = lines
 
             # For other document types, return basic info
@@ -213,28 +223,40 @@ class MetadataExtractor:
             analysis: Dict[str, Any] = {
                 "character_count": len(content),
                 "word_count": len(content.split()),
-                "line_count": len(content.split('\n')),
+                "line_count": len(content.split("\n")),
                 "entities": [],
-                "patterns": []
+                "patterns": [],
             }
 
-                        # Basic entity extraction (could be enhanced with NLP)
+            # Basic entity extraction (could be enhanced with NLP)
 
             # Look for email patterns
             import re
-            emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', content)
+
+            emails = re.findall(
+                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", content
+            )
             if emails:
-                analysis["entities"].extend([{"type": "email", "value": email} for email in emails])
+                analysis["entities"].extend(
+                    [{"type": "email", "value": email} for email in emails]
+                )
 
             # Look for phone numbers (basic pattern)
-            phones = re.findall(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', content)
+            phones = re.findall(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", content)
             if phones:
-                analysis["entities"].extend([{"type": "phone", "value": phone} for phone in phones])
+                analysis["entities"].extend(
+                    [{"type": "phone", "value": phone} for phone in phones]
+                )
 
             # Look for URLs
-            urls = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', content)
+            urls = re.findall(
+                r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+                content,
+            )
             if urls:
-                analysis["entities"].extend([{"type": "url", "value": url} for url in urls])
+                analysis["entities"].extend(
+                    [{"type": "url", "value": url} for url in urls]
+                )
 
             return analysis
 

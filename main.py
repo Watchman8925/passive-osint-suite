@@ -24,6 +24,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import the unified module system
 from modules import MODULE_REGISTRY
+
 # Import core utilities
 from utils.osint_utils import OSINTUtils
 from utils.transport import get_tor_status
@@ -131,7 +132,9 @@ class OSINTSuite:
             else:
                 # Create empty placeholder for missing modules to avoid AttributeError
                 setattr(self, attr_name, None)
-                print(f"⚠️ Warning: Module {module_name} not loaded, {attr_name} attribute will be None")
+                print(
+                    f"⚠️ Warning: Module {module_name} not loaded, {attr_name} attribute will be None"
+                )
 
     def get_module(self, module_name):
         """Get a module instance by name"""
@@ -525,7 +528,8 @@ class OSINTSuite:
         # Passive Search
         if self.passive_search:
             ps_result = self.passive_search.analyze_target(  # type: ignore
-            target, "domain")
+                target, "domain"
+            )
             console.print(f"[green]Passive Search:[/green] {ps_result}")
         else:
             console.print("[yellow]Passive Search module not loaded.[/yellow]")
@@ -550,7 +554,9 @@ class OSINTSuite:
             ct_result = self.certificate_transparency.search(target)
             console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
         else:
-            console.print("[yellow]Certificate Transparency module not loaded.[/yellow]")
+            console.print(
+                "[yellow]Certificate Transparency module not loaded.[/yellow]"
+            )
         if self.wayback_machine:
             wb_result = self.wayback_machine.fetch_snapshots(target)
             console.print(f"[green]Wayback Machine:[/green] {wb_result}")
@@ -667,7 +673,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Scraping completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"web_scraper_{target.replace('/', '_').replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"web_scraper_{target.replace('/', '_').replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Scraping failed[/red]")
@@ -693,7 +701,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Dorking completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"dorking_{target.replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"dorking_{target.replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Dorking failed[/red]")
@@ -719,7 +729,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Certificate search completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"cert_transparency_{target.replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"cert_transparency_{target.replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Certificate search failed[/red]")
@@ -745,7 +757,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Snapshots fetched: {results}[/green]")
-            filename = self.utils.save_results(results, f"wayback_{target.replace('/', '_').replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"wayback_{target.replace('/', '_').replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Snapshot fetch failed[/red]")
@@ -771,7 +785,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Paste search completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"paste_monitor_{target.replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"paste_monitor_{target.replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Paste search failed[/red]")
@@ -823,7 +839,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]GitHub search completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"github_search_{target.replace(' ', '_')}")
+            filename = self.utils.save_results(
+                results, f"github_search_{target.replace(' ', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]GitHub search failed[/red]")
@@ -849,7 +867,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]DNS enumeration completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"dns_enum_{target.replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"dns_enum_{target.replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]DNS enumeration failed[/red]")
@@ -875,7 +895,9 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]WHOIS history fetched: {results}[/green]")
-            filename = self.utils.save_results(results, f"whois_history_{target.replace('.', '_')}")
+            filename = self.utils.save_results(
+                results, f"whois_history_{target.replace('.', '_')}"
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]WHOIS history fetch failed[/red]")
@@ -901,7 +923,10 @@ class OSINTSuite:
 
         if results:
             console.print(f"[green]Breach search completed: {results}[/green]")
-            filename = self.utils.save_results(results, f"breach_search_{target.replace('@', '_at_').replace('.', '_')}")
+            filename = self.utils.save_results(
+                results,
+                f"breach_search_{target.replace('@', '_at_').replace('.', '_')}",
+            )
             console.print(f"[green]Results saved to: {filename}[/green]")
         else:
             console.print("[red]Breach search failed[/red]")
@@ -929,7 +954,9 @@ class OSINTSuite:
             ct_result = self.certificate_transparency.search(target)
             console.print(f"[green]Certificate Transparency:[/green] {ct_result}")
         else:
-            console.print("[yellow]Certificate Transparency module not loaded.[/yellow]")
+            console.print(
+                "[yellow]Certificate Transparency module not loaded.[/yellow]"
+            )
         # Wayback Machine
         if self.wayback_machine:
             wb_result = self.wayback_machine.fetch_snapshots(target)
@@ -966,6 +993,7 @@ class OSINTSuite:
             console.print(f"[green]WHOIS History:[/green] {whois_result}")
         else:
             console.print("[yellow]WHOIS History module not loaded.[/yellow]")
+
     def domain_reconnaissance_menu(self):
         """Domain reconnaissance submenu"""
         console.print("\n[bold cyan]🌐 Domain Reconnaissance[/bold cyan]\n")
@@ -1001,6 +1029,7 @@ class OSINTSuite:
                 self.utils.save_results(
                     report, f"domain_report_{domain.replace('.', '_')}", format="txt"
                 )
+
     def email_intelligence_menu(self):
         """Email intelligence submenu"""
         console.print("\n[bold cyan]📧 Email Intelligence[/bold cyan]\n")
@@ -1039,6 +1068,7 @@ class OSINTSuite:
                     f"email_report_{email.replace('@', '_at_').replace('.', '_')}",
                     format="txt",
                 )
+
     def ip_analysis_menu(self):
         """IP analysis submenu"""
         console.print("\n[bold cyan]🔍 IP Address Analysis[/bold cyan]\n")
@@ -1074,6 +1104,7 @@ class OSINTSuite:
                 self.utils.save_results(
                     report, f"ip_report_{ip_address.replace('.', '_')}", format="txt"
                 )
+
     def company_intelligence_menu(self):
         """Company intelligence submenu"""
         console.print("\n[bold cyan]🏢 Company Intelligence[/bold cyan]\n")
@@ -1114,6 +1145,7 @@ class OSINTSuite:
                     f"company_report_{company_name.replace(' ', '_')}",
                     format="txt",
                 )
+
     def flight_intelligence_menu(self):
         """Flight intelligence submenu"""
         console.print("\n[bold cyan]✈️ Flight & Aviation Intelligence[/bold cyan]\n")
@@ -1160,6 +1192,7 @@ class OSINTSuite:
                     f"flight_report_{identifier.replace('-', '_')}",
                     format="txt",
                 )
+
     def passive_search_menu(self):
         """Passive search intelligence submenu"""
         console.print("\n[bold cyan]🔎 Passive Search Intelligence[/bold cyan]\n")
@@ -1190,7 +1223,8 @@ class OSINTSuite:
 
         with console.status("[bold green]Searching across multiple sources..."):
             results = self.passive_search.analyze_target(  # type: ignore
-            target, search_type)
+                target, search_type
+            )
 
         if results:
             # Display summary
@@ -1211,6 +1245,7 @@ class OSINTSuite:
                     f"search_report_{target.replace('@', '_at_').replace('.', '_').replace(' ', '_')}",
                     format="txt",
                 )
+
     def crypto_intelligence_menu(self):
         """Cryptocurrency intelligence submenu"""
         console.print("\n[bold cyan]₿ Cryptocurrency Intelligence[/bold cyan]\n")
@@ -1296,7 +1331,8 @@ class OSINTSuite:
 
         with console.status("[bold green]Searching across multiple sources..."):
             results = self.passive_search.analyze_target(  # type: ignore
-            target, search_type)
+                target, search_type
+            )
 
         if results:
             # Display summary
@@ -1310,6 +1346,7 @@ class OSINTSuite:
             console.print(f"\n[green]Results saved to: {filename}[/green]")
 
             # Generate report
+
     def batch_domain_analysis(self):
         """Batch domain analysis"""
         if not self.domain_recon:
@@ -1346,6 +1383,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch domain analysis: {e}[/red]")
+
     def batch_email_analysis(self):
         """Batch email analysis"""
         if not self.email_intel:
@@ -1384,6 +1422,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch email analysis: {e}[/red]")
+
     def batch_ip_analysis(self):
         """Batch IP analysis"""
         if not self.ip_intel:
@@ -1418,6 +1457,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch IP analysis: {e}[/red]")
+
     def batch_company_analysis(self):
         """Batch company analysis"""
         if not self.company_intel:
@@ -1456,6 +1496,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch company analysis: {e}[/red]")
+
     def batch_flight_analysis(self):
         """Batch flight analysis"""
         if not self.flight_intel:
@@ -1494,6 +1535,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch flight analysis: {e}[/red]")
+
     def batch_crypto_analysis(self):
         """Batch crypto analysis"""
         if not self.crypto_intel:
@@ -1538,6 +1580,7 @@ class OSINTSuite:
             console.print(f"\n[green]Batch results saved to: {batch_filename}[/green]")
         except Exception as e:
             console.print(f"[red]Error during batch crypto analysis: {e}[/red]")
+
     def custom_batch_analysis(self):
         """Custom batch analysis with mixed types"""
         console.print("\n[bold cyan]Custom Batch Analysis[/bold cyan]\n")
@@ -1692,9 +1735,7 @@ class OSINTSuite:
                     analysis_type = (
                         filename.split("_")[0] if "_" in filename else "unknown"
                     )
-                    console.print(
-                        f"  {i}. {analysis_type.title():<10} - {mod_time}"
-                    )
+                    console.print(f"  {i}. {analysis_type.title():<10} - {mod_time}")
 
     def view_api_status(self):
         """View API key status"""
@@ -2151,7 +2192,8 @@ class OSINTSuite:
             console.print(analysis_options)
 
             choice = Prompt.ask(
-                "\n[bold yellow]Select advanced analysis option[/bold yellow]", default="0"
+                "\n[bold yellow]Select advanced analysis option[/bold yellow]",
+                default="0",
             )
 
             if choice == "1":
@@ -2174,7 +2216,9 @@ class OSINTSuite:
         while True:
             console.print("\n[bold cyan]📊 Intelligence Reporting[/bold cyan]\n")
 
-            reporting_options = Table(show_header=False, show_edge=False, pad_edge=False)
+            reporting_options = Table(
+                show_header=False, show_edge=False, pad_edge=False
+            )
             reporting_options.add_column("Option", style="cyan", width=3)
             reporting_options.add_column("Description", style="white")
 
@@ -2188,7 +2232,8 @@ class OSINTSuite:
             console.print(reporting_options)
 
             choice = Prompt.ask(
-                "\n[bold yellow]Select intelligence reporting option[/bold yellow]", default="0"
+                "\n[bold yellow]Select intelligence reporting option[/bold yellow]",
+                default="0",
             )
 
             if choice == "1":
@@ -2225,7 +2270,8 @@ class OSINTSuite:
             console.print(feeds_options)
 
             choice = Prompt.ask(
-                "\n[bold yellow]Select real-time feeds option[/bold yellow]", default="0"
+                "\n[bold yellow]Select real-time feeds option[/bold yellow]",
+                default="0",
             )
 
             if choice == "1":
@@ -2246,7 +2292,9 @@ class OSINTSuite:
     def bellingcat_toolkit_menu(self):
         """Bellingcat Investigation Toolkit menu for advanced OSINT investigations"""
         while True:
-            console.print("\n[bold cyan]🕵️ Bellingcat Investigation Toolkit[/bold cyan]\n")
+            console.print(
+                "\n[bold cyan]🕵️ Bellingcat Investigation Toolkit[/bold cyan]\n"
+            )
 
             toolkit_options = Table(show_header=False, show_edge=False, pad_edge=False)
             toolkit_options.add_column("Option", style="cyan", width=3)
@@ -2267,7 +2315,8 @@ class OSINTSuite:
             console.print(toolkit_options)
 
             choice = Prompt.ask(
-                "\n[bold yellow]Select Bellingcat toolkit option[/bold yellow]", default="0"
+                "\n[bold yellow]Select Bellingcat toolkit option[/bold yellow]",
+                default="0",
             )
 
             if choice == "1":
@@ -2298,7 +2347,9 @@ class OSINTSuite:
     def cross_reference_analysis(self):
         """Cross-reference multiple data sources for investigation"""
         console.print("\n[bold cyan]🔍 Cross-Reference Analysis[/bold cyan]\n")
-        console.print("[yellow]Cross-reference analysis functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Cross-reference analysis functionality coming soon...[/yellow]"
+        )
 
     def pattern_detection(self):
         """Detect patterns in data for investigative leads"""
@@ -2323,17 +2374,23 @@ class OSINTSuite:
     def evidence_collection(self):
         """Collect and organize evidence for investigations"""
         console.print("\n[bold cyan]📋 Evidence Collection[/bold cyan]\n")
-        console.print("[yellow]Evidence collection functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Evidence collection functionality coming soon...[/yellow]"
+        )
 
     def conspiracy_analysis(self):
         """Analyze conspiracy theories and misinformation"""
         console.print("\n[bold cyan]🧩 Conspiracy Analysis[/bold cyan]\n")
-        console.print("[yellow]Conspiracy analysis functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Conspiracy analysis functionality coming soon...[/yellow]"
+        )
 
     def advanced_reporting(self):
         """Generate advanced investigative reports"""
         console.print("\n[bold cyan]📊 Advanced Reporting[/bold cyan]\n")
-        console.print("[yellow]Advanced reporting functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Advanced reporting functionality coming soon...[/yellow]"
+        )
 
     def metadata_analysis(self):
         """Analyze metadata from files and communications"""
@@ -2343,28 +2400,38 @@ class OSINTSuite:
     def investigation_workflow(self):
         """Guided investigation workflow management"""
         console.print("\n[bold cyan]🕵️ Investigation Workflow[/bold cyan]\n")
-        console.print("[yellow]Investigation workflow functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Investigation workflow functionality coming soon...[/yellow]"
+        )
 
     # Advanced Analysis Suite methods
     def statistical_analysis(self):
         """Perform statistical analysis on collected data"""
         console.print("\n[bold cyan]📈 Statistical Analysis[/bold cyan]\n")
-        console.print("[yellow]Statistical analysis functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Statistical analysis functionality coming soon...[/yellow]"
+        )
 
     def correlation_analysis(self):
         """Analyze correlations between different data sources"""
         console.print("\n[bold cyan]🔍 Correlation Analysis[/bold cyan]\n")
-        console.print("[yellow]Correlation analysis functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Correlation analysis functionality coming soon...[/yellow]"
+        )
 
     def data_visualization(self):
         """Create visualizations from intelligence data"""
         console.print("\n[bold cyan]📊 Data Visualization[/bold cyan]\n")
-        console.print("[yellow]Data visualization functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Data visualization functionality coming soon...[/yellow]"
+        )
 
     def predictive_modeling(self):
         """Build predictive models from intelligence data"""
         console.print("\n[bold cyan]🧮 Predictive Modeling[/bold cyan]\n")
-        console.print("[yellow]Predictive modeling functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Predictive modeling functionality coming soon...[/yellow]"
+        )
 
     def anomaly_detection(self):
         """Detect anomalies in intelligence data"""
@@ -2380,7 +2447,9 @@ class OSINTSuite:
     def intelligence_brief(self):
         """Create intelligence briefing documents"""
         console.print("\n[bold cyan]📊 Intelligence Brief[/bold cyan]\n")
-        console.print("[yellow]Intelligence brief functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Intelligence brief functionality coming soon...[/yellow]"
+        )
 
     def detailed_analysis(self):
         """Perform detailed analysis reports"""
@@ -2401,7 +2470,9 @@ class OSINTSuite:
     def live_network_monitoring(self):
         """Monitor network activity in real-time"""
         console.print("\n[bold cyan]🌐 Live Network Monitoring[/bold cyan]\n")
-        console.print("[yellow]Live network monitoring functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Live network monitoring functionality coming soon...[/yellow]"
+        )
 
     def dark_web_feeds(self):
         """Monitor dark web intelligence feeds"""
@@ -2411,18 +2482,23 @@ class OSINTSuite:
     def news_media_feeds(self):
         """Monitor news and media intelligence feeds"""
         console.print("\n[bold cyan]📰 News & Media Feeds[/bold cyan]\n")
-        console.print("[yellow]News & media feeds functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]News & media feeds functionality coming soon...[/yellow]"
+        )
 
     def financial_market_feeds(self):
         """Monitor financial market intelligence feeds"""
         console.print("\n[bold cyan]💰 Financial Market Feeds[/bold cyan]\n")
-        console.print("[yellow]Financial market feeds functionality coming soon...[/yellow]")
+        console.print(
+            "[yellow]Financial market feeds functionality coming soon...[/yellow]"
+        )
 
     def security_threat_feeds(self):
         """Monitor security threat intelligence feeds"""
         console.print("\n[bold cyan]🔐 Security Threat Feeds[/bold cyan]\n")
-        console.print("[yellow]Security threat feeds functionality coming soon...[/yellow]")
-
+        console.print(
+            "[yellow]Security threat feeds functionality coming soon...[/yellow]"
+        )
 
     def batch_analysis_menu(self):
         """Batch analysis menu for processing multiple targets"""

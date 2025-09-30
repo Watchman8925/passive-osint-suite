@@ -15,6 +15,7 @@ from types import SimpleNamespace
 # linter/runtime errors when optional modules are not installed.
 try:
     import validators  # preferred library for input validation
+
     _validators_available = True
 except Exception:
     # Minimal validators fallback if the 'validators' package is not available.
@@ -65,14 +66,24 @@ try:
     _colorama_available = True
 except Exception:
     _colorama_available = False
+
     class _ColorFallback:
         CYAN = ""
+
     class _StyleFallback:
         RESET_ALL = ""
+
     Fore = _ColorFallback()
     Style = _StyleFallback()
-    def init(autoreset: bool = False, convert: bool | None = None, strip: bool | None = None, wrap: bool = True) -> None:
+
+    def init(
+        autoreset: bool = False,
+        convert: bool | None = None,
+        strip: bool | None = None,
+        wrap: bool = True,
+    ) -> None:
         return None
+
 
 # rich fallback (simple Table and Console implementations so UI code still works)
 try:
@@ -107,10 +118,15 @@ except Exception:
                     else:
                         col_widths[i] = max(col_widths[i], len(cell))
             sep = " | "
-            header = sep.join(c.ljust(col_widths[i]) for i, c in enumerate(self._columns))
+            header = sep.join(
+                c.ljust(col_widths[i]) for i, c in enumerate(self._columns)
+            )
             lines = [f"{self.title}", header, "-" * len(header)]
             for row in self._rows:
-                line = sep.join((row[i] if i < len(row) else "").ljust(col_widths[i]) for i in range(len(col_widths)))
+                line = sep.join(
+                    (row[i] if i < len(row) else "").ljust(col_widths[i])
+                    for i in range(len(col_widths))
+                )
                 lines.append(line)
             return "\n".join(lines)
 
@@ -129,6 +145,7 @@ except Exception:
 # a potentially incompatible type stub (which can declare NoReturn). Expose sync_get
 # as a callable returning Any so static type checkers won't assert NoReturn.
 from typing import Any
+
 try:
     transport_mod = importlib.import_module("transport")
     # Assign the imported function directly (no variable annotation) so a later
@@ -138,6 +155,7 @@ except Exception:
     # Minimal sync_get fallback that raises to make failures explicit at runtime
     def sync_get(*args, **kwargs) -> Any:
         raise RuntimeError("transport.sync_get is not available in this environment")
+
 
 # Attempt to import optional integration modules; provide safe no-op fallbacks
 # DoH client
@@ -151,7 +169,7 @@ except Exception:
     DOH_AVAILABLE = False
     logging.warning("DoH client not available - DNS resolution may be insecure")
 
-    async def resolve_dns(domain, record_type='A'):
+    async def resolve_dns(domain, record_type="A"):
         # Return a simple namespace with .answers = []
         return SimpleNamespace(answers=[])
 
@@ -160,6 +178,7 @@ except Exception:
 
     async def resolve_ipv6(domain):
         return None
+
 
 # Query obfuscation system
 try:
@@ -219,6 +238,7 @@ except Exception:
     def store_api_key(service, api_key, **kwargs):
         return False
 
+
 # Audit trail
 try:
     audit_mod = importlib.import_module("security.audit_trail")
@@ -250,6 +270,7 @@ except Exception:
     def enforce_policy(**kwargs):
         # Default allow-all policy
         return {"allowed": True, "warnings": [], "delays": [], "actions": []}
+
 
 # Result encryption
 try:
@@ -302,7 +323,7 @@ class OSINTUtils:
             if api_key:
                 self.logger.debug(f"API key for {service} retrieved from secure store")
                 return api_key
-        
+
         # Fallback to config file
         try:
             # ConfigParser converts option names to lowercase, so we need to try both cases
@@ -315,27 +336,27 @@ class OSINTUtils:
                 return api_key
         except Exception:
             pass
-        
+
         self.logger.error(f"No API key found for service: {service}")
         return None
 
     def get_all_api_keys(self):
         """Get all API keys from both secure store and config file"""
         all_keys = {}
-        
+
         # Try to get all keys from secure secrets manager first
         if SECRETS_AVAILABLE:
             try:
                 # Get all secrets from the manager
                 secrets = secrets_manager.list_secrets()
                 for secret in secrets:
-                    if secret.get('service'):
-                        api_key = get_api_key(secret['service'])
+                    if secret.get("service"):
+                        api_key = get_api_key(secret["service"])
                         if api_key:
-                            all_keys[secret['service']] = api_key
+                            all_keys[secret["service"]] = api_key
             except Exception as e:
                 self.logger.warning(f"Failed to get API keys from secure store: {e}")
-        
+
         # Fallback to config file for any missing keys
         if self.config.has_section("API_KEYS"):
             for option in self.config.options("API_KEYS"):
@@ -347,7 +368,7 @@ class OSINTUtils:
                             all_keys[option.upper()] = value
                     except Exception:
                         continue
-        
+
         return all_keys
 
     def store_api_key_secure(self, service, api_key, description="", expires_days=None):
@@ -357,33 +378,33 @@ class OSINTUtils:
                 "Secrets manager not available - cannot store API key securely"
             )
             return False
-        
+
         success = store_api_key(
             service=service,
             api_key=api_key,
             description=description or f"API key for {service}",
-            expires_days=expires_days
+            expires_days=expires_days,
         )
-        
+
         if success:
             self.logger.info(f"API key for {service} stored securely")
         else:
             self.logger.error(f"Failed to store API key for {service}")
-        
+
         return success
 
     def list_stored_secrets(self, service=None):
         """List secrets stored in secure manager"""
         if not SECRETS_AVAILABLE:
             return []
-        
+
         return secrets_manager.list_secrets(service)
 
     def get_secrets_status(self):
         """Get secrets manager status and statistics"""
         if not SECRETS_AVAILABLE:
             return {"available": False, "reason": "Secrets manager not imported"}
-        
+
         try:
             stats = secrets_manager.get_statistics()
             stats["available"] = True
@@ -403,37 +424,45 @@ class OSINTUtils:
             return validators.url(input_value)
         return True
 
-    def make_request(self, url, headers=None, params=None, timeout=30, 
-                     operation_type="http_request", actor="osint_utils"):
+    def make_request(
+        self,
+        url,
+        headers=None,
+        params=None,
+        timeout=30,
+        operation_type="http_request",
+        actor="osint_utils",
+    ):
         """Make HTTP request with error handling using mandatory Tor proxy"""
         # Extract target from URL for policy enforcement
         from urllib.parse import urlparse
+
         target = urlparse(url).netloc or url
-        
+
         # Enforce OPSEC policies
         if OPSEC_AVAILABLE:
             policy_result = enforce_policy(
                 operation_type=operation_type,
                 target=target,
                 actor=actor,
-                user_agent=headers.get('User-Agent') if headers else None
+                user_agent=headers.get("User-Agent") if headers else None,
             )
-            
+
             # Check if operation is allowed
-            if not policy_result['allowed']:
-                actions = ', '.join(policy_result['actions'])
+            if not policy_result["allowed"]:
+                actions = ", ".join(policy_result["actions"])
                 self.logger.error(f"HTTP request denied by OPSEC policy: {actions}")
                 raise PermissionError(f"Request denied by OPSEC policy: {actions}")
-            
+
             # Apply warnings
-            for warning in policy_result['warnings']:
+            for warning in policy_result["warnings"]:
                 self.logger.warning(f"OPSEC Policy Warning: {warning}")
-            
+
             # Apply delays
-            for delay in policy_result['delays']:
+            for delay in policy_result["delays"]:
                 self.logger.info(f"OPSEC Policy Delay: {delay} seconds")
                 time.sleep(delay)
-        
+
         # Log the request for audit
         if AUDIT_AVAILABLE:
             audit_trail.log_operation(
@@ -441,13 +470,13 @@ class OSINTUtils:
                 actor=actor,
                 target=target,
                 metadata={
-                    "url": url, 
-                    "timeout": timeout, 
+                    "url": url,
+                    "timeout": timeout,
                     "has_custom_headers": bool(headers),
-                    "operation_type": operation_type
-                }
+                    "operation_type": operation_type,
+                },
             )
-        
+
         try:
             default_headers = {
                 "User-Agent": self.config.get(
@@ -467,17 +496,17 @@ class OSINTUtils:
             return None
 
     def make_obfuscated_request(
-        self, 
-        url, 
-        headers=None, 
-        params=None, 
-        timeout=30, 
+        self,
+        url,
+        headers=None,
+        params=None,
+        timeout=30,
         priority=2,
-        use_obfuscation=True
+        use_obfuscation=True,
     ):
         """
         Make HTTP request with query obfuscation and anti-fingerprinting.
-        
+
         Args:
             url: Target URL
             headers: Custom headers
@@ -485,14 +514,14 @@ class OSINTUtils:
             timeout: Request timeout
             priority: Query priority (1=LOW, 2=NORMAL, 3=HIGH, 4=CRITICAL)
             use_obfuscation: Whether to use obfuscation (fallback to direct if False)
-        
+
         Returns:
             Query ID for tracking (if obfuscated) or response object (if direct)
         """
         if not use_obfuscation or not OBFUSCATION_AVAILABLE:
             # Fallback to direct request
             return self.make_request(url, headers, params, timeout)
-        
+
         try:
             default_headers = {
                 "User-Agent": self.config.get(
@@ -501,17 +530,14 @@ class OSINTUtils:
             }
             if headers:
                 default_headers.update(headers)
-            
-            parameters = {
-                'headers': default_headers,
-                'timeout': timeout
-            }
+
+            parameters = {"headers": default_headers, "timeout": timeout}
             if params:
-                parameters['params'] = params
-            
+                parameters["params"] = params
+
             # Convert priority int to enum
             priority_enum = QueryPriority(priority)
-            
+
             # Submit obfuscated request
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -523,28 +549,22 @@ class OSINTUtils:
                 return query_id
             finally:
                 loop.close()
-                
+
         except Exception as e:
             self.logger.error(f"Obfuscated request failed: {e}")
             # Fallback to direct request
             return self.make_request(url, headers, params, timeout)
 
-    def submit_batch_requests(
-        self, 
-        urls, 
-        headers=None, 
-        priority=2,
-        add_decoys=True
-    ):
+    def submit_batch_requests(self, urls, headers=None, priority=2, add_decoys=True):
         """
         Submit multiple requests as an obfuscated batch.
-        
+
         Args:
             urls: List of URLs or (url, headers, params) tuples
             headers: Default headers for all requests
             priority: Batch priority
             add_decoys: Whether to add decoy requests
-        
+
         Returns:
             Batch ID for tracking
         """
@@ -562,7 +582,7 @@ class OSINTUtils:
                     result = self.make_request(url, combined_headers, params)
                 results.append(result)
             return results
-        
+
         try:
             default_headers = {
                 "User-Agent": self.config.get(
@@ -571,7 +591,7 @@ class OSINTUtils:
             }
             if headers:
                 default_headers.update(headers)
-            
+
             # Prepare batch queries
             queries = []
             for url_info in urls:
@@ -585,29 +605,23 @@ class OSINTUtils:
                     if req_headers_extra:
                         req_headers.update(req_headers_extra)
                     params = params or {}
-                
-                parameters = {
-                    'headers': req_headers,
-                    'params': params,
-                    'timeout': 30
-                }
-                
+
+                parameters = {"headers": req_headers, "params": params, "timeout": 30}
+
                 # Convert priority int to enum
                 priority_enum = QueryPriority(priority)
                 queries.append((url, "http", parameters, priority_enum))
-            
+
             # Submit batch
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                batch_id = loop.run_until_complete(
-                    obfuscated_batch(queries)
-                )
+                batch_id = loop.run_until_complete(obfuscated_batch(queries))
                 self.logger.info(f"Obfuscated batch submitted: {batch_id}")
                 return batch_id
             finally:
                 loop.close()
-                
+
         except Exception as e:
             self.logger.error(f"Batch submission failed: {e}")
             return None
@@ -617,7 +631,7 @@ class OSINTUtils:
         if not OBFUSCATION_AVAILABLE:
             self.logger.warning("Query obfuscation not available")
             return False
-        
+
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -632,13 +646,16 @@ class OSINTUtils:
         """Get current obfuscation system status and statistics."""
         if not OBFUSCATION_AVAILABLE:
             return {"available": False, "reason": "Obfuscation module not imported"}
-        
+
         try:
             # Import the same module path used when the obfuscation subsystem is initialized.
             qo_module = importlib.import_module("tools.query_obfuscation")
             get_stats = getattr(qo_module, "get_obfuscation_stats", None)
             if get_stats is None:
-                return {"available": False, "reason": "get_obfuscation_stats not implemented in tools.query_obfuscation"}
+                return {
+                    "available": False,
+                    "reason": "get_obfuscation_stats not implemented in tools.query_obfuscation",
+                }
             stats = get_stats()
             if isinstance(stats, dict):
                 stats["available"] = True
@@ -671,13 +688,19 @@ class OSINTUtils:
         except Exception as e:
             self.logger.error(f"Failed to save results: {e}")
             return None
-    
-    def save_results_encrypted(self, data, operation, target, 
-                             expires_in_hours=None, password=None, 
-                             burn_after_read=False):
+
+    def save_results_encrypted(
+        self,
+        data,
+        operation,
+        target,
+        expires_in_hours=None,
+        password=None,
+        burn_after_read=False,
+    ):
         """
         Save results using encryption.
-        
+
         Args:
             data: Result data to encrypt
             operation: OSINT operation type
@@ -685,14 +708,14 @@ class OSINTUtils:
             expires_in_hours: Hours until expiration
             password: Optional password for encryption
             burn_after_read: Delete after first read
-        
+
         Returns:
             Result ID if successful, None if failed
         """
         if not ENCRYPTION_AVAILABLE:
             self.logger.warning("Encryption not available - falling back to plain save")
             return self.save_results(data, f"{operation}_{target}")
-        
+
         try:
             result_id = result_encryption.encrypt_result(
                 result_data=data,
@@ -700,12 +723,12 @@ class OSINTUtils:
                 target=target,
                 expires_in_hours=expires_in_hours,
                 password=password,
-                burn_after_read=burn_after_read
+                burn_after_read=burn_after_read,
             )
-            
+
             self.logger.info(f"Results encrypted and saved: {result_id}")
             return result_id
-            
+
         except Exception as e:
             self.logger.error(f"Failed to encrypt results: {e}")
             return None
@@ -763,16 +786,17 @@ class OSINTUtils:
     def validate_tor_connection(self):
         """Validate that Tor proxy is working"""
         from transport import sync_validate_tor_connection
+
         return sync_validate_tor_connection()
 
-    def resolve_domain_secure(self, domain, record_type='A'):
+    def resolve_domain_secure(self, domain, record_type="A"):
         """
         Resolve domain using secure DoH through Tor.
-        
+
         Args:
             domain: Domain name to resolve
             record_type: DNS record type (A, AAAA, MX, TXT, etc.)
-        
+
         Returns:
             List of resolved records or None if resolution fails
         """
@@ -782,20 +806,20 @@ class OSINTUtils:
                 operation="dns_resolution",
                 actor="osint_utils",
                 target=domain,
-                metadata={"record_type": record_type, "method": "doh"}
+                metadata={"record_type": record_type, "method": "doh"},
             )
-        
+
         if not DOH_AVAILABLE:
             self.logger.warning("DoH client not available - falling back to system DNS")
             return None
-        
+
         try:
             # Run async DoH resolution in a new event loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
                 response = loop.run_until_complete(resolve_dns(domain, record_type))
-                
+
                 if response.answers:
                     results = [answer.data for answer in response.answers]
                     self.logger.info(f"Resolved {domain} {record_type}: {results}")
@@ -803,10 +827,10 @@ class OSINTUtils:
                 else:
                     self.logger.warning(f"No {record_type} records found for {domain}")
                     return []
-                    
+
             finally:
                 loop.close()
-                
+
         except Exception as e:
             self.logger.error(f"Secure DNS resolution failed for {domain}: {e}")
             return None
@@ -815,7 +839,7 @@ class OSINTUtils:
         """Get IP address for domain using secure DoH."""
         if not DOH_AVAILABLE:
             return None
-        
+
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -834,7 +858,7 @@ class OSINTUtils:
         """Get IPv6 address for domain using secure DoH."""
         if not DOH_AVAILABLE:
             return None
-        
+
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -886,13 +910,15 @@ class OSINTUtils:
         email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return re.findall(email_pattern, text)
 
-    def request_with_fallback(self, method, url, headers=None, params=None, timeout=30, allow_fallback=True):
+    def request_with_fallback(
+        self, method, url, headers=None, params=None, timeout=30, allow_fallback=True
+    ):
         """
         Make HTTP request with fallback support.
-        
+
         This method provides a unified interface for making HTTP requests with optional
         fallback mechanisms. Currently uses the standard make_request method.
-        
+
         Args:
             method: HTTP method ('get', 'post', etc.)
             url: Target URL
@@ -900,14 +926,20 @@ class OSINTUtils:
             params: Query parameters
             timeout: Request timeout
             allow_fallback: Whether to allow fallback mechanisms (currently unused)
-        
+
         Returns:
             Response object or None if request fails
         """
-        if method.lower() == 'get':
-            return self.make_request(url, headers=headers, params=params, timeout=timeout)
+        if method.lower() == "get":
+            return self.make_request(
+                url, headers=headers, params=params, timeout=timeout
+            )
         else:
             # For other methods, we'd need to implement them in make_request
             # For now, just use make_request for GET requests
-            self.logger.warning(f"HTTP method {method} not fully implemented, using GET fallback")
-            return self.make_request(url, headers=headers, params=params, timeout=timeout)
+            self.logger.warning(
+                f"HTTP method {method} not fully implemented, using GET fallback"
+            )
+            return self.make_request(
+                url, headers=headers, params=params, timeout=timeout
+            )

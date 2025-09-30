@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 console = Console()
 
+
 class SetupWizard:
     """Interactive setup wizard for OSINT Suite"""
 
@@ -60,8 +61,12 @@ class SetupWizard:
     def show_welcome(self):
         """Show welcome screen"""
         welcome_text = Text()
-        welcome_text.append("🚀 Welcome to Passive OSINT Suite Setup Wizard!\n\n", style="bold blue")
-        welcome_text.append("This wizard will help you configure your OSINT platform for optimal performance.\n\n")
+        welcome_text.append(
+            "🚀 Welcome to Passive OSINT Suite Setup Wizard!\n\n", style="bold blue"
+        )
+        welcome_text.append(
+            "This wizard will help you configure your OSINT platform for optimal performance.\n\n"
+        )
         welcome_text.append("We'll cover:\n")
         welcome_text.append("• Basic settings and preferences\n")
         welcome_text.append("• API key configuration\n")
@@ -84,9 +89,7 @@ class SetupWizard:
         current_log_level = self.config.get("SETTINGS", "LOG_LEVEL", fallback="INFO")
 
         log_level = questionary.select(
-            "Select logging level:",
-            choices=log_levels,
-            default=current_log_level
+            "Select logging level:", choices=log_levels, default=current_log_level
         ).ask()
 
         if not self.config.has_section("SETTINGS"):
@@ -101,7 +104,7 @@ class SetupWizard:
         output_format = questionary.select(
             "Select default output format:",
             choices=output_formats,
-            default=current_format
+            default=current_format,
         ).ask()
 
         self.config.set("SETTINGS", "OUTPUT_FORMAT", output_format)
@@ -110,7 +113,7 @@ class SetupWizard:
         max_threads = questionary.text(
             "Maximum concurrent threads (recommended: 5-10):",
             default=self.config.get("SETTINGS", "MAX_THREADS", fallback="5"),
-            validate=lambda x: x.isdigit() and 1 <= int(x) <= 50
+            validate=lambda x: x.isdigit() and 1 <= int(x) <= 50,
         ).ask()
 
         self.config.set("SETTINGS", "MAX_THREADS", max_threads)
@@ -119,7 +122,7 @@ class SetupWizard:
         timeout = questionary.text(
             "Request timeout in seconds (recommended: 30-60):",
             default=self.config.get("SETTINGS", "TIMEOUT", fallback="30"),
-            validate=lambda x: x.isdigit() and 10 <= int(x) <= 300
+            validate=lambda x: x.isdigit() and 10 <= int(x) <= 300,
         ).ask()
 
         self.config.set("SETTINGS", "TIMEOUT", timeout)
@@ -131,7 +134,9 @@ class SetupWizard:
         console.clear()
         console.print("[bold blue]🔑 API Key Configuration[/bold blue]\n")
 
-        console.print("OSINT Suite supports various APIs for enhanced intelligence gathering.")
+        console.print(
+            "OSINT Suite supports various APIs for enhanced intelligence gathering."
+        )
         console.print("You can configure API keys now or skip and add them later.\n")
 
         # Check if we have secure storage
@@ -139,9 +144,12 @@ class SetupWizard:
         secrets_manager = None
         try:
             from security.secrets_manager import secrets_manager
+
             has_secure_storage = True and secrets_manager is not None
         except ImportError:
-            console.print("[yellow]⚠️  Secure storage not available - keys will be stored in plain text[/yellow]")
+            console.print(
+                "[yellow]⚠️  Secure storage not available - keys will be stored in plain text[/yellow]"
+            )
 
         # API services to configure
         api_services = {
@@ -154,46 +162,57 @@ class SetupWizard:
             "urlscan": "URLScan.io (URL analysis)",
             "emailrep": "EmailRep (Email reputation)",
             "hunter": "Hunter.io (Email finding)",
-            "breachdirectory": "BreachDirectory (Password breach checking)"
+            "breachdirectory": "BreachDirectory (Password breach checking)",
         }
 
         configured_keys = []
 
         for service_key, service_name in api_services.items():
             configure = questionary.confirm(
-                f"Configure {service_name} API key?",
-                default=False
+                f"Configure {service_name} API key?", default=False
             ).ask()
 
             if configure:
-                api_key = questionary.password(
-                    f"Enter {service_name} API key:"
-                ).ask()
+                api_key = questionary.password(f"Enter {service_name} API key:").ask()
 
                 if has_secure_storage and secrets_manager is not None:
                     try:
                         secrets_manager.store_secret(f"api_key_{service_key}", api_key)
-                        console.print(f"[green]✓ {service_name} key stored securely[/green]")
+                        console.print(
+                            f"[green]✓ {service_name} key stored securely[/green]"
+                        )
                     except Exception as e:
-                        console.print(f"[red]✗ Failed to store {service_name} key: {e}[/red]")
-                        console.print(f"[red]✗ Failed to store {service_name} key: {e}[/red]")
+                        console.print(
+                            f"[red]✗ Failed to store {service_name} key: {e}[/red]"
+                        )
+                        console.print(
+                            f"[red]✗ Failed to store {service_name} key: {e}[/red]"
+                        )
                 else:
                     # Store in config (not recommended)
                     if not self.config.has_section("API_KEYS"):
                         self.config.add_section("API_KEYS")
                     self.config.set("API_KEYS", service_key.upper(), api_key)
-                    console.print(f"[yellow]⚠️  {service_name} key stored in config (not secure)[/yellow]")
+                    console.print(
+                        f"[yellow]⚠️  {service_name} key stored in config (not secure)[/yellow]"
+                    )
 
                     configured_keys.append(service_name)
 
         if configured_keys:
-            console.print(f"\n[green]✅ Configured {len(configured_keys)} API services:[/green]")
+            console.print(
+                f"\n[green]✅ Configured {len(configured_keys)} API services:[/green]"
+            )
             for service in configured_keys:
                 console.print(f"  • {service}")
         else:
-            console.print("\n[yellow]ℹ️  No API keys configured. You can add them later.[/yellow]")
+            console.print(
+                "\n[yellow]ℹ️  No API keys configured. You can add them later.[/yellow]"
+            )
 
-        console.print("\n[dim]💡 Tip: API keys are stored securely and never logged in plain text.[/dim]")
+        console.print(
+            "\n[dim]💡 Tip: API keys are stored securely and never logged in plain text.[/dim]"
+        )
 
     def configure_security(self):
         """Configure security settings"""
@@ -205,8 +224,7 @@ class SetupWizard:
 
         # Tor usage
         use_tor = questionary.confirm(
-            "Use Tor for all network requests (recommended for privacy)?",
-            default=True
+            "Use Tor for all network requests (recommended for privacy)?", default=True
         ).ask()
 
         if not self.config.has_section("OPSEC"):
@@ -216,32 +234,28 @@ class SetupWizard:
 
         # DNS over HTTPS
         use_doh = questionary.confirm(
-            "Use DNS over HTTPS for DNS queries?",
-            default=True
+            "Use DNS over HTTPS for DNS queries?", default=True
         ).ask()
 
         self.config.set("OPSEC", "USE_DOH", str(use_doh))
 
         # Query obfuscation
         use_obfuscation = questionary.confirm(
-            "Enable query obfuscation to avoid detection?",
-            default=True
+            "Enable query obfuscation to avoid detection?", default=True
         ).ask()
 
         self.config.set("OPSEC", "USE_OBFUSCATION", str(use_obfuscation))
 
         # Result encryption
         encrypt_results = questionary.confirm(
-            "Automatically encrypt all investigation results?",
-            default=True
+            "Automatically encrypt all investigation results?", default=True
         ).ask()
 
         self.config.set("OPSEC", "ENCRYPT_RESULTS", str(encrypt_results))
 
         # Audit trail
         enable_audit = questionary.confirm(
-            "Enable comprehensive audit trail logging?",
-            default=True
+            "Enable comprehensive audit trail logging?", default=True
         ).ask()
 
         self.config.set("OPSEC", "ENABLE_AUDIT", str(enable_audit))
@@ -263,17 +277,18 @@ class SetupWizard:
             "ENABLE_SOCIAL_MEDIA_SEARCH": "Social media monitoring",
             "ENABLE_COURT_RECORDS_SEARCH": "Court records search",
             "ENABLE_NEWS_SEARCH": "News article monitoring",
-            "ENABLE_JOB_POSTING_SEARCH": "Job posting intelligence"
+            "ENABLE_JOB_POSTING_SEARCH": "Job posting intelligence",
         }
 
         if not self.config.has_section("PASSIVE_SOURCES"):
             self.config.add_section("PASSIVE_SOURCES")
 
         for setting, description in passive_sources.items():
-            current_value = self.config.getboolean("PASSIVE_SOURCES", setting, fallback=True)
+            current_value = self.config.getboolean(
+                "PASSIVE_SOURCES", setting, fallback=True
+            )
             enabled = questionary.confirm(
-                f"Enable {description}?",
-                default=current_value
+                f"Enable {description}?", default=current_value
             ).ask()
 
             self.config.set("PASSIVE_SOURCES", setting, str(enabled))
@@ -286,16 +301,14 @@ class SetupWizard:
 
         # Local LLM
         use_local_llm = questionary.confirm(
-            "Enable local LLM processing (no external API calls)?",
-            default=True
+            "Enable local LLM processing (no external API calls)?", default=True
         ).ask()
 
         self.config.set("AI", "USE_LOCAL_LLM", str(use_local_llm))
 
         # Pattern analysis
         use_patterns = questionary.confirm(
-            "Enable advanced pattern analysis and anomaly detection?",
-            default=True
+            "Enable advanced pattern analysis and anomaly detection?", default=True
         ).ask()
 
         self.config.set("AI", "USE_PATTERN_ANALYSIS", str(use_patterns))
@@ -308,10 +321,12 @@ class SetupWizard:
         console.print("[bold blue]💾 Saving Configuration[/bold blue]\n")
 
         try:
-            with open(self.config_path, 'w') as f:
+            with open(self.config_path, "w") as f:
                 self.config.write(f)
 
-            console.print(f"[green]✅ Configuration saved to {self.config_path}[/green]")
+            console.print(
+                f"[green]✅ Configuration saved to {self.config_path}[/green]"
+            )
 
             # Set appropriate permissions
             self.config_path.chmod(0o600)
@@ -330,17 +345,38 @@ class SetupWizard:
         summary_table.add_column("Value", style="green")
 
         # Basic settings
-        summary_table.add_row("Log Level", self.config.get("SETTINGS", "LOG_LEVEL", fallback="INFO"))
-        summary_table.add_row("Output Format", self.config.get("SETTINGS", "OUTPUT_FORMAT", fallback="json"))
-        summary_table.add_row("Max Threads", self.config.get("SETTINGS", "MAX_THREADS", fallback="5"))
-        summary_table.add_row("Timeout", f"{self.config.get('SETTINGS', 'TIMEOUT', fallback='30')}s")
+        summary_table.add_row(
+            "Log Level", self.config.get("SETTINGS", "LOG_LEVEL", fallback="INFO")
+        )
+        summary_table.add_row(
+            "Output Format",
+            self.config.get("SETTINGS", "OUTPUT_FORMAT", fallback="json"),
+        )
+        summary_table.add_row(
+            "Max Threads", self.config.get("SETTINGS", "MAX_THREADS", fallback="5")
+        )
+        summary_table.add_row(
+            "Timeout", f"{self.config.get('SETTINGS', 'TIMEOUT', fallback='30')}s"
+        )
 
         # Security settings
-        summary_table.add_row("Use Tor", self.config.get("OPSEC", "USE_TOR", fallback="True"))
-        summary_table.add_row("Use DoH", self.config.get("OPSEC", "USE_DOH", fallback="True"))
-        summary_table.add_row("Query Obfuscation", self.config.get("OPSEC", "USE_OBFUSCATION", fallback="True"))
-        summary_table.add_row("Encrypt Results", self.config.get("OPSEC", "ENCRYPT_RESULTS", fallback="True"))
-        summary_table.add_row("Audit Trail", self.config.get("OPSEC", "ENABLE_AUDIT", fallback="True"))
+        summary_table.add_row(
+            "Use Tor", self.config.get("OPSEC", "USE_TOR", fallback="True")
+        )
+        summary_table.add_row(
+            "Use DoH", self.config.get("OPSEC", "USE_DOH", fallback="True")
+        )
+        summary_table.add_row(
+            "Query Obfuscation",
+            self.config.get("OPSEC", "USE_OBFUSCATION", fallback="True"),
+        )
+        summary_table.add_row(
+            "Encrypt Results",
+            self.config.get("OPSEC", "ENCRYPT_RESULTS", fallback="True"),
+        )
+        summary_table.add_row(
+            "Audit Trail", self.config.get("OPSEC", "ENABLE_AUDIT", fallback="True")
+        )
 
         console.print(summary_table)
 

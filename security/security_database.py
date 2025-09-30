@@ -16,14 +16,14 @@ try:
     HAS_POSTGRESQL = True
 except ImportError:
     HAS_POSTGRESQL = False
-    
+
     # Create dummy psycopg2 for type checking
     class MockExtras:
         RealDictCursor = None
-    
+
     class MockPsycopg2:
         extras = MockExtras()
-    
+
     psycopg2 = MockPsycopg2()  # type: ignore
 
     # Create dummy classes for type hints
@@ -31,8 +31,14 @@ except ImportError:
         pass
 
 
-from .models import (AccessPolicy, DataObject, SecurityAlert, SecurityEvent,
-                     Session, User)
+from .models import (
+    AccessPolicy,
+    DataObject,
+    SecurityAlert,
+    SecurityEvent,
+    Session,
+    User,
+)
 
 
 class SecurityDatabase:
@@ -77,24 +83,34 @@ class SecurityDatabase:
                     class MockCursor:
                         def __enter__(self):
                             return self
+
                         def __exit__(self, *args):
                             pass
+
                         def execute(self, *args):
                             pass
+
                         def fetchone(self):
                             return None
+
                         def fetchall(self):
                             return []
+
                         def fetchmany(self, size=None):
                             return []
+
                         @property
                         def rowcount(self):
                             return 0
+
                     return MockCursor()
+
                 def commit(self):
                     pass
+
                 def rollback(self):
                     pass
+
             yield MockConnection()
         else:
             conn = None
@@ -664,7 +680,10 @@ class SecurityDatabase:
             return False
 
     def load_access_policies(
-        self, resource_type: Optional[str] = None, resource_id: Optional[str] = None, user_id: Optional[str] = None
+        self,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[AccessPolicy]:
         """Load access policies from database"""
         policies = []
@@ -905,10 +924,14 @@ class SecurityDatabase:
                     return {
                         "period_days": days,
                         "total_events": stats.get("total_events", 0) if stats else 0,
-                        "critical_events": stats.get("critical_events", 0) if stats else 0,
+                        "critical_events": stats.get("critical_events", 0)
+                        if stats
+                        else 0,
                         "high_events": stats.get("high_events", 0) if stats else 0,
                         "failed_logins": stats.get("failed_logins", 0) if stats else 0,
-                        "access_denials": stats.get("access_denials", 0) if stats else 0,
+                        "access_denials": stats.get("access_denials", 0)
+                        if stats
+                        else 0,
                         "top_users": [
                             {"user_id": u["user_id"], "event_count": u["event_count"]}
                             for u in top_users

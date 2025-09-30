@@ -7,5 +7,6 @@ Provides:
 
 Later phases will add dynamic loading and validation.
 """
+
 from .definitions import CapabilityDefinition, CapabilityResult  # noqa
 from .registry import REGISTRY  # noqa

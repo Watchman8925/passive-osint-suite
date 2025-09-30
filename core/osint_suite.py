@@ -24,6 +24,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import the unified module system
 from modules import MODULE_REGISTRY
+
 # Import core utilities
 from utils.osint_utils import OSINTUtils
 
@@ -2011,7 +2012,6 @@ class OSINTSuite:
 
         console.print(table)
 
-
     def advanced_analysis_menu(self):
         """Advanced analysis suite with pattern detection, conspiracy analysis, and cross-referencing"""
         while True:
@@ -2026,7 +2026,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select analysis type[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select analysis type[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.run_hidden_pattern_detection()
@@ -2055,7 +2057,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select reporting option[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select reporting option[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.generate_intelligence_report()
@@ -2084,7 +2088,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select feed option[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select feed option[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.start_feed_monitoring()
@@ -2102,7 +2108,9 @@ class OSINTSuite:
     def bellingcat_toolkit_menu(self):
         """Bellingcat-style open source investigation toolkit"""
         while True:
-            console.print("\n[bold cyan]🕵️ Bellingcat Investigation Toolkit[/bold cyan]\n")
+            console.print(
+                "\n[bold cyan]🕵️ Bellingcat Investigation Toolkit[/bold cyan]\n"
+            )
             menu = Table(show_header=False, show_edge=False, pad_edge=False)
             menu.add_column("Option", style="cyan", width=3)
             menu.add_column("Description", style="white")
@@ -2114,7 +2122,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select investigation tool[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select investigation tool[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.start_new_investigation()
@@ -2139,9 +2149,13 @@ class OSINTSuite:
         try:
             if "hidden_pattern_detector" in self.modules:
                 results = self.modules["hidden_pattern_detector"].analyze_target(target)
-                console.print(f"[green]Pattern analysis completed for: {target}[/green]")
+                console.print(
+                    f"[green]Pattern analysis completed for: {target}[/green]"
+                )
                 # Save results
-                filename = self.utils.save_results(results, f"pattern_analysis_{target}")
+                filename = self.utils.save_results(
+                    results, f"pattern_analysis_{target}"
+                )
                 console.print(f"Results saved to: {filename}")
             else:
                 console.print("[red]Hidden pattern detector module not available[/red]")
@@ -2155,8 +2169,12 @@ class OSINTSuite:
         try:
             if "conspiracy_analyzer" in self.modules:
                 results = self.modules["conspiracy_analyzer"].analyze_conspiracy(topic)
-                console.print(f"[green]Conspiracy analysis completed for: {topic}[/green]")
-                filename = self.utils.save_results(results, f"conspiracy_analysis_{topic}")
+                console.print(
+                    f"[green]Conspiracy analysis completed for: {topic}[/green]"
+                )
+                filename = self.utils.save_results(
+                    results, f"conspiracy_analysis_{topic}"
+                )
                 console.print(f"Results saved to: {filename}")
             else:
                 console.print("[red]Conspiracy analyzer module not available[/red]")
@@ -2170,7 +2188,9 @@ class OSINTSuite:
         try:
             if "cross_reference_engine" in self.modules:
                 results = self.modules["cross_reference_engine"].cross_reference(target)
-                console.print(f"[green]Cross-reference analysis completed for: {target}[/green]")
+                console.print(
+                    f"[green]Cross-reference analysis completed for: {target}[/green]"
+                )
                 filename = self.utils.save_results(results, f"cross_reference_{target}")
                 console.print(f"Results saved to: {filename}")
             else:
@@ -2185,8 +2205,12 @@ class OSINTSuite:
         try:
             if "blackbox_patterns" in self.modules:
                 results = self.modules["blackbox_patterns"].analyze_patterns(target)
-                console.print(f"[green]Blackbox analysis completed for: {target}[/green]")
-                filename = self.utils.save_results(results, f"blackbox_analysis_{target}")
+                console.print(
+                    f"[green]Blackbox analysis completed for: {target}[/green]"
+                )
+                filename = self.utils.save_results(
+                    results, f"blackbox_analysis_{target}"
+                )
                 console.print(f"Results saved to: {filename}")
             else:
                 console.print("[red]Blackbox patterns module not available[/red]")
@@ -2199,7 +2223,9 @@ class OSINTSuite:
         try:
             if "reporting_engine" in self.modules:
                 report = self.modules["reporting_engine"].generate_report()
-                console.print("[green]Intelligence report generated successfully[/green]")
+                console.print(
+                    "[green]Intelligence report generated successfully[/green]"
+                )
                 console.print(f"Report saved to: {report}")
             else:
                 console.print("[red]Reporting engine module not available[/red]")
@@ -2209,13 +2235,17 @@ class OSINTSuite:
     def show_visualization_dashboard(self):
         """Show data visualization dashboard"""
         console.print("\n[bold green]📊 Data Visualization Dashboard[/bold green]")
-        console.print("[yellow]Visualization dashboard would open in web browser[/yellow]")
+        console.print(
+            "[yellow]Visualization dashboard would open in web browser[/yellow]"
+        )
         console.print("[dim]Feature coming soon...[/dim]")
 
     def export_analysis_results(self):
         """Export analysis results"""
         console.print("\n[bold green]📋 Export Analysis Results[/bold green]")
-        console.print("[yellow]Export functionality available through individual modules[/yellow]")
+        console.print(
+            "[yellow]Export functionality available through individual modules[/yellow]"
+        )
 
     def manage_case_files(self):
         """Manage case files"""
@@ -2275,7 +2305,9 @@ class OSINTSuite:
         try:
             if "bellingcat_toolkit" in self.modules:
                 self.modules["bellingcat_toolkit"].start_investigation(case_name)
-                console.print(f"[green]Investigation '{case_name}' started successfully[/green]")
+                console.print(
+                    f"[green]Investigation '{case_name}' started successfully[/green]"
+                )
             else:
                 console.print("[red]Bellingcat toolkit module not available[/red]")
         except Exception as e:
@@ -2301,11 +2333,12 @@ class OSINTSuite:
         console.print("\n[bold green]🔗 Evidence Correlation[/bold green]")
         console.print("[yellow]Evidence correlation tools coming soon...[/yellow]")
 
-
     def local_forensics_menu(self):
         """Local file analysis and digital forensics"""
         while True:
-            console.print("\n[bold cyan]📁 Local File Analysis & Forensics[/bold cyan]\n")
+            console.print(
+                "\n[bold cyan]📁 Local File Analysis & Forensics[/bold cyan]\n"
+            )
             menu = Table(show_header=False, show_edge=False, pad_edge=False)
             menu.add_column("Option", style="cyan", width=3)
             menu.add_column("Description", style="white")
@@ -2317,7 +2350,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select forensics option[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select forensics option[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.analyze_single_file()
@@ -2353,7 +2388,9 @@ class OSINTSuite:
             menu.add_row("0", "🔙 Back to main menu")
 
             console.print(menu)
-            choice = Prompt.ask("\n[bold yellow]Select network option[/bold yellow]", default="0")
+            choice = Prompt.ask(
+                "\n[bold yellow]Select network option[/bold yellow]", default="0"
+            )
 
             if choice == "1":
                 self.show_network_interfaces()
@@ -2389,7 +2426,9 @@ class OSINTSuite:
                 console.print(f"[green]Analysis completed for: {file_path}[/green]")
                 console.print(f"File size: {results.get('file_size', 'Unknown')} bytes")
                 console.print(f"MIME type: {results.get('mime_type', 'Unknown')}")
-                filename = self.utils.save_results(results, f"file_analysis_{os.path.basename(file_path)}")
+                filename = self.utils.save_results(
+                    results, f"file_analysis_{os.path.basename(file_path)}"
+                )
                 console.print(f"Results saved to: {filename}")
             else:
                 console.print("[red]Metadata extractor module not available[/red]")
@@ -2400,13 +2439,21 @@ class OSINTSuite:
         """Analyze all files in a directory"""
         console.print("\n[bold green]📂 Directory Analysis[/bold green]")
         dir_path = Prompt.ask("Enter directory path to analyze")
-        recursive = Prompt.ask("Include subdirectories? (y/n)", default="n").lower() == "y"
+        recursive = (
+            Prompt.ask("Include subdirectories? (y/n)", default="n").lower() == "y"
+        )
         try:
             if "metadata_extractor" in self.modules:
-                results = self.modules["metadata_extractor"].analyze_directory(dir_path, recursive)
-                console.print(f"[green]Analysis completed for directory: {dir_path}[/green]")
+                results = self.modules["metadata_extractor"].analyze_directory(
+                    dir_path, recursive
+                )
+                console.print(
+                    f"[green]Analysis completed for directory: {dir_path}[/green]"
+                )
                 console.print(f"Files analyzed: {len(results)}")
-                filename = self.utils.save_results(results, f"directory_analysis_{os.path.basename(dir_path)}")
+                filename = self.utils.save_results(
+                    results, f"directory_analysis_{os.path.basename(dir_path)}"
+                )
                 console.print(f"Results saved to: {filename}")
             else:
                 console.print("[red]Metadata extractor module not available[/red]")
@@ -2454,7 +2501,9 @@ class OSINTSuite:
                 results = self.modules["metadata_extractor"].analyze_file(file_path)
                 metadata = results.get("metadata", {})
                 if metadata:
-                    console.print(f"[green]Document analysis for: {results.get('file_name', 'Unknown')}[/green]")
+                    console.print(
+                        f"[green]Document analysis for: {results.get('file_name', 'Unknown')}[/green]"
+                    )
                     console.print(f"Lines: {metadata.get('line_count', 'N/A')}")
                     console.print(f"Words: {metadata.get('word_count', 'N/A')}")
                     sensitive = metadata.get("sensitive_data", {})
@@ -2473,7 +2522,9 @@ class OSINTSuite:
         console.print("\n[bold green]🔌 Network Interfaces[/bold green]")
         try:
             if "local_network_analyzer" in self.modules:
-                interfaces = self.modules["local_network_analyzer"].get_network_interfaces()
+                interfaces = self.modules[
+                    "local_network_analyzer"
+                ].get_network_interfaces()
                 for name, info in interfaces.items():
                     console.print(f"[cyan]Interface: {name}[/cyan]")
                     addresses = info.get("addresses", {})
@@ -2491,16 +2542,22 @@ class OSINTSuite:
         console.print("\n[bold green]🔗 Active Network Connections[/bold green]")
         try:
             if "local_network_analyzer" in self.modules:
-                connections = self.modules["local_network_analyzer"].get_network_connections()
+                connections = self.modules[
+                    "local_network_analyzer"
+                ].get_network_connections()
                 for conn in connections[:20]:  # Show first 20
                     if "error" not in conn:
                         local = conn.get("local_addr", "N/A")
                         remote = conn.get("remote_addr", "N/A")
                         status = conn.get("status", "N/A")
                         process = conn.get("process", {}).get("name", "N/A")
-                        console.print(f"Local: {local} -> Remote: {remote} | Status: {status} | Process: {process}")
+                        console.print(
+                            f"Local: {local} -> Remote: {remote} | Status: {status} | Process: {process}"
+                        )
                 if len(connections) > 20:
-                    console.print(f"[dim]... and {len(connections) - 20} more connections[/dim]")
+                    console.print(
+                        f"[dim]... and {len(connections) - 20} more connections[/dim]"
+                    )
             else:
                 console.print("[red]Local network analyzer module not available[/red]")
         except Exception as e:
@@ -2532,7 +2589,9 @@ class OSINTSuite:
                         console.print(f"  Bytes sent: {counters['bytes_sent']:,}")
                         console.print(f"  Bytes received: {counters['bytes_recv']:,}")
                         console.print(f"  Packets sent: {counters['packets_sent']:,}")
-                        console.print(f"  Packets received: {counters['packets_recv']:,}")
+                        console.print(
+                            f"  Packets received: {counters['packets_recv']:,}"
+                        )
                         console.print()
             else:
                 console.print("[red]Local network analyzer module not available[/red]")
@@ -2544,7 +2603,9 @@ class OSINTSuite:
         console.print("\n[bold green]🔍 Service Discovery[/bold green]")
         try:
             if "local_network_analyzer" in self.modules:
-                services = self.modules["local_network_analyzer"].discover_local_services()
+                services = self.modules[
+                    "local_network_analyzer"
+                ].discover_local_services()
                 for service in services:
                     port = service.get("port")
                     name = service.get("service")
@@ -2564,11 +2625,17 @@ class OSINTSuite:
         duration = int(Prompt.ask("Analysis duration in seconds", default="10"))
         try:
             if "local_network_analyzer" in self.modules:
-                analysis = self.modules["local_network_analyzer"].analyze_network_traffic(duration)
+                analysis = self.modules[
+                    "local_network_analyzer"
+                ].analyze_network_traffic(duration)
                 for interface, stats in analysis.get("interfaces", {}).items():
                     console.print(f"[cyan]Interface: {interface}[/cyan]")
-                    console.print(f"  Bytes/sec sent: {stats['bytes_sent_per_sec']:.2f}")
-                    console.print(f"  Bytes/sec received: {stats['bytes_recv_per_sec']:.2f}")
+                    console.print(
+                        f"  Bytes/sec sent: {stats['bytes_sent_per_sec']:.2f}"
+                    )
+                    console.print(
+                        f"  Bytes/sec received: {stats['bytes_recv_per_sec']:.2f}"
+                    )
                     console.print(f"  Total bytes: {stats['total_bytes']:,}")
                     console.print()
             else:
@@ -2584,7 +2651,9 @@ class OSINTSuite:
                 routes = self.modules["local_network_analyzer"].get_routing_table()
                 for route in routes[:20]:  # Show first 20 routes
                     if "error" not in route:
-                        console.print(f"Destination: {route.get('destination', 'N/A')} | Gateway: {route.get('gateway', 'N/A')} | Interface: {route.get('iface', 'N/A')}")
+                        console.print(
+                            f"Destination: {route.get('destination', 'N/A')} | Gateway: {route.get('gateway', 'N/A')} | Interface: {route.get('iface', 'N/A')}"
+                        )
                 if len(routes) > 20:
                     console.print(f"[dim]... and {len(routes) - 20} more routes[/dim]")
             else:
@@ -2597,10 +2666,14 @@ class OSINTSuite:
         console.print("\n[bold green]🌐 Connectivity Test[/bold green]")
         try:
             if "local_network_analyzer" in self.modules:
-                results = self.modules["local_network_analyzer"].check_network_connectivity()
+                results = self.modules[
+                    "local_network_analyzer"
+                ].check_network_connectivity()
                 for target, info in results["targets"].items():
                     status = "✓" if info.get("reachable") else "✗"
-                    console.print(f"{status} {target}: {info.get('ip', 'N/A')} ({'reachable' if info.get('reachable') else 'unreachable'})")
+                    console.print(
+                        f"{status} {target}: {info.get('ip', 'N/A')} ({'reachable' if info.get('reachable') else 'unreachable'})"
+                    )
             else:
                 console.print("[red]Local network analyzer module not available[/red]")
         except Exception as e:
@@ -2611,7 +2684,9 @@ class OSINTSuite:
         console.print("\n[bold green]📋 Network Analysis Report[/bold green]")
         try:
             if "local_network_analyzer" in self.modules:
-                report = self.modules["local_network_analyzer"].generate_network_report()
+                report = self.modules[
+                    "local_network_analyzer"
+                ].generate_network_report()
                 console.print(report)
             else:
                 console.print("[red]Local network analyzer module not available[/red]")
@@ -2635,7 +2710,9 @@ def main():
     parser.add_argument("--crypto", help="Analyze cryptocurrency address")
     parser.add_argument("--crypto-type", help="Cryptocurrency type")
     parser.add_argument("--search", help="Perform passive search")
-    parser.add_argument("--search-type", help="Search type (domain/email/company/person)")
+    parser.add_argument(
+        "--search-type", help="Search type (domain/email/company/person)"
+    )
     parser.add_argument("--batch", help="Batch analysis file")
     parser.add_argument("--batch-type", help="Batch analysis type")
     parser.add_argument("--output", help="Output format (json/txt/csv)")

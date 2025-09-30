@@ -42,12 +42,12 @@ class LocalLLMEngine:
 
     async def _query_llm(self, prompt: str) -> Any:
         """Query the active LLM backend"""
-        if self.active_backend == 'openai' and self.openai_client:
+        if self.active_backend == "openai" and self.openai_client:
             try:
                 response = self.openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=1000
+                    max_tokens=1000,
                 )
                 return response.choices[0].message.content
             except Exception as e:
@@ -65,14 +65,10 @@ class LocalLLMEngine:
                 "analysis": analysis,
                 "confidence": 0.8,
                 "entities": [],
-                "sentiment": "neutral"
+                "sentiment": "neutral",
             }
         except Exception as e:
-            return {
-                "error": str(e),
-                "analysis": "Analysis failed",
-                "confidence": 0.0
-            }
+            return {"error": str(e), "analysis": "Analysis failed", "confidence": 0.0}
 
     async def generate_report_summary(self, data: Dict[str, Any]) -> str:
         """Generate a summary report from investigation data"""

@@ -395,14 +395,20 @@ class SecurityMonitor:
         unresolved_alerts = [a for a in alerts if a.status != "resolved"]
 
         # Calculate average response time for resolved alerts
-        resolved_alerts = [a for a in alerts if a.status == "resolved" and a.resolved_at]
+        resolved_alerts = [
+            a for a in alerts if a.status == "resolved" and a.resolved_at
+        ]
         if resolved_alerts:
             response_times = []
             for alert in resolved_alerts:
                 if alert.resolved_at and alert.timestamp:
-                    response_time = (alert.resolved_at - alert.timestamp).total_seconds() / 3600  # hours
+                    response_time = (
+                        alert.resolved_at - alert.timestamp
+                    ).total_seconds() / 3600  # hours
                     response_times.append(response_time)
-            avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+            avg_response_time = (
+                sum(response_times) / len(response_times) if response_times else 0
+            )
             response_time_str = f"{avg_response_time:.1f} hours"
         else:
             response_time_str = "unknown"

@@ -23,7 +23,9 @@ class GitLabPassive(OSINTUtils):
         repositories = []
 
         try:
-            resp = self.request_with_fallback('get', url, timeout=20, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=20, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -36,45 +38,53 @@ class GitLabPassive(OSINTUtils):
                     # Extract repository name and URL
                     title_link = card.select_one("a.text-plain")
                     if title_link:
-                        repo_info['name'] = title_link.text.strip()
-                        href = title_link.get('href')
+                        repo_info["name"] = title_link.text.strip()
+                        href = title_link.get("href")
                         if href:
-                            repo_info['url'] = self.base_url + str(href)
+                            repo_info["url"] = self.base_url + str(href)
 
                     # Extract description
                     desc_elem = card.select_one("p.description, .description")
                     if desc_elem:
-                        repo_info['description'] = desc_elem.text.strip()
+                        repo_info["description"] = desc_elem.text.strip()
 
                     # Extract metadata (stars, forks, etc.)
                     stats = card.select(".project-stats, .stats")
                     if stats:
                         for stat in stats:
                             text = stat.text.strip()
-                            if 'star' in text.lower():
-                                repo_info['stars'] = re.search(r'\d+', text)
-                                repo_info['stars'] = repo_info['stars'].group() if repo_info['stars'] else '0'
-                            elif 'fork' in text.lower():
-                                repo_info['forks'] = re.search(r'\d+', text)
-                                repo_info['forks'] = repo_info['forks'].group() if repo_info['forks'] else '0'
+                            if "star" in text.lower():
+                                repo_info["stars"] = re.search(r"\d+", text)
+                                repo_info["stars"] = (
+                                    repo_info["stars"].group()
+                                    if repo_info["stars"]
+                                    else "0"
+                                )
+                            elif "fork" in text.lower():
+                                repo_info["forks"] = re.search(r"\d+", text)
+                                repo_info["forks"] = (
+                                    repo_info["forks"].group()
+                                    if repo_info["forks"]
+                                    else "0"
+                                )
 
                     # Extract last updated
                     updated_elem = card.select_one(".updated-at, .time")
                     if updated_elem:
-                        repo_info['last_updated'] = updated_elem.text.strip()
+                        repo_info["last_updated"] = updated_elem.text.strip()
 
                     # Extract programming language
                     lang_elem = card.select_one(".language, .lang")
                     if lang_elem:
-                        repo_info['language'] = lang_elem.text.strip()
+                        repo_info["language"] = lang_elem.text.strip()
 
-                    if repo_info.get('name'):
+                    if repo_info.get("name"):
                         repositories.append(repo_info)
 
                 return {
                     "status": "success",
                     "total_found": len(repositories),
-                    "repositories": repositories
+                    "repositories": repositories,
                 }
             else:
                 status_code = resp.status_code if resp else "unknown"
@@ -91,7 +101,9 @@ class GitLabPassive(OSINTUtils):
         users = []
 
         try:
-            resp = self.request_with_fallback('get', url, timeout=15, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=15, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -102,23 +114,19 @@ class GitLabPassive(OSINTUtils):
 
                     name_link = card.select_one("a.user-link")
                     if name_link:
-                        user_info['username'] = name_link.text.strip()
-                        href = name_link.get('href')
+                        user_info["username"] = name_link.text.strip()
+                        href = name_link.get("href")
                         if href:
-                            user_info['profile_url'] = self.base_url + str(href)
+                            user_info["profile_url"] = self.base_url + str(href)
 
                     bio_elem = card.select_one(".bio, .user-bio")
                     if bio_elem:
-                        user_info['bio'] = bio_elem.text.strip()
+                        user_info["bio"] = bio_elem.text.strip()
 
-                    if user_info.get('username'):
+                    if user_info.get("username"):
                         users.append(user_info)
 
-                return {
-                    "status": "success",
-                    "total_found": len(users),
-                    "users": users
-                }
+                return {"status": "success", "total_found": len(users), "users": users}
             else:
                 status_code = resp.status_code if resp else "unknown"
                 return {"status": "error", "error": f"HTTP {status_code}"}
@@ -131,50 +139,54 @@ class GitLabPassive(OSINTUtils):
         Extract detailed information from a specific GitLab repository page
         """
         try:
-            resp = self.request_with_fallback('get', repo_url, timeout=15, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", repo_url, timeout=15, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
                 info = {
-                    'url': repo_url,
-                    'name': '',
-                    'description': '',
-                    'stars': '0',
-                    'forks': '0',
-                    'language': '',
-                    'license': '',
-                    'last_commit': '',
-                    'readme_preview': ''
+                    "url": repo_url,
+                    "name": "",
+                    "description": "",
+                    "stars": "0",
+                    "forks": "0",
+                    "language": "",
+                    "license": "",
+                    "last_commit": "",
+                    "readme_preview": "",
                 }
 
                 # Extract repository name
                 name_elem = soup.select_one("h1.project-title, .project-title")
                 if name_elem:
-                    info['name'] = name_elem.text.strip()
+                    info["name"] = name_elem.text.strip()
 
                 # Extract description
                 desc_elem = soup.select_one(".project-description, .description")
                 if desc_elem:
-                    info['description'] = desc_elem.text.strip()
+                    info["description"] = desc_elem.text.strip()
 
                 # Extract stats
                 stats = soup.select(".project-stats .stat, .stats .stat")
                 for stat in stats:
                     text = stat.text.strip()
-                    if 'star' in text.lower():
-                        stars_match = re.search(r'(\d+)', text)
-                        info['stars'] = stars_match.group(1) if stars_match else '0'
-                    elif 'fork' in text.lower():
-                        forks_match = re.search(r'(\d+)', text)
-                        info['forks'] = forks_match.group(1) if forks_match else '0'
+                    if "star" in text.lower():
+                        stars_match = re.search(r"(\d+)", text)
+                        info["stars"] = stars_match.group(1) if stars_match else "0"
+                    elif "fork" in text.lower():
+                        forks_match = re.search(r"(\d+)", text)
+                        info["forks"] = forks_match.group(1) if forks_match else "0"
 
                 # Extract README preview
                 readme_elem = soup.select_one("#readme, .readme")
                 if readme_elem:
                     # Get first few paragraphs
                     paragraphs = readme_elem.select("p")
-                    preview = ' '.join([p.text.strip() for p in paragraphs[:3]])
-                    info['readme_preview'] = preview[:500] + '...' if len(preview) > 500 else preview
+                    preview = " ".join([p.text.strip() for p in paragraphs[:3]])
+                    info["readme_preview"] = (
+                        preview[:500] + "..." if len(preview) > 500 else preview
+                    )
 
                 return {"status": "success", "repository_info": info}
             else:

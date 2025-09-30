@@ -228,9 +228,7 @@ class LocalLLMEngine:
             self.active_backend = "llamacpp"
             self._setup_llamacpp()
         else:
-            logger.warning(
-                "No LLM backends available. API keys may be missing."
-            )
+            logger.warning("No LLM backends available. API keys may be missing.")
 
     def _get_perplexity_api_key(self) -> str:
         """Get Perplexity API key from config or environment."""
@@ -265,6 +263,7 @@ class LocalLLMEngine:
         # Check secrets manager (where API key manager stores it)
         try:
             from secrets_manager import secrets_manager  # type: ignore
+
             key = secrets_manager.get_secret("openai_api_key", "")
             if key:
                 return key
@@ -284,7 +283,9 @@ class LocalLLMEngine:
             logger.warning(f"Failed to load encrypted API key: {e}")
 
         # No key available
-        logger.error("No OpenAI API key found in environment, secrets manager, or encrypted config")
+        logger.error(
+            "No OpenAI API key found in environment, secrets manager, or encrypted config"
+        )
         return ""
 
     def _setup_ollama(self):
@@ -346,7 +347,9 @@ class LocalLLMEngine:
             for config in model_configs:
                 try:
                     if not TRANSFORMERS_AVAILABLE or torch is None or pipeline is None:
-                        logger.warning("Transformers not available, skipping model load")
+                        logger.warning(
+                            "Transformers not available, skipping model load"
+                        )
                         continue
                     if torch.cuda.is_available():
                         device = 0  # Use GPU
@@ -391,13 +394,17 @@ class LocalLLMEngine:
                         break
 
             if not model_path or not os.path.exists(model_path):
-                logger.warning("No llama.cpp model file found. Please specify llama_model_path in config")
+                logger.warning(
+                    "No llama.cpp model file found. Please specify llama_model_path in config"
+                )
                 self.available_backends["llamacpp"] = False
                 return
 
             # Test llama.cpp executable
             try:
-                result = subprocess.run([llama_path, "--help"], capture_output=True, timeout=10)
+                result = subprocess.run(
+                    [llama_path, "--help"], capture_output=True, timeout=10
+                )
                 if result.returncode != 0:
                     raise subprocess.SubprocessError("llama.cpp executable test failed")
             except (subprocess.SubprocessError, FileNotFoundError):
@@ -760,17 +767,28 @@ class LocalLLMEngine:
             # Using the main executable with inference parameters
             cmd = [
                 executable,
-                "--model", model_path,
-                "--prompt", prompt,
-                "--ctx-size", str(context_size),
-                "--threads", str(threads),
-                "--n-predict", "512",  # Maximum tokens to generate
-                "--temp", "0.7",      # Temperature for creativity
-                "--top-k", "40",      # Top-k sampling
-                "--top-p", "0.9",     # Top-p sampling
-                "--repeat-last-n", "64",  # Repeat penalty window
-                "--repeat-penalty", "1.1", # Repeat penalty
-                "--seed", "-1",       # Random seed (-1 for random)
+                "--model",
+                model_path,
+                "--prompt",
+                prompt,
+                "--ctx-size",
+                str(context_size),
+                "--threads",
+                str(threads),
+                "--n-predict",
+                "512",  # Maximum tokens to generate
+                "--temp",
+                "0.7",  # Temperature for creativity
+                "--top-k",
+                "40",  # Top-k sampling
+                "--top-p",
+                "0.9",  # Top-p sampling
+                "--repeat-last-n",
+                "64",  # Repeat penalty window
+                "--repeat-penalty",
+                "1.1",  # Repeat penalty
+                "--seed",
+                "-1",  # Random seed (-1 for random)
             ]
 
             # Run llama.cpp as subprocess
@@ -778,18 +796,19 @@ class LocalLLMEngine:
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=os.getcwd()
+                cwd=os.getcwd(),
             )
 
             # Wait for completion with timeout
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=120  # 2 minute timeout
+                    process.communicate(),
+                    timeout=120,  # 2 minute timeout
                 )
 
                 if process.returncode == 0:
                     # Extract the generated text (llama.cpp outputs the prompt + generation)
-                    output = stdout.decode('utf-8', errors='ignore')
+                    output = stdout.decode("utf-8", errors="ignore")
 
                     # Remove the original prompt from the output
                     if prompt in output:
@@ -803,7 +822,7 @@ class LocalLLMEngine:
                     return generated_text if generated_text else "No response generated"
 
                 else:
-                    error_msg = stderr.decode('utf-8', errors='ignore')
+                    error_msg = stderr.decode("utf-8", errors="ignore")
                     logger.error(f"llama.cpp process failed: {error_msg}")
                     raise RuntimeError(f"llama.cpp execution failed: {error_msg}")
 
@@ -820,22 +839,24 @@ class LocalLLMEngine:
         """Clean llama.cpp output by removing artifacts."""
         try:
             # Remove common llama.cpp artifacts
-            lines = output.split('\n')
+            lines = output.split("\n")
 
             # Remove empty lines and llama.cpp status messages
             cleaned_lines = []
             for line in lines:
                 line = line.strip()
                 # Skip status messages and empty lines
-                if (line and
-                    not line.startswith('llama_') and
-                    not line.startswith('[') and
-                    'tokens/s' not in line and
-                    'generation speed' not in line):
+                if (
+                    line
+                    and not line.startswith("llama_")
+                    and not line.startswith("[")
+                    and "tokens/s" not in line
+                    and "generation speed" not in line
+                ):
                     cleaned_lines.append(line)
 
             # Join back and limit to reasonable length
-            cleaned_output = '\n'.join(cleaned_lines)
+            cleaned_output = "\n".join(cleaned_lines)
 
             # Truncate if too long (llama.cpp can generate very long responses)
             if len(cleaned_output) > 10000:
@@ -1164,31 +1185,34 @@ class LocalLLMEngine:
             investigation_name = investigation_data.get("name", "Unknown Investigation")
             investigation_type = investigation_data.get("investigation_type", "general")
             targets = investigation_data.get("targets", [])
-            
+
             # Format data for analysis
             data_summary = f"""
 Investigation: {investigation_name}
 Type: {investigation_type}
 Targets: {', '.join(targets) if targets else 'None specified'}
 """
-            
+
             if context:
                 data_summary += f"\nContext: {context}\n"
-            
+
             if include_raw_data and "results" in investigation_data:
                 data_summary += f"\nRaw Data: {investigation_data['results']}\n"
 
             # Perform analysis
             analysis = await self.analyze_osint_data(data_summary, analysis_type)
-            
+
             # Convert to expected format
             return {
                 "analysis_type": analysis_type,
-                "summary": analysis.insights[0] if analysis.insights else "Analysis completed",
+                "summary": analysis.insights[0]
+                if analysis.insights
+                else "Analysis completed",
                 "findings": [
                     {"type": "insight", "content": insight}
                     for insight in analysis.insights
-                ] + [
+                ]
+                + [
                     {"type": "pattern", "content": str(pattern)}
                     for pattern in analysis.patterns
                 ],

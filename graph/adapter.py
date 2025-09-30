@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 EntityKey = Tuple[str, str]  # (type, value)
 
+
 @dataclass
 class GraphEntity:
     type: str
@@ -14,6 +15,7 @@ class GraphEntity:
     properties: Dict[str, Any]
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
+
 
 @dataclass
 class GraphEdge:
@@ -24,6 +26,7 @@ class GraphEdge:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 
+
 class GraphAdapter:
     def __init__(self):
         self._entities: Dict[EntityKey, GraphEntity] = {}
@@ -31,7 +34,9 @@ class GraphAdapter:
         self._lock = threading.RLock()
 
     # Entity Operations
-    def upsert_entity(self, entity_type: str, key: str, properties: Dict[str, Any]) -> GraphEntity:
+    def upsert_entity(
+        self, entity_type: str, key: str, properties: Dict[str, Any]
+    ) -> GraphEntity:
         ek = (entity_type, key)
         with self._lock:
             if ek in self._entities:
@@ -39,7 +44,9 @@ class GraphAdapter:
                 ent.properties.update(properties)
                 ent.updated_at = time.time()
             else:
-                ent = GraphEntity(type=entity_type, key=key, properties=dict(properties))
+                ent = GraphEntity(
+                    type=entity_type, key=key, properties=dict(properties)
+                )
                 self._entities[ek] = ent
             return ent
 
@@ -47,14 +54,31 @@ class GraphAdapter:
         return self._entities.get((entity_type, key))
 
     # Edge Operations
-    def link(self, source: EntityKey, target: EntityKey, rel_type: str, properties: Optional[Dict[str, Any]] = None) -> GraphEdge:
+    def link(
+        self,
+        source: EntityKey,
+        target: EntityKey,
+        rel_type: str,
+        properties: Optional[Dict[str, Any]] = None,
+    ) -> GraphEdge:
         properties = properties or {}
         with self._lock:
-            edge = GraphEdge(rel_type=rel_type, source=source, target=target, properties=dict(properties))
+            edge = GraphEdge(
+                rel_type=rel_type,
+                source=source,
+                target=target,
+                properties=dict(properties),
+            )
             self._edges.append(edge)
             return edge
 
-    def neighbors(self, entity_type: str, key: str, rel_type: Optional[str] = None, direction: str = "both") -> Iterable[GraphEdge]:
+    def neighbors(
+        self,
+        entity_type: str,
+        key: str,
+        rel_type: Optional[str] = None,
+        direction: str = "both",
+    ) -> Iterable[GraphEdge]:
         ek = (entity_type, key)
         for edge in self._edges:
             if rel_type and edge.rel_type != rel_type:
@@ -67,17 +91,31 @@ class GraphAdapter:
     def export_snapshot(self) -> Dict[str, Any]:
         return {
             "entities": [
-                {"type": e.type, "key": e.key, "properties": e.properties, "created_at": e.created_at, "updated_at": e.updated_at}
+                {
+                    "type": e.type,
+                    "key": e.key,
+                    "properties": e.properties,
+                    "created_at": e.created_at,
+                    "updated_at": e.updated_at,
+                }
                 for e in self._entities.values()
             ],
             "edges": [
-                {"rel_type": ed.rel_type, "source": ed.source, "target": ed.target, "properties": ed.properties,
-                 "created_at": ed.created_at, "updated_at": ed.updated_at}
+                {
+                    "rel_type": ed.rel_type,
+                    "source": ed.source,
+                    "target": ed.target,
+                    "properties": ed.properties,
+                    "created_at": ed.created_at,
+                    "updated_at": ed.updated_at,
+                }
                 for ed in self._edges
-            ]
+            ],
         }
 
+
 _default_graph: Optional[GraphAdapter] = None
+
 
 def get_default_graph() -> GraphAdapter:
     global _default_graph

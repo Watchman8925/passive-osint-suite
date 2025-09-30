@@ -16,10 +16,8 @@ def test_imports():
     print("Testing ML model imports...")
 
     try:
-        from ml_models.crypto_pattern_detector import \
-            CryptoPatternDetector  # noqa: F401
-        from ml_models.crypto_pattern_detector import \
-            analyze_crypto_address  # noqa: F401
+        from ml_models.crypto_pattern_detector import CryptoPatternDetector  # noqa: F401
+        from ml_models.crypto_pattern_detector import analyze_crypto_address  # noqa: F401
 
         print("✓ Cryptocurrency pattern detector imported successfully")
     except ImportError as e:
@@ -27,10 +25,8 @@ def test_imports():
         return False
 
     try:
-        from ml_models.flight_anomaly_detector import \
-            FlightAnomalyDetector  # noqa: F401
-        from ml_models.flight_anomaly_detector import \
-            analyze_flight_anomaly  # noqa: F401
+        from ml_models.flight_anomaly_detector import FlightAnomalyDetector  # noqa: F401
+        from ml_models.flight_anomaly_detector import analyze_flight_anomaly  # noqa: F401
 
         print("✓ Flight anomaly detector imported successfully")
     except ImportError as e:
@@ -39,7 +35,9 @@ def test_imports():
 
     try:
         from ml_models.risk_scoring_engine import (  # noqa: F401
-            RiskScoringEngine, calculate_comprehensive_risk)
+            RiskScoringEngine,
+            calculate_comprehensive_risk,
+        )
 
         print("✓ Risk scoring engine imported successfully")
     except ImportError as e:

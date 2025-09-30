@@ -9,4 +9,5 @@ Interface goals:
 
 Later: replace implementation with Neo4j / other backend without changing callers.
 """
+
 from .adapter import GraphAdapter, get_default_graph  # noqa

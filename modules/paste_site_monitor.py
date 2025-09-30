@@ -11,9 +11,12 @@ class PasteSiteMonitor(OSINTUtils):
         Returns a list of paste URLs and snippets.
         """
         from bs4 import BeautifulSoup
+
         url = f"https://pastebin.com/search?q={keyword}"
         try:
-            resp = self.request_with_fallback('get', url, timeout=20, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=20, allow_fallback=True
+            )
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
                 pastes = []
@@ -23,10 +26,12 @@ class PasteSiteMonitor(OSINTUtils):
                         link = cols[0].find("a")
                         snippet = cols[1].text.strip()
                         if link:
-                            pastes.append({
-                                "url": f"https://pastebin.com{link.get('href')}",
-                                "snippet": snippet
-                            })
+                            pastes.append(
+                                {
+                                    "url": f"https://pastebin.com{link.get('href')}",
+                                    "snippet": snippet,
+                                }
+                            )
                 return {"status": "success", "pastes": pastes}
             else:
                 return {"status": "error", "error": f"HTTP {resp.status_code}"}

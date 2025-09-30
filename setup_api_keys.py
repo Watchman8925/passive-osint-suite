@@ -13,9 +13,10 @@ import getpass
 import time
 
 # Add security module to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'security'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "security"))
 
 from security.secrets_manager import secrets_manager
+
 
 def setup_api_key(service_name, env_var, description):
     """Set up an API key for a specific service."""
@@ -28,7 +29,7 @@ def setup_api_key(service_name, env_var, description):
     if existing_key:
         print(f"   ✅ Already configured (length: {len(existing_key)})")
         choice = input("   Update key? (y/N): ").lower().strip()
-        if choice != 'y':
+        if choice != "y":
             return True
 
     # Get API key from user
@@ -51,7 +52,7 @@ def setup_api_key(service_name, env_var, description):
         print(f"   ✅ Confirm: Save this {service_name} API key? (y/N): ", end="")
         confirm = input().lower().strip()
 
-        if confirm == 'y':
+        if confirm == "y":
             break
         else:
             print("   🔄 Let's try again...")
@@ -67,6 +68,7 @@ def setup_api_key(service_name, env_var, description):
         print(f"   ❌ Failed to store {service_name} API key")
         return False
 
+
 def main():
     """Main setup function."""
     print("🔒 OSINT Suite Secure API Key Setup")
@@ -78,13 +80,19 @@ def main():
     # Show current status
     stats = secrets_manager.get_statistics()
     print("📊 Current Status:")
-    print(f"   Encryption: {'✅ Enabled' if stats['encryption_enabled'] else '❌ Disabled'}")
+    print(
+        f"   Encryption: {'✅ Enabled' if stats['encryption_enabled'] else '❌ Disabled'}"
+    )
     print(f"   Stored secrets: {stats['total_secrets']}")
     print()
 
     # API services to configure
     services = [
-        ("OpenAI", "OPENAI_API_KEY", "Required for AI-powered analysis and LLM features"),
+        (
+            "OpenAI",
+            "OPENAI_API_KEY",
+            "Required for AI-powered analysis and LLM features",
+        ),
         ("Shodan", "SHODAN_API_KEY", "Network scanning and device intelligence"),
         ("Censys", "CENSYS_API_ID", "Certificate and network intelligence"),
         ("VirusTotal", "VIRUSTOTAL_API_KEY", "File and URL analysis"),
@@ -111,13 +119,17 @@ def main():
 
     print("\n🎉 Setup complete!")
     print(f"   Configured: {configured}/{total} services")
-    print(f"   Total stored secrets: {secrets_manager.get_statistics()['total_secrets']}")
+    print(
+        f"   Total stored secrets: {secrets_manager.get_statistics()['total_secrets']}"
+    )
 
     if configured > 0:
         print("\n💡 Tips:")
         print("   • API keys are encrypted and stored securely")
         print("   • You can re-run this script to update keys")
-        print("   • Use 'python3 -c \"from security.secrets_manager import secrets_manager; print(secrets_manager.list_secrets())\"' to list stored keys")
+        print(
+            "   • Use 'python3 -c \"from security.secrets_manager import secrets_manager; print(secrets_manager.list_secrets())\"' to list stored keys"
+        )
         print("   • The suite will automatically use these keys")
 
     print("\n🔍 To test your API keys, run:")
@@ -127,11 +139,12 @@ def main():
     print("\n🔄 Run setup again? (y/N): ", end="")
     try:
         again = input().lower().strip()
-        if again == 'y':
-            print("\n" + "="*50)
+        if again == "y":
+            print("\n" + "=" * 50)
             main()  # Recursive call to restart
     except KeyboardInterrupt:
         pass
+
 
 if __name__ == "__main__":
     try:

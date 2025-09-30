@@ -2,6 +2,7 @@
 
 Future: dynamic discovery, enable/disable via config, policy filtering.
 """
+
 from . import dns_basic, ssl_cert_fetch, whois_lookup
 from .definitions import CapabilityDefinition
 
@@ -62,7 +63,6 @@ REGISTRY = {
         risk_level="low",
         execute=ssl_cert_fetch.execute,
     ),
-
     # Digital Forensics Capabilities
     "digital_forensics_metadata": CapabilityDefinition(
         id="digital_forensics_metadata",
@@ -75,7 +75,9 @@ REGISTRY = {
         dependencies=(),
         cost_weight=1.2,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_digital_forensics("extract_metadata", inputs),
+        execute=lambda context, **inputs: _execute_digital_forensics(
+            "extract_metadata", inputs
+        ),
     ),
     "digital_forensics_ocr": CapabilityDefinition(
         id="digital_forensics_ocr",
@@ -88,7 +90,9 @@ REGISTRY = {
         dependencies=(),
         cost_weight=2.0,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_digital_forensics("extract_text_from_image", inputs),
+        execute=lambda context, **inputs: _execute_digital_forensics(
+            "extract_text_from_image", inputs
+        ),
     ),
     "digital_forensics_qr": CapabilityDefinition(
         id="digital_forensics_qr",
@@ -101,9 +105,10 @@ REGISTRY = {
         dependencies=(),
         cost_weight=1.5,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_digital_forensics("scan_qr_barcodes", inputs),
+        execute=lambda context, **inputs: _execute_digital_forensics(
+            "scan_qr_barcodes", inputs
+        ),
     ),
-
     # Code Analysis Capabilities
     "code_analysis_secrets": CapabilityDefinition(
         id="code_analysis_secrets",
@@ -111,12 +116,17 @@ REGISTRY = {
         description="Scan git repositories for secrets using GitLeaks and TruffleHog",
         category="code_analysis",
         version="1.0.0",
-        inputs={"repo_path": "Path to git repository", "scan_type": "Scan type (gitleaks, trufflehog, both, all)"},
+        inputs={
+            "repo_path": "Path to git repository",
+            "scan_type": "Scan type (gitleaks, trufflehog, both, all)",
+        },
         produces=["secrets", "vulnerabilities", "evidence"],
         dependencies=(),
         cost_weight=3.0,
         risk_level="medium",
-        execute=lambda context, **inputs: _execute_code_analysis("scan_git_repository", inputs),
+        execute=lambda context, **inputs: _execute_code_analysis(
+            "scan_git_repository", inputs
+        ),
     ),
     "code_analysis_patterns": CapabilityDefinition(
         id="code_analysis_patterns",
@@ -124,14 +134,18 @@ REGISTRY = {
         description="Search for sensitive patterns in code using Ripgrep",
         category="code_analysis",
         version="1.0.0",
-        inputs={"search_path": "Path to search in", "patterns": "List of regex patterns"},
+        inputs={
+            "search_path": "Path to search in",
+            "patterns": "List of regex patterns",
+        },
         produces=["pattern_matches", "evidence"],
         dependencies=(),
         cost_weight=2.5,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_code_analysis("search_code_patterns", inputs),
+        execute=lambda context, **inputs: _execute_code_analysis(
+            "search_code_patterns", inputs
+        ),
     ),
-
     # Network Analysis Capabilities
     "network_analysis_pcap": CapabilityDefinition(
         id="network_analysis_pcap",
@@ -139,12 +153,17 @@ REGISTRY = {
         description="Analyze PCAP files using tshark for traffic patterns",
         category="network",
         version="1.0.0",
-        inputs={"pcap_path": "Path to PCAP file", "analysis_type": "Analysis type (summary, conversations, endpoints, protocols)"},
+        inputs={
+            "pcap_path": "Path to PCAP file",
+            "analysis_type": "Analysis type (summary, conversations, endpoints, protocols)",
+        },
         produces=["network_traffic", "connections", "protocols", "evidence"],
         dependencies=(),
         cost_weight=2.0,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_network_analysis("analyze_pcap_file", inputs),
+        execute=lambda context, **inputs: _execute_network_analysis(
+            "analyze_pcap_file", inputs
+        ),
     ),
     "network_analysis_http": CapabilityDefinition(
         id="network_analysis_http",
@@ -157,9 +176,10 @@ REGISTRY = {
         dependencies=(),
         cost_weight=1.8,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_network_analysis("extract_http_traffic", inputs),
+        execute=lambda context, **inputs: _execute_network_analysis(
+            "extract_http_traffic", inputs
+        ),
     ),
-
     # Web Discovery Capabilities
     "web_discovery_wayback": CapabilityDefinition(
         id="web_discovery_wayback",
@@ -167,12 +187,17 @@ REGISTRY = {
         description="Discover URLs from Wayback Machine using Gau",
         category="web_discovery",
         version="1.0.0",
-        inputs={"domain": "Target domain", "include_subs": "Include subdomains (boolean)"},
+        inputs={
+            "domain": "Target domain",
+            "include_subs": "Include subdomains (boolean)",
+        },
         produces=["urls", "historical_data", "endpoints"],
         dependencies=(),
         cost_weight=2.5,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_web_discovery("discover_urls_from_wayback", inputs),
+        execute=lambda context, **inputs: _execute_web_discovery(
+            "discover_urls_from_wayback", inputs
+        ),
     ),
     "web_discovery_crawl": CapabilityDefinition(
         id="web_discovery_crawl",
@@ -185,9 +210,10 @@ REGISTRY = {
         dependencies=(),
         cost_weight=3.0,
         risk_level="medium",
-        execute=lambda context, **inputs: _execute_web_discovery("crawl_website", inputs),
+        execute=lambda context, **inputs: _execute_web_discovery(
+            "crawl_website", inputs
+        ),
     ),
-
     # DNS Intelligence Capabilities
     "dns_intelligence_recon": CapabilityDefinition(
         id="dns_intelligence_recon",
@@ -195,12 +221,17 @@ REGISTRY = {
         description="Perform DNS reconnaissance using dnsrecon",
         category="dns_intelligence",
         version="1.0.0",
-        inputs={"domain": "Target domain", "recon_type": "Recon type (standard, brute, axfr, all)"},
+        inputs={
+            "domain": "Target domain",
+            "recon_type": "Recon type (standard, brute, axfr, all)",
+        },
         produces=["dns_records", "subdomains", "nameservers"],
         dependencies=(),
         cost_weight=2.0,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_dns_intelligence("dns_reconnaissance", inputs),
+        execute=lambda context, **inputs: _execute_dns_intelligence(
+            "dns_reconnaissance", inputs
+        ),
     ),
     "dns_intelligence_subdomains": CapabilityDefinition(
         id="dns_intelligence_subdomains",
@@ -208,14 +239,18 @@ REGISTRY = {
         description="Enumerate subdomains using various techniques",
         category="dns_intelligence",
         version="1.0.0",
-        inputs={"domain": "Target domain", "wordlist_path": "Path to wordlist (optional)"},
+        inputs={
+            "domain": "Target domain",
+            "wordlist_path": "Path to wordlist (optional)",
+        },
         produces=["subdomains", "dns_records"],
         dependencies=(),
         cost_weight=3.0,
         risk_level="medium",
-        execute=lambda context, **inputs: _execute_dns_intelligence("subdomain_enumeration", inputs),
+        execute=lambda context, **inputs: _execute_dns_intelligence(
+            "subdomain_enumeration", inputs
+        ),
     ),
-
     # Pattern Matching Capabilities
     "pattern_matching_yara": CapabilityDefinition(
         id="pattern_matching_yara",
@@ -223,12 +258,17 @@ REGISTRY = {
         description="Scan files with Yara rules for malware detection",
         category="pattern_matching",
         version="1.0.0",
-        inputs={"file_path": "Path to file to scan", "rules_path": "Path to Yara rules (optional)"},
+        inputs={
+            "file_path": "Path to file to scan",
+            "rules_path": "Path to Yara rules (optional)",
+        },
         produces=["yara_matches", "malware_indicators", "evidence"],
         dependencies=(),
         cost_weight=1.5,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_pattern_matching("yara_scan_file", inputs),
+        execute=lambda context, **inputs: _execute_pattern_matching(
+            "yara_scan_file", inputs
+        ),
     ),
     "pattern_matching_secrets": CapabilityDefinition(
         id="pattern_matching_secrets",
@@ -241,9 +281,10 @@ REGISTRY = {
         dependencies=(),
         cost_weight=1.0,
         risk_level="medium",
-        execute=lambda context, **inputs: _execute_pattern_matching("find_secrets_in_text", inputs),
+        execute=lambda context, **inputs: _execute_pattern_matching(
+            "find_secrets_in_text", inputs
+        ),
     ),
-
     # Conspiracy Analysis Capabilities
     "conspiracy_analysis": CapabilityDefinition(
         id="conspiracy_analysis",
@@ -251,14 +292,18 @@ REGISTRY = {
         description="Comprehensive conspiracy theory analysis with evidence-based methodology",
         category="analysis",
         version="1.0.0",
-        inputs={"theory": "Conspiracy theory description", "claims": "List of claims to analyze"},
+        inputs={
+            "theory": "Conspiracy theory description",
+            "claims": "List of claims to analyze",
+        },
         produces=["analysis_result", "evidence_assessment", "truth_probability"],
         dependencies=(),
         cost_weight=4.0,
         risk_level="medium",
-        execute=lambda context, **inputs: _execute_conspiracy_analysis("analyze_theory", inputs),
+        execute=lambda context, **inputs: _execute_conspiracy_analysis(
+            "analyze_theory", inputs
+        ),
     ),
-
     # Comprehensive Sweep Capabilities
     "comprehensive_investigation": CapabilityDefinition(
         id="comprehensive_investigation",
@@ -266,12 +311,17 @@ REGISTRY = {
         description="Complete passive investigation sweep across all modules",
         category="orchestration",
         version="1.0.0",
-        inputs={"target": "Target to investigate", "target_type": "Type of target (domain, ip, email, etc.)"},
+        inputs={
+            "target": "Target to investigate",
+            "target_type": "Type of target (domain, ip, email, etc.)",
+        },
         produces=["sweep_results", "leads", "pivot_points", "investigation_report"],
         dependencies=(),
         cost_weight=5.0,
         risk_level="low",
-        execute=lambda context, **inputs: _execute_comprehensive_sweep("comprehensive_sweep", inputs),
+        execute=lambda context, **inputs: _execute_comprehensive_sweep(
+            "comprehensive_sweep", inputs
+        ),
     ),
 }
 
@@ -283,11 +333,13 @@ _web_discovery_engine = None
 _dns_intelligence_engine = None
 _pattern_matching_engine = None
 
+
 def _get_digital_forensics_analyzer():
     global _digital_forensics_analyzer
     if _digital_forensics_analyzer is None and DigitalForensicsAnalyzer:
         _digital_forensics_analyzer = DigitalForensicsAnalyzer()
     return _digital_forensics_analyzer
+
 
 def _get_code_analysis_engine():
     global _code_analysis_engine
@@ -295,11 +347,13 @@ def _get_code_analysis_engine():
         _code_analysis_engine = CodeAnalysisEngine()
     return _code_analysis_engine
 
+
 def _get_network_analysis_engine():
     global _network_analysis_engine
     if _network_analysis_engine is None and NetworkAnalysisEngine:
         _network_analysis_engine = NetworkAnalysisEngine()
     return _network_analysis_engine
+
 
 def _get_web_discovery_engine():
     global _web_discovery_engine
@@ -307,11 +361,13 @@ def _get_web_discovery_engine():
         _web_discovery_engine = WebDiscoveryEngine()
     return _web_discovery_engine
 
+
 def _get_dns_intelligence_engine():
     global _dns_intelligence_engine
     if _dns_intelligence_engine is None and DNSIntelligenceEngine:
         _dns_intelligence_engine = DNSIntelligenceEngine()
     return _dns_intelligence_engine
+
 
 def _get_pattern_matching_engine():
     global _pattern_matching_engine
@@ -319,9 +375,11 @@ def _get_pattern_matching_engine():
         _pattern_matching_engine = PatternMatchingEngine()
     return _pattern_matching_engine
 
+
 # Capability execution functions
 def _execute_digital_forensics(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("digital_forensics")
 
     try:
@@ -341,8 +399,10 @@ def _execute_digital_forensics(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_code_analysis(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("code_analysis")
 
     try:
@@ -362,8 +422,10 @@ def _execute_code_analysis(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_network_analysis(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("network_analysis")
 
     try:
@@ -383,8 +445,10 @@ def _execute_network_analysis(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_web_discovery(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("web_discovery")
 
     try:
@@ -404,8 +468,10 @@ def _execute_web_discovery(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_dns_intelligence(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("dns_intelligence")
 
     try:
@@ -425,8 +491,10 @@ def _execute_dns_intelligence(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_pattern_matching(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("pattern_matching")
 
     try:
@@ -446,13 +514,16 @@ def _execute_pattern_matching(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_conspiracy_analysis(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("conspiracy_analysis")
 
     try:
         # Import conspiracy analyzer
         from conspiracy_analyzer import ConspiracyTheoryAnalyzer
+
         analyzer = ConspiracyTheoryAnalyzer()
 
         method = getattr(analyzer, method_name)
@@ -464,13 +535,16 @@ def _execute_conspiracy_analysis(method_name, inputs):
     except Exception as e:
         return result.mark_complete(False, str(e))
 
+
 def _execute_comprehensive_sweep(method_name, inputs):
     from .definitions import CapabilityResult
+
     result = CapabilityResult.start("comprehensive_sweep")
 
     try:
         # Import comprehensive sweep
         from modules.comprehensive_sweep import ComprehensiveInvestigationSweep
+
         sweep = ComprehensiveInvestigationSweep()
 
         method = getattr(sweep, method_name)

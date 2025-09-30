@@ -21,8 +21,14 @@ try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import (Image, Paragraph, SimpleDocTemplate,
-                                    Spacer, Table, TableStyle)
+    from reportlab.platypus import (
+        Image,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
     # from reportlab.platypus.flowables import KeepTogether, PageBreak  # Unused
 
     REPORTLAB_AVAILABLE = True
@@ -214,8 +220,12 @@ class EnhancedReportingEngine:
             "methodology": self._generate_methodology_section(investigation_data),
             "technical_findings": self._extract_technical_findings(investigation_data),
             "infrastructure_analysis": self._analyze_infrastructure(investigation_data),
-            "vulnerability_assessment": self._assess_vulnerabilities(investigation_data),
-            "technical_recommendations": self._generate_technical_recommendations(investigation_data),
+            "vulnerability_assessment": self._assess_vulnerabilities(
+                investigation_data
+            ),
+            "technical_recommendations": self._generate_technical_recommendations(
+                investigation_data
+            ),
             "confidence_score": self._calculate_confidence_score(investigation_data),
         }
 
@@ -232,16 +242,16 @@ class EnhancedReportingEngine:
             "threat_actors": self._identify_threat_actors(investigation_data),
             "attack_vectors": self._analyze_attack_vectors(investigation_data),
             "threat_indicators": self._extract_threat_indicators(investigation_data),
-            "mitigation_strategies": self._generate_mitigation_strategies(investigation_data),
+            "mitigation_strategies": self._generate_mitigation_strategies(
+                investigation_data
+            ),
             "risk_assessment": self._calculate_risk_score(investigation_data),
             "confidence_score": self._calculate_confidence_score(investigation_data),
         }
 
         return threat_assessment
 
-    def generate_custom_report(
-        self, report_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def generate_custom_report(self, report_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a custom report based on provided data"""
         custom_report = {
             "investigation_id": report_data.get("investigation_id", "Unknown"),
@@ -252,7 +262,9 @@ class EnhancedReportingEngine:
             "style": report_data.get("style", "professional"),
             "length": report_data.get("length", "medium"),
             "include_charts": report_data.get("include_charts", True),
-            "confidence_score": self._calculate_confidence_score(report_data.get("intelligence_data", {})),
+            "confidence_score": self._calculate_confidence_score(
+                report_data.get("intelligence_data", {})
+            ),
         }
 
         return custom_report
@@ -731,18 +743,22 @@ class EnhancedReportingEngine:
 
         # Add technical details from various sources
         if "domain_data" in data:
-            findings.append({
-                "category": "domain",
-                "findings": self._analyze_domain_findings(data["domain_data"]),
-                "severity": "medium",
-            })
+            findings.append(
+                {
+                    "category": "domain",
+                    "findings": self._analyze_domain_findings(data["domain_data"]),
+                    "severity": "medium",
+                }
+            )
 
         if "ip_data" in data:
-            findings.append({
-                "category": "network",
-                "findings": self._analyze_ip_findings(data["ip_data"]),
-                "severity": "high",
-            })
+            findings.append(
+                {
+                    "category": "network",
+                    "findings": self._analyze_ip_findings(data["ip_data"]),
+                    "severity": "high",
+                }
+            )
 
         return findings
 
@@ -761,11 +777,13 @@ class EnhancedReportingEngine:
 
         # Check for common vulnerabilities
         if data.get("breach_data", {}).get("total_breaches", 0) > 0:
-            vulnerabilities.append({
-                "type": "data_breach",
-                "severity": "high",
-                "description": "Data found in breach databases",
-            })
+            vulnerabilities.append(
+                {
+                    "type": "data_breach",
+                    "severity": "high",
+                    "description": "Data found in breach databases",
+                }
+            )
 
         return vulnerabilities
 
@@ -787,11 +805,13 @@ class EnhancedReportingEngine:
 
         # Basic threat actor identification logic
         if data.get("breach_data", {}).get("total_breaches", 0) > 0:
-            actors.append({
-                "type": "cyber_criminal",
-                "confidence": 0.7,
-                "indicators": ["data_breach_activity"],
-            })
+            actors.append(
+                {
+                    "type": "cyber_criminal",
+                    "confidence": 0.7,
+                    "indicators": ["data_breach_activity"],
+                }
+            )
 
         return actors
 
@@ -800,11 +820,13 @@ class EnhancedReportingEngine:
         vectors = []
 
         if data.get("social_data", {}).get("total_profiles", 0) > 0:
-            vectors.append({
-                "type": "social_engineering",
-                "likelihood": "medium",
-                "description": "Social media presence enables targeted attacks",
-            })
+            vectors.append(
+                {
+                    "type": "social_engineering",
+                    "likelihood": "medium",
+                    "description": "Social media presence enables targeted attacks",
+                }
+            )
 
         return vectors
 
@@ -813,11 +835,13 @@ class EnhancedReportingEngine:
         indicators = []
 
         if data.get("domain_data", {}).get("suspicious_patterns"):
-            indicators.append({
-                "type": "domain",
-                "value": "suspicious_domain_patterns",
-                "confidence": 0.8,
-            })
+            indicators.append(
+                {
+                    "type": "domain",
+                    "value": "suspicious_domain_patterns",
+                    "confidence": 0.8,
+                }
+            )
 
         return indicators
 

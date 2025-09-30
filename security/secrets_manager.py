@@ -20,9 +20,15 @@ class SecretsManager:
     Uses Fernet encryption for secure storage.
     """
 
-    def __init__(self, key_file: Optional[str] = None, secrets_file: Optional[str] = None):
-        self.key_file = key_file or os.path.join(os.path.dirname(__file__), 'encryption.key')
-        self.secrets_file = secrets_file or os.path.join(os.path.dirname(__file__), 'secrets.enc')
+    def __init__(
+        self, key_file: Optional[str] = None, secrets_file: Optional[str] = None
+    ):
+        self.key_file = key_file or os.path.join(
+            os.path.dirname(__file__), "encryption.key"
+        )
+        self.secrets_file = secrets_file or os.path.join(
+            os.path.dirname(__file__), "secrets.enc"
+        )
         self._secrets = {}
         self._cipher = None
         self._initialize_encryption()
@@ -33,7 +39,7 @@ class SecretsManager:
         try:
             # Load or generate master key
             if os.path.exists(self.key_file):
-                with open(self.key_file, 'rb') as f:
+                with open(self.key_file, "rb") as f:
                     key_data = f.read()
                     if len(key_data) == 32:
                         # Raw 32-byte key
@@ -51,7 +57,7 @@ class SecretsManager:
                 # Generate new master key
                 master_key = secrets.token_bytes(32)
                 os.makedirs(os.path.dirname(self.key_file), exist_ok=True)
-                with open(self.key_file, 'wb') as f:
+                with open(self.key_file, "wb") as f:
                     f.write(base64.b64encode(master_key))
                 # Set restrictive permissions
                 os.chmod(self.key_file, 0o600)
@@ -60,6 +66,7 @@ class SecretsManager:
             if len(master_key) != 32:
                 # Derive 32-byte key from existing key
                 import hashlib
+
                 master_key = hashlib.sha256(master_key).digest()
 
             # Create Fernet cipher
@@ -74,7 +81,7 @@ class SecretsManager:
         """Load encrypted secrets from storage"""
         try:
             if os.path.exists(self.secrets_file):
-                with open(self.secrets_file, 'rb') as f:
+                with open(self.secrets_file, "rb") as f:
                     encrypted_data = f.read()
 
                 if self._cipher and encrypted_data:
@@ -96,11 +103,11 @@ class SecretsManager:
 
             if self._cipher:
                 encrypted_data = self._cipher.encrypt(json_data.encode())
-                with open(self.secrets_file, 'wb') as f:
+                with open(self.secrets_file, "wb") as f:
                     f.write(encrypted_data)
             else:
                 # Fallback to unencrypted (not recommended)
-                with open(self.secrets_file, 'w') as f:
+                with open(self.secrets_file, "w") as f:
                     f.write(json_data)
 
             # Set restrictive permissions
@@ -129,12 +136,12 @@ class SecretsManager:
     def get_statistics(self) -> Dict[str, Any]:
         """Get secrets manager statistics."""
         return {
-            'total_secrets': len(self._secrets),
-            'secrets_file': self.secrets_file,
-            'key_file': self.key_file,
-            'encryption_enabled': self._cipher is not None,
-            'file_exists': os.path.exists(self.secrets_file),
-            'key_exists': os.path.exists(self.key_file)
+            "total_secrets": len(self._secrets),
+            "secrets_file": self.secrets_file,
+            "key_file": self.key_file,
+            "encryption_enabled": self._cipher is not None,
+            "file_exists": os.path.exists(self.secrets_file),
+            "key_exists": os.path.exists(self.key_file),
         }
 
     def has_secret(self, key: str) -> bool:
@@ -170,11 +177,11 @@ class SecretsManager:
             new_encrypted_data = new_cipher.encrypt(json_data.encode())
 
             # Save new key
-            with open(self.key_file, 'wb') as f:
+            with open(self.key_file, "wb") as f:
                 f.write(base64.b64encode(new_master_key))
 
             # Save re-encrypted data
-            with open(self.secrets_file, 'wb') as f:
+            with open(self.secrets_file, "wb") as f:
                 f.write(new_encrypted_data)
 
             # Update cipher

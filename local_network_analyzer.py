@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
     logger.warning("psutil not available - system network info limited")
+
 
 class LocalNetworkAnalyzer:
     """Advanced local network analyzer"""
@@ -44,10 +46,12 @@ class LocalNetworkAnalyzer:
             993: "IMAPS",
             995: "POP3S",
             3389: "RDP",
-            5900: "VNC"
+            5900: "VNC",
         }
 
-        logger.info("LocalNetworkAnalyzer initialized with network analysis capabilities")
+        logger.info(
+            "LocalNetworkAnalyzer initialized with network analysis capabilities"
+        )
 
     def analyze_network(self, network_range: str) -> Dict[str, Any]:
         """Analyze local network for active hosts and services"""
@@ -58,7 +62,7 @@ class LocalNetworkAnalyzer:
                 "services": [],
                 "analyzed": True,
                 "timestamp": time.time(),
-                "scan_method": "basic_port_scan"
+                "scan_method": "basic_port_scan",
             }
 
             # Parse network range
@@ -70,7 +74,7 @@ class LocalNetworkAnalyzer:
                     "hosts": [],
                     "services": [],
                     "analyzed": False,
-                    "error": "Invalid network range"
+                    "error": "Invalid network range",
                 }
 
             # Get local network information
@@ -99,15 +103,12 @@ class LocalNetworkAnalyzer:
                 "hosts": [],
                 "services": [],
                 "analyzed": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     def _get_local_network_info(self) -> Dict[str, Any]:
         """Get local network interface information"""
-        info: Dict[str, Any] = {
-            "hostname": socket.gethostname(),
-            "interfaces": []
-        }
+        info: Dict[str, Any] = {"hostname": socket.gethostname(), "interfaces": []}
 
         try:
             # Get local IP addresses
@@ -119,20 +120,27 @@ class LocalNetworkAnalyzer:
             if HAS_PSUTIL:
                 interfaces = psutil.net_if_addrs()  # type: ignore
                 for interface_name, addresses in interfaces.items():
-                    interface_info: Dict[str, Any] = {"name": interface_name, "addresses": []}
+                    interface_info: Dict[str, Any] = {
+                        "name": interface_name,
+                        "addresses": [],
+                    }
                     for addr in addresses:
                         if addr.family == socket.AF_INET:  # IPv4
-                            interface_info["addresses"].append({
-                                "ip": addr.address,
-                                "netmask": addr.netmask,
-                                "family": "IPv4"
-                            })
+                            interface_info["addresses"].append(
+                                {
+                                    "ip": addr.address,
+                                    "netmask": addr.netmask,
+                                    "family": "IPv4",
+                                }
+                            )
                         elif addr.family == socket.AF_INET6:  # IPv6
-                            interface_info["addresses"].append({
-                                "ip": addr.address,
-                                "netmask": addr.netmask,
-                                "family": "IPv6"
-                            })
+                            interface_info["addresses"].append(
+                                {
+                                    "ip": addr.address,
+                                    "netmask": addr.netmask,
+                                    "family": "IPv6",
+                                }
+                            )
                     info["interfaces"].append(interface_info)
 
         except Exception as e:
@@ -150,11 +158,7 @@ class LocalNetworkAnalyzer:
                 param = "-n" if platform.system().lower() == "windows" else "-c"
                 command = ["ping", param, "1", "-W", "1", ip]
 
-                result = subprocess.run(
-                    command,
-                    capture_output=True,
-                    timeout=2
-                )
+                result = subprocess.run(command, capture_output=True, timeout=2)
 
                 if result.returncode == 0:
                     # Try to resolve hostname
@@ -167,7 +171,7 @@ class LocalNetworkAnalyzer:
                         "ip": ip,
                         "hostname": hostname,
                         "status": "active",
-                        "response_time": "unknown"
+                        "response_time": "unknown",
                     }
 
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
@@ -177,9 +181,14 @@ class LocalNetworkAnalyzer:
 
         # Scan network (limit to reasonable size)
         if network.num_addresses > 1024:
-            logger.warning(f"Network {network} is too large ({network.num_addresses} hosts), limiting scan")
+            logger.warning(
+                f"Network {network} is too large ({network.num_addresses} hosts), limiting scan"
+            )
             # Only scan first 256 addresses
-            hosts_to_scan = [str(network.network_address + i) for i in range(min(256, network.num_addresses))]
+            hosts_to_scan = [
+                str(network.network_address + i)
+                for i in range(min(256, network.num_addresses))
+            ]
         else:
             hosts_to_scan = [str(ip) for ip in network.hosts()]
 
@@ -209,12 +218,14 @@ class LocalNetworkAnalyzer:
                     result = sock.connect_ex((ip, port))
 
                     if result == 0:  # Port is open
-                        host_services.append({
-                            "ip": ip,
-                            "port": port,
-                            "service": service_name,
-                            "status": "open"
-                        })
+                        host_services.append(
+                            {
+                                "ip": ip,
+                                "port": port,
+                                "service": service_name,
+                                "status": "open",
+                            }
+                        )
 
                     sock.close()
 
@@ -237,10 +248,12 @@ class LocalNetworkAnalyzer:
         """Analyze network scan results"""
         analysis: Dict[str, Any] = {
             "total_hosts_scanned": len(results.get("hosts", [])),
-            "active_hosts": len([h for h in results.get("hosts", []) if h.get("status") == "active"]),
+            "active_hosts": len(
+                [h for h in results.get("hosts", []) if h.get("status") == "active"]
+            ),
             "total_services": len(results.get("services", [])),
             "service_distribution": {},
-            "security_concerns": []
+            "security_concerns": [],
         }
 
         # Analyze service distribution
@@ -259,9 +272,13 @@ class LocalNetworkAnalyzer:
         if any(s.get("service") == "FTP" for s in services):
             analysis["security_concerns"].append("FTP service detected (consider SFTP)")
 
-        open_web_servers = [s for s in services if s.get("service") in ["HTTP", "HTTPS"]]
+        open_web_servers = [
+            s for s in services if s.get("service") in ["HTTP", "HTTPS"]
+        ]
         if len(open_web_servers) > 5:
-            analysis["security_concerns"].append("Many web servers detected - potential web farm")
+            analysis["security_concerns"].append(
+                "Many web servers detected - potential web farm"
+            )
 
         return analysis
 
@@ -283,18 +300,24 @@ class LocalNetworkAnalyzer:
                             packet_counts[src] = packet_counts.get(src, 0) + 1
 
                     # Detect high traffic sources
-                    avg_packets = sum(packet_counts.values()) / len(packet_counts) if packet_counts else 0
+                    avg_packets = (
+                        sum(packet_counts.values()) / len(packet_counts)
+                        if packet_counts
+                        else 0
+                    )
                     threshold = avg_packets * 3  # 3x average
 
                     for ip, count in packet_counts.items():
                         if count > threshold:
-                            anomalies.append({
-                                "type": "high_traffic",
-                                "description": f"IP {ip} has unusually high traffic ({count} packets)",
-                                "severity": "medium",
-                                "ip": ip,
-                                "packet_count": count
-                            })
+                            anomalies.append(
+                                {
+                                    "type": "high_traffic",
+                                    "description": f"IP {ip} has unusually high traffic ({count} packets)",
+                                    "severity": "medium",
+                                    "ip": ip,
+                                    "packet_count": count,
+                                }
+                            )
                             detected = True
 
             # Analyze connection patterns
@@ -316,13 +339,15 @@ class LocalNetworkAnalyzer:
 
                     for ip, ports in source_ports.items():
                         if len(ports) > port_scan_threshold:
-                            anomalies.append({
-                                "type": "port_scan",
-                                "description": f"IP {ip} attempted connections to {len(ports)} different ports",
-                                "severity": "high",
-                                "ip": ip,
-                                "ports_scanned": len(ports)
-                            })
+                            anomalies.append(
+                                {
+                                    "type": "port_scan",
+                                    "description": f"IP {ip} attempted connections to {len(ports)} different ports",
+                                    "severity": "high",
+                                    "ip": ip,
+                                    "ports_scanned": len(ports),
+                                }
+                            )
                             detected = True
 
             # Analyze bandwidth usage
@@ -331,18 +356,20 @@ class LocalNetworkAnalyzer:
                 if isinstance(bandwidth, dict):
                     # Simple threshold-based detection
                     if bandwidth.get("total_mb", 0) > 1000:  # 1GB threshold
-                        anomalies.append({
-                            "type": "high_bandwidth",
-                            "description": f"High bandwidth usage detected ({bandwidth.get('total_mb')} MB)",
-                            "severity": "low"
-                        })
+                        anomalies.append(
+                            {
+                                "type": "high_bandwidth",
+                                "description": f"High bandwidth usage detected ({bandwidth.get('total_mb')} MB)",
+                                "severity": "low",
+                            }
+                        )
                         detected = True
 
             return {
                 "anomalies": anomalies,
                 "detected": detected,
                 "anomaly_count": len(anomalies),
-                "analysis_timestamp": time.time()
+                "analysis_timestamp": time.time(),
             }
 
         except Exception as e:
@@ -359,7 +386,7 @@ class LocalNetworkAnalyzer:
                 "network": network_range,
                 "nodes": [],
                 "edges": [],
-                "generated": True
+                "generated": True,
             }
 
             # Create nodes from hosts
@@ -368,7 +395,7 @@ class LocalNetworkAnalyzer:
                     "id": host["ip"],
                     "type": "host",
                     "hostname": host.get("hostname"),
-                    "status": host.get("status", "unknown")
+                    "status": host.get("status", "unknown"),
                 }
                 topology["nodes"].append(node)
 
@@ -378,7 +405,7 @@ class LocalNetworkAnalyzer:
                     "source": service["ip"],
                     "target": f"{service['service']}:{service['port']}",
                     "type": "service",
-                    "port": service["port"]
+                    "port": service["port"],
                 }
                 topology["edges"].append(edge)
 
@@ -387,7 +414,7 @@ class LocalNetworkAnalyzer:
                     "id": f"{service['service']}:{service['port']}",
                     "type": "service",
                     "service": service["service"],
-                    "port": service["port"]
+                    "port": service["port"],
                 }
                 if service_node not in topology["nodes"]:
                     topology["nodes"].append(service_node)
@@ -396,4 +423,10 @@ class LocalNetworkAnalyzer:
 
         except Exception as e:
             logger.error(f"Failed to generate network topology: {e}")
-            return {"network": network_range, "nodes": [], "edges": [], "generated": False, "error": str(e)}
+            return {
+                "network": network_range,
+                "nodes": [],
+                "edges": [],
+                "generated": False,
+                "error": str(e),
+            }

@@ -6,7 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 # Lightweight domain enums (could become Enum classes later)
 CapabilityCategory = str  # e.g., 'dns', 'infra', 'whois', 'ssl'
-RiskLevel = str           # e.g., 'low', 'medium', 'high'
+RiskLevel = str  # e.g., 'low', 'medium', 'high'
+
 
 @dataclass(frozen=True)
 class CapabilityDefinition:
@@ -15,6 +16,7 @@ class CapabilityDefinition:
     execute callable signature: execute(context: dict, **inputs) -> CapabilityResult
     (context may later include investigation_id, transport/session handles, graph adapter, etc.)
     """
+
     id: str
     name: str
     description: str
@@ -27,6 +29,7 @@ class CapabilityDefinition:
     risk_level: RiskLevel = "low"
     enabled: bool = True
     execute: Optional[Callable[..., "CapabilityResult"]] = None
+
 
 @dataclass
 class CapabilityResult:

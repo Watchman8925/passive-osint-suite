@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EncryptedResult:
     """Represents an encrypted intelligence result"""
+
     result_id: str
     encrypted_data: str
     salt: str
@@ -49,14 +50,14 @@ class ResultEncryption:
         key_file = "security/encryption.key"
 
         if os.path.exists(key_file):
-            with open(key_file, 'r') as f:
+            with open(key_file, "r") as f:
                 return f.read().strip()
 
         # Generate new master key
         master_key = secrets.token_hex(32)
         os.makedirs("security", exist_ok=True)
 
-        with open(key_file, 'w') as f:
+        with open(key_file, "w") as f:
             f.write(master_key)
 
         # Set restrictive permissions
@@ -71,21 +72,21 @@ class ResultEncryption:
             return
 
         try:
-            with open(index_file, 'r') as f:
+            with open(index_file, "r") as f:
                 data = json.load(f)
 
             for result_id, result_data in data.items():
                 self.results[result_id] = EncryptedResult(
                     result_id=result_id,
-                    encrypted_data=result_data['encrypted_data'],
-                    salt=result_data['salt'],
-                    operation=result_data['operation'],
-                    target=result_data['target'],
-                    description=result_data['description'],
-                    created_at=result_data['created_at'],
-                    expires_at=result_data.get('expires_at'),
-                    burn_after_read=result_data.get('burn_after_read', False),
-                    accessed=result_data.get('accessed', False)
+                    encrypted_data=result_data["encrypted_data"],
+                    salt=result_data["salt"],
+                    operation=result_data["operation"],
+                    target=result_data["target"],
+                    description=result_data["description"],
+                    created_at=result_data["created_at"],
+                    expires_at=result_data.get("expires_at"),
+                    burn_after_read=result_data.get("burn_after_read", False),
+                    accessed=result_data.get("accessed", False),
                 )
 
         except Exception as e:
@@ -99,24 +100,26 @@ class ResultEncryption:
             data = {}
             for result_id, result in self.results.items():
                 data[result_id] = {
-                    'encrypted_data': result.encrypted_data,
-                    'salt': result.salt,
-                    'operation': result.operation,
-                    'target': result.target,
-                    'description': result.description,
-                    'created_at': result.created_at,
-                    'expires_at': result.expires_at,
-                    'burn_after_read': result.burn_after_read,
-                    'accessed': result.accessed
+                    "encrypted_data": result.encrypted_data,
+                    "salt": result.salt,
+                    "operation": result.operation,
+                    "target": result.target,
+                    "description": result.description,
+                    "created_at": result.created_at,
+                    "expires_at": result.expires_at,
+                    "burn_after_read": result.burn_after_read,
+                    "accessed": result.accessed,
                 }
 
-            with open(index_file, 'w') as f:
+            with open(index_file, "w") as f:
                 json.dump(data, f, indent=2)
 
         except Exception as e:
             logger.error(f"Failed to save encrypted results: {e}")
 
-    def _generate_key(self, password: Optional[str] = None, salt: Optional[str] = None) -> str:
+    def _generate_key(
+        self, password: Optional[str] = None, salt: Optional[str] = None
+    ) -> str:
         """Generate encryption key from password and salt"""
         if password:
             salt = salt or secrets.token_hex(16)
@@ -136,7 +139,7 @@ class ResultEncryption:
             key_char = key_bytes[i % len(key_bytes)]
             encrypted.append(chr(ord(char) ^ key_char))
 
-        return ''.join(encrypted)
+        return "".join(encrypted)
 
     def _simple_decrypt(self, data: str, key: str) -> str:
         """Simple XOR decryption"""
@@ -151,7 +154,7 @@ class ResultEncryption:
         expires_hours: Optional[int] = None,
         expires_in_hours: Optional[int] = None,
         password: Optional[str] = None,
-        burn_after_read: bool = False
+        burn_after_read: bool = False,
     ) -> Optional[str]:
         """Encrypt and store an intelligence result"""
         try:
@@ -166,15 +169,15 @@ class ResultEncryption:
 
             # Prepare data for encryption
             data_to_encrypt = {
-                'result_data': result_data,
-                'metadata': {
-                    'operation': operation or 'unknown',
-                    'target': target or 'unknown',
-                    'description': description or '',
-                    'created_at': time.time(),
-                    'expires_at': expires_at,
-                    'burn_after_read': burn_after_read
-                }
+                "result_data": result_data,
+                "metadata": {
+                    "operation": operation or "unknown",
+                    "target": target or "unknown",
+                    "description": description or "",
+                    "created_at": time.time(),
+                    "expires_at": expires_at,
+                    "burn_after_read": burn_after_read,
+                },
             }
 
             # Generate salt and key
@@ -190,12 +193,12 @@ class ResultEncryption:
                 result_id=result_id,
                 encrypted_data=encrypted_data,
                 salt=salt,
-                operation=operation or 'unknown',
-                target=target or 'unknown',
-                description=description or '',
+                operation=operation or "unknown",
+                target=target or "unknown",
+                description=description or "",
                 created_at=time.time(),
                 expires_at=expires_at,
-                burn_after_read=burn_after_read
+                burn_after_read=burn_after_read,
             )
 
             # Store result
@@ -204,11 +207,8 @@ class ResultEncryption:
 
             # Save encrypted data to file
             result_file = os.path.join(self.storage_path, f"{result_id}.enc")
-            with open(result_file, 'w') as f:
-                json.dump({
-                    'encrypted_data': encrypted_data,
-                    'salt': salt
-                }, f)
+            with open(result_file, "w") as f:
+                json.dump({"encrypted_data": encrypted_data, "salt": salt}, f)
 
             logger.info(f"Result encrypted and stored: {result_id}")
             return result_id
@@ -217,7 +217,9 @@ class ResultEncryption:
             logger.error(f"Failed to encrypt result: {e}")
             return None
 
-    def decrypt_result(self, result_id: str, password: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def decrypt_result(
+        self, result_id: str, password: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """Decrypt and retrieve an intelligence result"""
         try:
             if result_id not in self.results:
@@ -234,7 +236,9 @@ class ResultEncryption:
 
             # Check burn after read
             if result.burn_after_read and result.accessed:
-                logger.warning(f"Result already accessed (burn after read): {result_id}")
+                logger.warning(
+                    f"Result already accessed (burn after read): {result_id}"
+                )
                 self.delete_result(result_id)
                 return None
 
@@ -244,14 +248,14 @@ class ResultEncryption:
                 logger.error(f"Encrypted file not found: {result_file}")
                 return None
 
-            with open(result_file, 'r') as f:
+            with open(result_file, "r") as f:
                 file_data = json.load(f)
 
             # Generate decryption key
-            key = self._generate_key(password, file_data['salt'])
+            key = self._generate_key(password, file_data["salt"])
 
             # Decrypt data
-            decrypted_json = self._simple_decrypt(file_data['encrypted_data'], key)
+            decrypted_json = self._simple_decrypt(file_data["encrypted_data"], key)
             data = json.loads(decrypted_json)
 
             # Mark as accessed
@@ -259,7 +263,7 @@ class ResultEncryption:
             self._save_results()
 
             logger.info(f"Result decrypted: {result_id}")
-            return data['result_data']
+            return data["result_data"]
 
         except Exception as e:
             logger.error(f"Failed to decrypt result {result_id}: {e}")
@@ -299,16 +303,18 @@ class ResultEncryption:
             if result.expires_at and current_time > result.expires_at:
                 continue
 
-            results.append({
-                'result_id': result.result_id,
-                'operation': result.operation,
-                'target': result.target,
-                'description': result.description,
-                'created_at': result.created_at,
-                'expires_at': result.expires_at,
-                'burn_after_read': result.burn_after_read,
-                'accessed': result.accessed
-            })
+            results.append(
+                {
+                    "result_id": result.result_id,
+                    "operation": result.operation,
+                    "target": result.target,
+                    "description": result.description,
+                    "created_at": result.created_at,
+                    "expires_at": result.expires_at,
+                    "burn_after_read": result.burn_after_read,
+                    "accessed": result.accessed,
+                }
+            )
 
         return results
 

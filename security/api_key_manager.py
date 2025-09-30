@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import aiohttp
+
 # Import our existing modules
 from .secrets_manager import SecretsManager
 
@@ -535,7 +536,9 @@ class APIConfigurationManager:
                     auth = aiohttp.BasicAuth(api_key, "")
                     async with aiohttp.ClientSession(auth=auth) as session:
                         async with session.get(
-                            test_url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+                            test_url,
+                            headers=headers,
+                            timeout=aiohttp.ClientTimeout(total=10),
                         ) as response:
                             response_data = await response.text()
                             status_code = response.status
@@ -543,7 +546,9 @@ class APIConfigurationManager:
                 else:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
-                            test_url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+                            test_url,
+                            headers=headers,
+                            timeout=aiohttp.ClientTimeout(total=10),
                         ) as response:
                             response_data = await response.text()
                             status_code = response.status
@@ -657,7 +662,10 @@ class APIConfigurationManager:
                     "Telegram Bot API": "telegram",
                 }
 
-                simple_name = service_name_map.get(service.service_name, service.service_name.lower().replace(" ", "").replace(".", ""))
+                simple_name = service_name_map.get(
+                    service.service_name,
+                    service.service_name.lower().replace(" ", "").replace(".", ""),
+                )
                 api_key = self.secrets_manager.get_secret(f"api_key_{simple_name}")
                 if api_key:
                     return api_key

@@ -32,15 +32,65 @@ class LocalDNSEnumerator(OSINTUtils):
 
         # Common DNS record types to check
         self.record_types = [
-            'A', 'AAAA', 'CNAME', 'MX', 'NS', 'SOA', 'TXT', 'SRV',
-            'PTR', 'HINFO', 'MINFO', 'RP', 'AFSDB', 'X25', 'ISDN',
-            'RT', 'NSAP', 'NSAP-PTR', 'SIG', 'KEY', 'PX', 'GPOS',
-            'AAAA', 'LOC', 'NXT', 'EID', 'NIMLOC', 'SRV', 'ATMA',
-            'NAPTR', 'KX', 'CERT', 'A6', 'DNAME', 'SINK', 'OPT',
-            'APL', 'DS', 'SSHFP', 'IPSECKEY', 'RRSIG', 'NSEC',
-            'DNSKEY', 'DHCID', 'NSEC3', 'NSEC3PARAM', 'TLSA',
-            'SMIMEA', 'HIP', 'NINFO', 'RKEY', 'TALINK', 'CDS',
-            'CDNSKEY', 'OPENPGPKEY', 'CSYNC', 'ZONEMD', 'SVCB', 'HTTPS'
+            "A",
+            "AAAA",
+            "CNAME",
+            "MX",
+            "NS",
+            "SOA",
+            "TXT",
+            "SRV",
+            "PTR",
+            "HINFO",
+            "MINFO",
+            "RP",
+            "AFSDB",
+            "X25",
+            "ISDN",
+            "RT",
+            "NSAP",
+            "NSAP-PTR",
+            "SIG",
+            "KEY",
+            "PX",
+            "GPOS",
+            "AAAA",
+            "LOC",
+            "NXT",
+            "EID",
+            "NIMLOC",
+            "SRV",
+            "ATMA",
+            "NAPTR",
+            "KX",
+            "CERT",
+            "A6",
+            "DNAME",
+            "SINK",
+            "OPT",
+            "APL",
+            "DS",
+            "SSHFP",
+            "IPSECKEY",
+            "RRSIG",
+            "NSEC",
+            "DNSKEY",
+            "DHCID",
+            "NSEC3",
+            "NSEC3PARAM",
+            "TLSA",
+            "SMIMEA",
+            "HIP",
+            "NINFO",
+            "RKEY",
+            "TALINK",
+            "CDS",
+            "CDNSKEY",
+            "OPENPGPKEY",
+            "CSYNC",
+            "ZONEMD",
+            "SVCB",
+            "HTTPS",
         ]
 
     def enumerate_domain(self, domain: str) -> Dict[str, Any]:
@@ -52,15 +102,19 @@ class LocalDNSEnumerator(OSINTUtils):
             "mx_records": [],
             "txt_records": [],
             "subdomains": [],
-            "errors": []
+            "errors": [],
         }
 
         # Get basic DNS records
-        for record_type in ['A', 'AAAA', 'MX', 'NS', 'SOA', 'TXT']:
+        for record_type in ["A", "AAAA", "MX", "NS", "SOA", "TXT"]:
             try:
                 answers = self.resolver.resolve(domain, record_type)
                 results["records"][record_type] = [str(rdata) for rdata in answers]
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.exception.Timeout):
+            except (
+                dns.resolver.NXDOMAIN,
+                dns.resolver.NoAnswer,
+                dns.exception.Timeout,
+            ):
                 results["records"][record_type] = []
             except Exception as e:
                 results["errors"].append(f"{record_type}: {str(e)}")
@@ -87,7 +141,7 @@ class LocalDNSEnumerator(OSINTUtils):
 
         try:
             # Get nameservers
-            ns_answers = self.resolver.resolve(domain, 'NS')
+            ns_answers = self.resolver.resolve(domain, "NS")
             nameservers = [str(ns) for ns in ns_answers]
 
             for ns in nameservers:
@@ -104,7 +158,7 @@ class LocalDNSEnumerator(OSINTUtils):
                                 "name": str(name),
                                 "type": dns.rdatatype.to_text(rdataset.rdtype),
                                 "ttl": rdataset.ttl,
-                                "data": [str(rdata) for rdata in rdataset]
+                                "data": [str(rdata) for rdata in rdataset],
                             }
                             results["records"].append(record_data)
 
@@ -121,11 +175,44 @@ class LocalDNSEnumerator(OSINTUtils):
     def _check_common_subdomains(self, domain: str, max_workers: int = 10) -> List[str]:
         """Check for common subdomains using DNS resolution"""
         common_subdomains = [
-            'www', 'mail', 'ftp', 'admin', 'api', 'dev', 'test', 'staging',
-            'blog', 'shop', 'store', 'app', 'mobile', 'm', 'webmail', 'remote',
-            'vpn', 'git', 'svn', 'ci', 'cdn', 'static', 'assets', 'img', 'images',
-            'video', 'videos', 'download', 'downloads', 'files', 'upload',
-            'portal', 'login', 'auth', 'secure', 'ssl', 'beta', 'demo'
+            "www",
+            "mail",
+            "ftp",
+            "admin",
+            "api",
+            "dev",
+            "test",
+            "staging",
+            "blog",
+            "shop",
+            "store",
+            "app",
+            "mobile",
+            "m",
+            "webmail",
+            "remote",
+            "vpn",
+            "git",
+            "svn",
+            "ci",
+            "cdn",
+            "static",
+            "assets",
+            "img",
+            "images",
+            "video",
+            "videos",
+            "download",
+            "downloads",
+            "files",
+            "upload",
+            "portal",
+            "login",
+            "auth",
+            "secure",
+            "ssl",
+            "beta",
+            "demo",
         ]
 
         found_subdomains = []
@@ -133,13 +220,15 @@ class LocalDNSEnumerator(OSINTUtils):
         def check_subdomain(subdomain):
             full_domain = f"{subdomain}.{domain}"
             try:
-                self.resolver.resolve(full_domain, 'A')
+                self.resolver.resolve(full_domain, "A")
                 return full_domain
             except Exception:
                 return None
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(check_subdomain, sub) for sub in common_subdomains]
+            futures = [
+                executor.submit(check_subdomain, sub) for sub in common_subdomains
+            ]
             for future in as_completed(futures):
                 result = future.result()
                 if result:
@@ -153,12 +242,12 @@ class LocalDNSEnumerator(OSINTUtils):
 
         try:
             # Check for DNSKEY records
-            dnskey_answers = self.resolver.resolve(domain, 'DNSKEY')
+            dnskey_answers = self.resolver.resolve(domain, "DNSKEY")
             results["enabled"] = True
             results["keys"] = [str(key) for key in dnskey_answers]
 
             # Check for RRSIG records
-            rrsig_answers = self.resolver.resolve(domain, 'RRSIG')
+            rrsig_answers = self.resolver.resolve(domain, "RRSIG")
             results["signatures"] = [str(sig) for sig in rrsig_answers]
 
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
@@ -180,7 +269,7 @@ class LocalDNSEnumerator(OSINTUtils):
             reverse_name = dns.reversename.from_address(ip_address)
 
             # Perform PTR lookup
-            ptr_answers = self.resolver.resolve(reverse_name, 'PTR')
+            ptr_answers = self.resolver.resolve(reverse_name, "PTR")
             results["ptr_records"] = [str(ptr) for ptr in ptr_answers]
 
         except ValueError:
@@ -192,7 +281,9 @@ class LocalDNSEnumerator(OSINTUtils):
 
         return results
 
-    def bulk_reverse_lookup(self, ip_list: List[str], max_workers: int = 20) -> List[Dict[str, Any]]:
+    def bulk_reverse_lookup(
+        self, ip_list: List[str], max_workers: int = 20
+    ) -> List[Dict[str, Any]]:
         """Perform reverse DNS lookup on multiple IPs"""
         results = []
 
@@ -205,15 +296,10 @@ class LocalDNSEnumerator(OSINTUtils):
 
     def check_dns_health(self, domain: str) -> Dict[str, Any]:
         """Check overall DNS health and configuration"""
-        results = {
-            "domain": domain,
-            "checks": {},
-            "score": 0,
-            "issues": []
-        }
+        results = {"domain": domain, "checks": {}, "score": 0, "issues": []}
 
         # Check for basic records
-        basic_records = ['A', 'MX', 'NS']
+        basic_records = ["A", "MX", "NS"]
         for record_type in basic_records:
             try:
                 answers = self.resolver.resolve(domain, record_type)
@@ -226,8 +312,8 @@ class LocalDNSEnumerator(OSINTUtils):
 
         # Check for SPF
         try:
-            txt_answers = self.resolver.resolve(domain, 'TXT')
-            has_spf = any('v=spf1' in str(txt) for txt in txt_answers)
+            txt_answers = self.resolver.resolve(domain, "TXT")
+            has_spf = any("v=spf1" in str(txt) for txt in txt_answers)
             results["checks"]["spf_record"] = has_spf
             if has_spf:
                 results["score"] += 1
@@ -239,8 +325,8 @@ class LocalDNSEnumerator(OSINTUtils):
 
         # Check for DMARC
         try:
-            dmarc_answers = self.resolver.resolve(f"_dmarc.{domain}", 'TXT')
-            has_dmarc = any('v=DMARC1' in str(dmarc) for dmarc in dmarc_answers)
+            dmarc_answers = self.resolver.resolve(f"_dmarc.{domain}", "TXT")
+            has_dmarc = any("v=DMARC1" in str(dmarc) for dmarc in dmarc_answers)
             results["checks"]["dmarc_record"] = has_dmarc
             if has_dmarc:
                 results["score"] += 1
@@ -271,6 +357,7 @@ class LocalDNSEnumerator(OSINTUtils):
             # Sample a subset for performance
             if len(ip_list) > 100:
                 import random
+
                 ip_list = random.sample(ip_list, 100)
 
             results = self.bulk_reverse_lookup(ip_list)

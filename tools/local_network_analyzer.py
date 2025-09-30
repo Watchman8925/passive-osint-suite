@@ -35,11 +35,9 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         try:
             import netifaces
+
             for interface in netifaces.interfaces():
-                interface_info = {
-                    "name": interface,
-                    "addresses": {}
-                }
+                interface_info = {"name": interface, "addresses": {}}
 
                 # Get addresses for each interface
                 try:
@@ -62,24 +60,22 @@ class LocalNetworkAnalyzer(OSINTUtils):
             for interface_name, addresses in net_interfaces.items():
                 interface_info = {
                     "name": interface_name,
-                    "addresses": {"ipv4": [], "ipv6": [], "mac": []}
+                    "addresses": {"ipv4": [], "ipv6": [], "mac": []},
                 }
 
                 for addr in addresses:
                     if addr.family == socket.AF_INET:
-                        interface_info["addresses"]["ipv4"].append({
-                            "addr": addr.address,
-                            "netmask": addr.netmask
-                        })
+                        interface_info["addresses"]["ipv4"].append(
+                            {"addr": addr.address, "netmask": addr.netmask}
+                        )
                     elif addr.family == socket.AF_INET6:
-                        interface_info["addresses"]["ipv6"].append({
-                            "addr": addr.address,
-                            "netmask": addr.netmask
-                        })
+                        interface_info["addresses"]["ipv6"].append(
+                            {"addr": addr.address, "netmask": addr.netmask}
+                        )
                     elif addr.family == psutil.AF_LINK:
-                        interface_info["addresses"]["mac"].append({
-                            "addr": addr.address
-                        })
+                        interface_info["addresses"]["mac"].append(
+                            {"addr": addr.address}
+                        )
 
                 interfaces[interface_name] = interface_info
 
@@ -90,17 +86,21 @@ class LocalNetworkAnalyzer(OSINTUtils):
         connections = []
 
         try:
-            net_connections = psutil.net_connections(kind='inet')
+            net_connections = psutil.net_connections(kind="inet")
 
             for conn in net_connections:
                 connection_info = {
                     "fd": conn.fd,
                     "family": str(conn.family),
                     "type": str(conn.type),
-                    "local_addr": f"{conn.laddr.ip}:{conn.laddr.port}" if conn.laddr else None,
-                    "remote_addr": f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else None,
+                    "local_addr": f"{conn.laddr.ip}:{conn.laddr.port}"
+                    if conn.laddr
+                    else None,
+                    "remote_addr": f"{conn.raddr.ip}:{conn.raddr.port}"
+                    if conn.raddr
+                    else None,
                     "status": conn.status,
-                    "pid": conn.pid
+                    "pid": conn.pid,
                 }
 
                 # Get process information if available
@@ -110,7 +110,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                         connection_info["process"] = {
                             "name": process.name(),
                             "exe": process.exe(),
-                            "cmdline": process.cmdline()
+                            "cmdline": process.cmdline(),
                         }
                     except Exception:
                         connection_info["process"] = {"name": "unknown"}
@@ -122,17 +122,36 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         return connections
 
-    def scan_local_ports(self, host: str = "127.0.0.1", ports: Optional[List[int]] = None) -> Dict[str, Any]:
+    def scan_local_ports(
+        self, host: str = "127.0.0.1", ports: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
         """Scan ports on a local host"""
         if ports is None:
             # Common ports to check
-            ports = [21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 3306, 3389]
+            ports = [
+                21,
+                22,
+                23,
+                25,
+                53,
+                80,
+                110,
+                135,
+                139,
+                143,
+                443,
+                445,
+                993,
+                995,
+                3306,
+                3389,
+            ]
 
         results = {
             "host": host,
             "open_ports": [],
             "closed_ports": [],
-            "filtered_ports": []
+            "filtered_ports": [],
         }
 
         def check_port(port):
@@ -178,7 +197,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                     "errin": counters.errin,
                     "errout": counters.errout,
                     "dropin": counters.dropin,
-                    "dropout": counters.dropout
+                    "dropout": counters.dropout,
                 }
 
         except Exception as e:
@@ -209,7 +228,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
             3389: "RDP",
             5432: "PostgreSQL",
             8080: "HTTP-Alt",
-            8443: "HTTPS-Alt"
+            8443: "HTTPS-Alt",
         }
 
         port_scan = self.scan_local_ports()
@@ -218,7 +237,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
             service_info = {
                 "port": port,
                 "service": common_ports.get(port, "Unknown"),
-                "protocol": "tcp"
+                "protocol": "tcp",
             }
 
             # Try to get service banner
@@ -230,7 +249,9 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         return services
 
-    def _get_service_banner(self, host: str, port: int, timeout: float = 2) -> Optional[str]:
+    def _get_service_banner(
+        self, host: str, port: int, timeout: float = 2
+    ) -> Optional[str]:
         """Get service banner from open port"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -245,7 +266,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
             else:
                 sock.send(b"\r\n")
 
-            banner = sock.recv(1024).decode('utf-8', errors='ignore').strip()
+            banner = sock.recv(1024).decode("utf-8", errors="ignore").strip()
             sock.close()
 
             return banner[:200]  # Limit banner length
@@ -259,10 +280,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
         time.sleep(duration)
         final_stats = self.get_network_stats()
 
-        analysis = {
-            "duration_seconds": duration,
-            "interfaces": {}
-        }
+        analysis = {"duration_seconds": duration, "interfaces": {}}
 
         for interface in initial_stats:
             if interface in final_stats and interface != "error":
@@ -270,12 +288,20 @@ class LocalNetworkAnalyzer(OSINTUtils):
                 final = final_stats[interface]
 
                 analysis["interfaces"][interface] = {
-                    "bytes_sent_per_sec": (final["bytes_sent"] - initial["bytes_sent"]) / duration,
-                    "bytes_recv_per_sec": (final["bytes_recv"] - initial["bytes_recv"]) / duration,
-                    "packets_sent_per_sec": (final["packets_sent"] - initial["packets_sent"]) / duration,
-                    "packets_recv_per_sec": (final["packets_recv"] - initial["packets_recv"]) / duration,
+                    "bytes_sent_per_sec": (final["bytes_sent"] - initial["bytes_sent"])
+                    / duration,
+                    "bytes_recv_per_sec": (final["bytes_recv"] - initial["bytes_recv"])
+                    / duration,
+                    "packets_sent_per_sec": (
+                        final["packets_sent"] - initial["packets_sent"]
+                    )
+                    / duration,
+                    "packets_recv_per_sec": (
+                        final["packets_recv"] - initial["packets_recv"]
+                    )
+                    / duration,
                     "total_bytes": final["bytes_sent"] + final["bytes_recv"],
-                    "total_packets": final["packets_sent"] + final["packets_recv"]
+                    "total_packets": final["packets_sent"] + final["packets_recv"],
                 }
 
         return analysis
@@ -287,17 +313,21 @@ class LocalNetworkAnalyzer(OSINTUtils):
         try:
             if self.system == "windows":
                 # Windows routing table
-                result = subprocess.run(['route', 'print'], capture_output=True, text=True, timeout=10)
+                result = subprocess.run(
+                    ["route", "print"], capture_output=True, text=True, timeout=10
+                )
                 # Parse Windows route output (simplified)
                 routes = [{"raw": result.stdout}]
 
             else:
                 # Unix-like systems
-                result = subprocess.run(['netstat', '-rn'], capture_output=True, text=True, timeout=10)
-                lines = result.stdout.strip().split('\n')
+                result = subprocess.run(
+                    ["netstat", "-rn"], capture_output=True, text=True, timeout=10
+                )
+                lines = result.stdout.strip().split("\n")
 
                 for line in lines[2:]:  # Skip headers
-                    parts = re.split(r'\s+', line.strip())
+                    parts = re.split(r"\s+", line.strip())
                     if len(parts) >= 8:
                         route_info = {
                             "destination": parts[0],
@@ -307,7 +337,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                             "mss": parts[4],
                             "window": parts[5],
                             "irtt": parts[6],
-                            "iface": parts[7]
+                            "iface": parts[7],
                         }
                         routes.append(route_info)
 
@@ -316,7 +346,9 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         return routes
 
-    def check_network_connectivity(self, targets: Optional[List[str]] = None) -> Dict[str, Any]:
+    def check_network_connectivity(
+        self, targets: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Check connectivity to various network targets"""
         if targets is None:
             targets = [
@@ -324,7 +356,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                 "1.1.1.1",  # Cloudflare DNS
                 "208.67.222.222",  # OpenDNS
                 "google.com",
-                "cloudflare.com"
+                "cloudflare.com",
             ]
 
         results = {"targets": {}}
@@ -336,7 +368,7 @@ class LocalNetworkAnalyzer(OSINTUtils):
                 results["targets"][target] = {
                     "resolvable": True,
                     "ip": ip,
-                    "reachable": False
+                    "reachable": False,
                 }
 
                 # Try to connect
@@ -345,17 +377,12 @@ class LocalNetworkAnalyzer(OSINTUtils):
                 result = sock.connect_ex((ip, 80))
                 sock.close()
 
-                results["targets"][target]["reachable"] = (result == 0)
+                results["targets"][target]["reachable"] = result == 0
 
             except socket.gaierror:
-                results["targets"][target] = {
-                    "resolvable": False,
-                    "reachable": False
-                }
+                results["targets"][target] = {"resolvable": False, "reachable": False}
             except Exception as e:
-                results["targets"][target] = {
-                    "error": str(e)
-                }
+                results["targets"][target] = {"error": str(e)}
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(check_target, target) for target in targets]
@@ -371,21 +398,23 @@ class LocalNetworkAnalyzer(OSINTUtils):
         try:
             if self.system == "windows":
                 # Windows DNS servers
-                result = subprocess.run(['ipconfig', '/all'], capture_output=True, text=True, timeout=10)
+                result = subprocess.run(
+                    ["ipconfig", "/all"], capture_output=True, text=True, timeout=10
+                )
                 # Parse DNS servers from output
-                for line in result.stdout.split('\n'):
-                    if 'DNS Servers' in line:
+                for line in result.stdout.split("\n"):
+                    if "DNS Servers" in line:
                         # Extract IP after colon
-                        parts = line.split(':')
+                        parts = line.split(":")
                         if len(parts) > 1:
                             dns_servers.append(parts[1].strip())
 
             else:
                 # Unix-like systems - check /etc/resolv.conf
                 try:
-                    with open('/etc/resolv.conf', 'r') as f:
+                    with open("/etc/resolv.conf", "r") as f:
                         for line in f:
-                            if line.startswith('nameserver'):
+                            if line.startswith("nameserver"):
                                 dns_servers.append(line.split()[1])
                 except Exception:
                     pass
@@ -413,13 +442,15 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         # Network connections
         connections = self.get_network_connections()
-        report += f"Active Connections: {len([c for c in connections if 'error' not in c])}\n"
+        report += (
+            f"Active Connections: {len([c for c in connections if 'error' not in c])}\n"
+        )
         report += "-" * 20 + "\n"
 
         # Open ports
         port_scan = self.scan_local_ports()
         report += f"Open Ports: {len(port_scan['open_ports'])}\n"
-        if port_scan['open_ports']:
+        if port_scan["open_ports"]:
             report += f"Ports: {', '.join(map(str, port_scan['open_ports']))}\n"
         report += "\n"
 
@@ -429,9 +460,12 @@ class LocalNetworkAnalyzer(OSINTUtils):
 
         # Connectivity check
         connectivity = self.check_network_connectivity()
-        reachable = sum(1 for target in connectivity['targets'].values()
-                       if target.get('reachable', False))
-        total = len(connectivity['targets'])
+        reachable = sum(
+            1
+            for target in connectivity["targets"].values()
+            if target.get("reachable", False)
+        )
+        total = len(connectivity["targets"])
         report += f"Network Connectivity: {reachable}/{total} targets reachable\n"
 
         return report

@@ -6,6 +6,7 @@ Tor proxy and network transport management
 import requests
 from typing import Any, Dict, Optional, Union
 
+
 def get_tor_status() -> Dict[str, Any]:
     """Get Tor network status"""
     try:
@@ -67,7 +68,9 @@ class Transport:
 
     def __init__(self, proxy_url: Optional[str] = None):
         if proxy_url:
-            self.transport: Union[ProxiedTransport, requests.Session] = ProxiedTransport(proxy_url)
+            self.transport: Union[ProxiedTransport, requests.Session] = (
+                ProxiedTransport(proxy_url)
+            )
         else:
             self.transport = requests.Session()
 

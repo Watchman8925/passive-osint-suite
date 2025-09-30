@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, Optional
 
 DEFAULT_DIR = os.path.join(os.getcwd(), "output", "evidence")
 
+
 @dataclass
 class EvidenceRecord:
     evidence_id: str
@@ -27,6 +28,7 @@ class EvidenceRecord:
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"), sort_keys=True)
+
 
 class EvidenceStore:
     def __init__(self, base_dir: str = DEFAULT_DIR):
@@ -98,9 +100,12 @@ class EvidenceStore:
     def iter_records(self) -> Iterable[EvidenceRecord]:
         for name in os.listdir(self.base_dir):
             if name.endswith(".meta.json"):
-                with open(os.path.join(self.base_dir, name), "r", encoding="utf-8") as f:
+                with open(
+                    os.path.join(self.base_dir, name), "r", encoding="utf-8"
+                ) as f:
                     data = json.load(f)
                 yield EvidenceRecord(**data)
+
 
 _default_store: Optional[EvidenceStore] = None
 

@@ -9,8 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from .models import (AccessPolicy, DataCategory, DataClassification,
-                     DataObject, Permission, User)
+from .models import (
+    AccessPolicy,
+    DataCategory,
+    DataClassification,
+    DataObject,
+    Permission,
+    User,
+)
 
 # from .rbac_manager import rbac_manager  # Circular import - will be injected later
 
@@ -101,7 +107,11 @@ class DataAccessControl:
         return data_object
 
     def check_access(
-        self, user: User, data_id: str, action: str = "read", context: Optional[Dict] = None
+        self,
+        user: User,
+        data_id: str,
+        action: str = "read",
+        context: Optional[Dict] = None,
     ) -> bool:
         """Check if user has access to data object"""
         if context is None:

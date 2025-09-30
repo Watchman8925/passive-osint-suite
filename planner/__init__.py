@@ -15,9 +15,11 @@ class TaskStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 @dataclass
 class PlannedTask:
     """A planned investigation task"""
+
     id: str
     name: str
     description: str
@@ -33,9 +35,11 @@ class PlannedTask:
         if self.created_at is None:
             self.created_at = datetime.now()
 
+
 @dataclass
 class Plan:
     """An investigation plan"""
+
     id: str
     name: str
     description: str
@@ -46,6 +50,7 @@ class Plan:
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now()
+
 
 class Planner:
     """Investigation planner"""
@@ -65,7 +70,7 @@ class Planner:
                 description=f"Investigate {objective}",
                 module="passive_search",
                 parameters={"query": objective},
-                priority=1
+                priority=1,
             )
             tasks.append(task)
 
@@ -73,7 +78,7 @@ class Planner:
             id=investigation_id,
             name=f"Investigation Plan for {investigation_id}",
             description="Auto-generated investigation plan",
-            tasks=tasks
+            tasks=tasks,
         )
 
         self.plans[investigation_id] = plan
@@ -83,7 +88,9 @@ class Planner:
         """Get a plan by ID"""
         return self.plans.get(plan_id)
 
-    def update_task_status(self, plan_id: str, task_id: str, status: TaskStatus) -> bool:
+    def update_task_status(
+        self, plan_id: str, task_id: str, status: TaskStatus
+    ) -> bool:
         """Update task status"""
         plan = self.plans.get(plan_id)
         if not plan:
@@ -109,7 +116,10 @@ class Planner:
             if task.status == TaskStatus.PENDING:
                 # Check if dependencies are satisfied
                 deps_satisfied = all(
-                    any(t.id == dep and t.status == TaskStatus.COMPLETED for t in plan.tasks)
+                    any(
+                        t.id == dep and t.status == TaskStatus.COMPLETED
+                        for t in plan.tasks
+                    )
                     for dep in task.dependencies
                 )
                 if deps_satisfied:

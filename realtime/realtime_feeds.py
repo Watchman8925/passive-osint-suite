@@ -410,7 +410,6 @@ class RealTimeIntelligenceFeed:
                                     or ip in subscription.targets
                                 )
                             ):
-
                                 alert = IntelligenceAlert(
                                     alert_id=f"ip_alert_{ip}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                                     title=f"IP Intelligence Alert: {ip}",
@@ -458,7 +457,6 @@ class RealTimeIntelligenceFeed:
                         or any(target in domain for target in subscription.targets)
                     )
                 ):
-
                     alert = IntelligenceAlert(
                         alert_id=f"domain_alert_{domain}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         title=f"Domain Intelligence Alert: {domain}",
@@ -509,7 +507,6 @@ class RealTimeIntelligenceFeed:
                         subscription.feed_type == FeedType.BREACH
                         and subscription.enabled
                     ):
-
                         alert = IntelligenceAlert(
                             alert_id=f"breach_alert_{breach_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                             title=f"New Data Breach: {breach_name}",
@@ -520,8 +517,12 @@ class RealTimeIntelligenceFeed:
                             indicators={
                                 "breach_name": breach_name,
                                 "breach_date": breach_date,
-                                "compromised_accounts": breach.get("PwnCount", 0) if isinstance(breach, dict) else 0,
-                                "compromised_data": breach.get("DataClasses", []) if isinstance(breach, dict) else [],
+                                "compromised_accounts": breach.get("PwnCount", 0)
+                                if isinstance(breach, dict)
+                                else 0,
+                                "compromised_data": breach.get("DataClasses", [])
+                                if isinstance(breach, dict)
+                                else [],
                             },
                             source=feed.name,
                             confidence=0.95,
@@ -547,7 +548,6 @@ class RealTimeIntelligenceFeed:
 
             for subscription in self.subscriptions.values():
                 if subscription.feed_type == FeedType.MALWARE and subscription.enabled:
-
                     alert = IntelligenceAlert(
                         alert_id=f"malware_alert_{indicator_value}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         title=f"Malware Indicator: {indicator_value}",
@@ -585,7 +585,6 @@ class RealTimeIntelligenceFeed:
 
             for subscription in self.subscriptions.values():
                 if subscription.feed_type == FeedType.SOCIAL and subscription.enabled:
-
                     alert = IntelligenceAlert(
                         alert_id=f"social_alert_{platform}_{profile_username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         title=f"Social Media Profile: {profile_username}",
@@ -623,7 +622,6 @@ class RealTimeIntelligenceFeed:
 
             for subscription in self.subscriptions.values():
                 if subscription.feed_type == FeedType.DARKWEB and subscription.enabled:
-
                     alert = IntelligenceAlert(
                         alert_id=f"darkweb_alert_{market_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         title=f"Dark Web Market: {market_name}",
@@ -725,7 +723,6 @@ class RealTimeIntelligenceFeed:
                 and alert.severity.value >= subscription.alert_severity_threshold.value
                 and (not subscription.targets or alert.target in subscription.targets)
             ):
-
                 # Send webhook notification
                 if subscription.webhook_url:
                     await self._send_webhook_notification(subscription, alert)

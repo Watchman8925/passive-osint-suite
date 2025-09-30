@@ -33,6 +33,7 @@ try:
 except Exception:  # pragma: no cover - optional advanced manager
     InvestigationManager = None
 from database.graph_database import GraphDatabaseAdapter
+
 # OSINT Module Registry
 from modules import (
     CATEGORIES,
@@ -44,22 +45,30 @@ from realtime.realtime_feeds import RealTimeIntelligenceFeed
 from reporting.report_scheduler import ReportScheduler
 from reporting.reporting_engine import EnhancedReportingEngine
 from security.data_access_control import data_access_control
+
 # Security Framework Integration
 from security.rbac_manager import rbac_manager
 from security.security_api import (
-
     security_controller,
     setup_security_routes,
 )
 from security.security_monitor import security_monitor
 
 # Use imported items to avoid unused import warnings
-_ = CATEGORIES, MODULE_REGISTRY, get_module, get_modules_by_category, RealTimeIntelligenceFeed, setup_security_routes
+_ = (
+    CATEGORIES,
+    MODULE_REGISTRY,
+    get_module,
+    get_modules_by_category,
+    RealTimeIntelligenceFeed,
+    setup_security_routes,
+)
 
 # Optional external libraries: prefer real packages but provide lightweight fallbacks
 try:
     import jwt  # type: ignore
 except Exception:  # pragma: no cover - fallback for static analysis / dev
+
     class _JWTStub:
         class PyJWTError(Exception):
             pass
@@ -82,6 +91,7 @@ except Exception:  # pragma: no cover - dev fallback
 try:
     from elasticsearch import AsyncElasticsearch  # type: ignore
 except Exception:  # pragma: no cover - dev fallback
+
     class AsyncElasticsearch:  # type: ignore
         def __init__(self, *args, **kwargs):
             pass
@@ -118,8 +128,10 @@ if _fastapi_spec is not None:
     try:
         from fastapi.responses import JSONResponse, FileResponse  # type: ignore
     except Exception:
+
         def JSONResponse(content=None, status_code=200):
             return {"status_code": status_code, "content": content}
+
         class FileResponse:  # type: ignore
             def __init__(self, *a, **k):
                 pass
@@ -127,8 +139,10 @@ if _fastapi_spec is not None:
     try:
         from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # type: ignore
     except Exception:
+
         class HTTPAuthorizationCredentials:  # type: ignore
             credentials: str = ""
+
         class HTTPBearer:  # type: ignore
             def __init__(self, *a, **k):
                 pass
@@ -228,6 +242,7 @@ else:
     class GZipMiddleware:  # type: ignore
         pass
 
+
 # Type-only aliases for static type checking (no runtime impact)
 if TYPE_CHECKING:
     pass
@@ -236,8 +251,12 @@ if TYPE_CHECKING:
 class AppConfig:
     """Application configuration"""
 
-    SECRET_KEY = os.getenv("OSINT_SECRET_KEY", "change-this-secret-key-in-production-environment")
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/osint_db")
+    SECRET_KEY = os.getenv(
+        "OSINT_SECRET_KEY", "change-this-secret-key-in-production-environment"
+    )
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL", "postgresql://user:pass@localhost/osint_db"
+    )
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
     AI_MODEL_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
@@ -250,6 +269,7 @@ class AppConfig:
 # Ensure we have a valid base class to inherit from (handles pydantic fallback)
 BaseModelBase = BaseModel
 
+
 class InvestigationCreate(BaseModelBase):
     """Model for creating new investigations"""
 
@@ -259,7 +279,9 @@ class InvestigationCreate(BaseModelBase):
     investigation_type: Optional[str] = Field(
         ..., pattern="^(domain|ip|email|phone|company|person)$"
     )
-    priority: Optional[str] = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    priority: Optional[str] = Field(
+        default="medium", pattern="^(low|medium|high|critical)$"
+    )
     tags: List[str] = Field(default_factory=list)  # type: ignore[assignment]
     scheduled_start: Optional[datetime] = None
     auto_reporting: bool = True
@@ -395,6 +417,8 @@ class WebSocketManager:
             except Exception as e:
                 logging.error(f"Failed to send update to {client_id}: {e}")
                 self.disconnect(client_id)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
@@ -402,7 +426,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize connections (guard against missing redis/elasticsearch)
     try:
-        app.state.redis = redis.from_url(AppConfig.REDIS_URL) if redis is not None else None
+        app.state.redis = (
+            redis.from_url(AppConfig.REDIS_URL) if redis is not None else None
+        )
     except Exception:
         app.state.redis = None
 
@@ -455,7 +481,9 @@ async def lifespan(app: FastAPI):
     except Exception:
         # If store cannot be instantiated, set to None and continue with degraded functionality
         store = None
-        logging.warning("PersistentInvestigationStore unavailable; investigation manager disabled")
+        logging.warning(
+            "PersistentInvestigationStore unavailable; investigation manager disabled"
+        )
 
     # Optional advanced manager instantiation
     if store is not None and InvestigationManager is not None:
@@ -487,7 +515,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize reporting engine and scheduler
     try:
-        app.state.reporting_engine = EnhancedReportingEngine(ai_engine=app.state.ai_engine)
+        app.state.reporting_engine = EnhancedReportingEngine(
+            ai_engine=app.state.ai_engine
+        )
         app.state.report_scheduler = ReportScheduler(app.state.reporting_engine)
         await app.state.report_scheduler.start_scheduler()
     except Exception:
@@ -497,7 +527,9 @@ async def lifespan(app: FastAPI):
         except Exception:
             app.state.reporting_engine = None
             app.state.report_scheduler = None
-        logging.warning("Reporting engine or scheduler initialization failed or partially degraded")
+        logging.warning(
+            "Reporting engine or scheduler initialization failed or partially degraded"
+        )
 
     # Initialize graph database (optional)
     try:
@@ -510,7 +542,9 @@ async def lifespan(app: FastAPI):
         if graph_connected:
             logging.info("✅ Graph database connected")
         else:
-            logging.warning("⚠️  Graph database not available - relationship mapping disabled")
+            logging.warning(
+                "⚠️  Graph database not available - relationship mapping disabled"
+            )
     except Exception:
         logging.warning("⚠️  Graph database not available")
         app.state.graph_db = None
@@ -527,7 +561,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize execution engine
     try:
-        app.state.execution_engine = ExecutionEngine(store=app.state.investigation_manager)
+        app.state.execution_engine = ExecutionEngine(
+            store=app.state.investigation_manager
+        )
     except Exception:
         app.state.execution_engine = None
         logging.warning("Execution engine unavailable")
@@ -551,7 +587,9 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown sequence (perform async closes where appropriate)
         try:
-            if getattr(app.state, "report_scheduler", None) and hasattr(app.state.report_scheduler, "stop_scheduler"):
+            if getattr(app.state, "report_scheduler", None) and hasattr(
+                app.state.report_scheduler, "stop_scheduler"
+            ):
                 await app.state.report_scheduler.stop_scheduler()
         except Exception:
             logging.exception("Error stopping report scheduler")
@@ -563,7 +601,9 @@ async def lifespan(app: FastAPI):
             logging.exception("Error closing elasticsearch client")
 
         try:
-            if getattr(app.state, "graph_db", None) and hasattr(app.state.graph_db, "disconnect"):
+            if getattr(app.state, "graph_db", None) and hasattr(
+                app.state.graph_db, "disconnect"
+            ):
                 await app.state.graph_db.disconnect()
         except Exception:
             logging.exception("Error disconnecting graph database")
@@ -571,11 +611,15 @@ async def lifespan(app: FastAPI):
         try:
             if getattr(app.state, "redis", None):
                 # redis may provide close or connection_pool.close; attempt close gracefully
-                close_fn = getattr(app.state.redis, "close", None) or getattr(app.state.redis, "connection_pool", None)
+                close_fn = getattr(app.state.redis, "close", None) or getattr(
+                    app.state.redis, "connection_pool", None
+                )
                 try:
                     if callable(close_fn):
                         close_fn()
-                    elif hasattr(app.state.redis, "connection_pool") and hasattr(app.state.redis.connection_pool, "disconnect"):
+                    elif hasattr(app.state.redis, "connection_pool") and hasattr(
+                        app.state.redis.connection_pool, "disconnect"
+                    ):
                         app.state.redis.connection_pool.disconnect()
                 except Exception:
                     logging.exception("Error closing redis connection")
@@ -618,6 +662,7 @@ except Exception:
 # ============================================================================
 # Rate Limiting and Authentication
 # ============================================================================
+
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(
@@ -700,6 +745,7 @@ def rate_limit(limit: int, window_seconds: int):
     This combines authentication verification with rate limiting.
     Returns the user_id if both authentication and rate limiting pass.
     """
+
     async def rate_limit_dependency(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(
             HTTPBearer(auto_error=False)
@@ -726,7 +772,7 @@ def rate_limit(limit: int, window_seconds: int):
         # For now, we'll use a simple in-memory approach
         # This is not suitable for production with multiple server instances
         global _rate_limits
-        if '_rate_limits' not in globals():
+        if "_rate_limits" not in globals():
             _rate_limits = {}
 
         if rate_key not in _rate_limits:
@@ -735,15 +781,18 @@ def rate_limit(limit: int, window_seconds: int):
         if _rate_limits[rate_key] >= limit:
             raise HTTPException(
                 status_code=429,
-                detail=f"Rate limit exceeded. Maximum {limit} requests per {window_seconds} seconds."
+                detail=f"Rate limit exceeded. Maximum {limit} requests per {window_seconds} seconds.",
             )
 
         _rate_limits[rate_key] += 1
 
         # Clean up old rate limit entries (simple cleanup)
         cutoff_time = current_time - window_seconds
-        old_keys = [k for k in _rate_limits.keys()
-                   if int(k.split(':')[-1]) * window_seconds < cutoff_time]
+        old_keys = [
+            k
+            for k in _rate_limits.keys()
+            if int(k.split(":")[-1]) * window_seconds < cutoff_time
+        ]
         for old_key in old_keys:
             del _rate_limits[old_key]
 
@@ -826,29 +875,80 @@ async def get_investigation_plan(
         from investigations.investigation_adapter import (  # type: ignore
             PersistentInvestigationStore,
         )
-        if isinstance(store, PersistentInvestigationStore) and hasattr(store, "_load_or_build_plan"):
+
+        if isinstance(store, PersistentInvestigationStore) and hasattr(
+            store, "_load_or_build_plan"
+        ):
             plan = store._load_or_build_plan(store._items[investigation_id])  # type: ignore[attr-defined]
         else:
             planner = Planner()
-            plan = planner.build_plan(investigation_id, inv["investigation_type"], inv["targets"])  # type: ignore
+            plan = planner.build_plan(
+                investigation_id, inv["investigation_type"], inv["targets"]
+            )  # type: ignore
     except Exception:
         # Fallback: create a basic plan if advanced planning fails
         planner = Planner()
-        plan = planner.build_plan(investigation_id, inv["investigation_type"], inv["targets"])  # type: ignore
+        plan = planner.build_plan(
+            investigation_id, inv["investigation_type"], inv["targets"]
+        )  # type: ignore
 
     # Extract tasks from plan
-    plan_id = getattr(plan, "investigation_id", None) or getattr(plan, "id", None) or investigation_id
-    task_iter = getattr(plan, "tasks", None) or (plan.get("tasks", []) if isinstance(plan, dict) else [])
+    plan_id = (
+        getattr(plan, "investigation_id", None)
+        or getattr(plan, "id", None)
+        or investigation_id
+    )
+    task_iter = getattr(plan, "tasks", None) or (
+        plan.get("tasks", []) if isinstance(plan, dict) else []
+    )
 
     tasks_out: List[PlannedTaskModel] = []
     for t in task_iter:
         tasks_out.append(
             PlannedTaskModel(
-                id=str(getattr(t, "id", getattr(t, "task_id", t.get("id") if isinstance(t, dict) else ""))),
-                capability_id=str(getattr(t, "capability_id", getattr(t, "capability", t.get("capability_id") if isinstance(t, dict) else ""))),
-                inputs=(getattr(t, "inputs", t.get("inputs") if isinstance(t, dict) else {}) or {}),
-                depends_on=(getattr(t, "depends_on", t.get("depends_on") if isinstance(t, dict) else []) or []),
-                status=str(getattr(t, "status", getattr(t, "state", t.get("status") if isinstance(t, dict) else "unknown"))),
+                id=str(
+                    getattr(
+                        t,
+                        "id",
+                        getattr(
+                            t, "task_id", t.get("id") if isinstance(t, dict) else ""
+                        ),
+                    )
+                ),
+                capability_id=str(
+                    getattr(
+                        t,
+                        "capability_id",
+                        getattr(
+                            t,
+                            "capability",
+                            t.get("capability_id") if isinstance(t, dict) else "",
+                        ),
+                    )
+                ),
+                inputs=(
+                    getattr(t, "inputs", t.get("inputs") if isinstance(t, dict) else {})
+                    or {}
+                ),
+                depends_on=(
+                    getattr(
+                        t,
+                        "depends_on",
+                        t.get("depends_on") if isinstance(t, dict) else [],
+                    )
+                    or []
+                ),
+                status=str(
+                    getattr(
+                        t,
+                        "status",
+                        getattr(
+                            t,
+                            "state",
+                            t.get("status") if isinstance(t, dict) else "unknown",
+                        ),
+                    )
+                ),
             )
         )
 
@@ -1140,7 +1240,10 @@ async def investigation_tasks(
         )
 
         # Accept either a dict container or a list; if dict ensure investigation matches
-        if isinstance(tasks, dict) and tasks.get("investigation_id") != investigation_id:
+        if (
+            isinstance(tasks, dict)
+            and tasks.get("investigation_id") != investigation_id
+        ):
             raise HTTPException(status_code=404, detail="Investigation not found")
 
         return tasks
@@ -1205,7 +1308,9 @@ async def execute_module(
         # Get the module instance
         module_instance = get_module(request.module_name)
         if module_instance is None:
-            raise HTTPException(status_code=404, detail=f"Module '{request.module_name}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Module '{request.module_name}' not found"
+            )
 
         # Log the operation
         audit_trail.log_operation(
@@ -1640,7 +1745,9 @@ async def get_related_entities(
 
 @app.get("/api/graph/entities/search")
 async def search_entities(
-    name: str, entity_type: Optional[str] = None, user_id: Optional[str] = Depends(verify_token)
+    name: str,
+    entity_type: Optional[str] = None,
+    user_id: Optional[str] = Depends(verify_token),
 ):
     """Search for entities by name"""
     try:
@@ -1751,7 +1858,9 @@ async def import_investigation_to_graph(
 
 
 @app.get("/api/graph/export")
-async def export_graph_data(format: str = "json", user_id: Optional[str] = Depends(verify_token)):
+async def export_graph_data(
+    format: str = "json", user_id: Optional[str] = Depends(verify_token)
+):
     """Export graph data for external analysis"""
     try:
         export_data = await app.state.graph_db.export_graph_data(format)
@@ -1792,7 +1901,8 @@ async def get_feeds_status(user_id: Optional[str] = Depends(verify_token)):
 
 @app.post("/api/feeds/{feed_name}/enable")
 async def enable_feed(
-    feed_name: str, user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300))
+    feed_name: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300)),
 ):
     """Enable a specific intelligence feed"""
     try:
@@ -1810,7 +1920,8 @@ async def enable_feed(
 
 @app.post("/api/feeds/{feed_name}/disable")
 async def disable_feed(
-    feed_name: str, user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300))
+    feed_name: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300)),
 ):
     """Disable a specific intelligence feed"""
     try:
@@ -1827,7 +1938,9 @@ async def disable_feed(
 
 
 @app.get("/api/feeds/alerts")
-async def get_recent_alerts(limit: int = 50, user_id: Optional[str] = Depends(verify_token)):
+async def get_recent_alerts(
+    limit: int = 50, user_id: Optional[str] = Depends(verify_token)
+):
     """Get recent intelligence alerts"""
     try:
         alerts = await app.state.intelligence_feeds.get_recent_alerts(limit)
@@ -1842,7 +1955,9 @@ async def get_recent_alerts(limit: int = 50, user_id: Optional[str] = Depends(ve
 
 
 @app.post("/api/feeds/alerts/{alert_id}/acknowledge")
-async def acknowledge_alert(alert_id: str, user_id: Optional[str] = Depends(verify_token)):
+async def acknowledge_alert(
+    alert_id: str, user_id: Optional[str] = Depends(verify_token)
+):
     """Acknowledge an intelligence alert"""
     try:
         success = await app.state.intelligence_feeds.acknowledge_alert(
@@ -1972,7 +2087,8 @@ async def add_custom_feed(
 
 @app.delete("/api/feeds/{feed_name}")
 async def remove_feed(
-    feed_name: str, user_id: Optional[str] = Depends(rate_limit(limit=2, window_seconds=3600))
+    feed_name: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=2, window_seconds=3600)),
 ):
     """Remove an intelligence feed source"""
     try:
@@ -1992,7 +2108,8 @@ async def remove_feed(
 
 @app.post("/api/feeds/{feed_name}/test")
 async def test_feed_connection(
-    feed_name: str, user_id: Optional[str] = Depends(rate_limit(limit=3, window_seconds=300))
+    feed_name: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=3, window_seconds=300)),
 ):
     """Test connection to a specific intelligence feed"""
     try:
@@ -2013,7 +2130,9 @@ async def test_feed_connection(
 
 
 @app.post("/api/investigations/{investigation_id}/demo/seed-tasks")
-async def seed_demo_tasks(investigation_id: str, user_id: Optional[str] = Depends(verify_token)):
+async def seed_demo_tasks(
+    investigation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
     """Seed synthetic tasks for demo UI when advanced manager is not active.
 
     Returns list of synthetic tasks. If advanced manager present, instructs

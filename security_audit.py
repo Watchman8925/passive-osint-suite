@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Union
 
+
 class SecurityAuditor:
     """Comprehensive security auditor for the OSINT Suite."""
 
@@ -60,14 +61,18 @@ class SecurityAuditor:
         if secrets_file.exists():
             perms = oct(secrets_file.stat().st_mode)[-3:]
             if perms != "600":
-                self.issues.append(f"❌ secrets.enc has insecure permissions: {perms} (should be 600)")
+                self.issues.append(
+                    f"❌ secrets.enc has insecure permissions: {perms} (should be 600)"
+                )
             else:
                 self.passed.append("✅ secrets.enc has secure permissions (600)")
 
         if key_file.exists():
             perms = oct(key_file.stat().st_mode)[-3:]
             if perms != "600":
-                self.issues.append(f"❌ encryption.key has insecure permissions: {perms} (should be 600)")
+                self.issues.append(
+                    f"❌ encryption.key has insecure permissions: {perms} (should be 600)"
+                )
             else:
                 self.passed.append("✅ encryption.key has secure permissions (600)")
 
@@ -78,7 +83,7 @@ class SecurityAuditor:
             "security/encryption.key",
             "config.ini",
             "config/api_config.json",
-            "config/api_status.json"
+            "config/api_status.json",
         ]
 
         for file_path in sensitive_files:
@@ -92,37 +97,46 @@ class SecurityAuditor:
         """Check for hardcoded API keys or credentials in source code."""
         # Common API key patterns
         patterns = [
-            r'sk-[a-zA-Z0-9]{48}',  # OpenAI
-            r'xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+',  # Slack
-            r'AIza[0-9A-Za-z-_]{35}',  # Google
-            r'[A-Za-z0-9]{32}',  # Generic 32-char keys
-            r'[A-Za-z0-9]{40}',  # GitHub tokens
-            r'[A-Za-z0-9]{64}',  # Generic 64-char keys
+            r"sk-[a-zA-Z0-9]{48}",  # OpenAI
+            r"xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+",  # Slack
+            r"AIza[0-9A-Za-z-_]{35}",  # Google
+            r"[A-Za-z0-9]{32}",  # Generic 32-char keys
+            r"[A-Za-z0-9]{40}",  # GitHub tokens
+            r"[A-Za-z0-9]{64}",  # Generic 64-char keys
         ]
 
         python_files = list(self.workspace.rglob("*.py"))
 
         # Exclude test files and demo files
-        excluded_files = ['test_', 'demo_', 'example_', 'sample_']
-        python_files = [f for f in python_files if not any(excl in f.name for excl in excluded_files)]
+        excluded_files = ["test_", "demo_", "example_", "sample_"]
+        python_files = [
+            f
+            for f in python_files
+            if not any(excl in f.name for excl in excluded_files)
+        ]
 
         for file_path in python_files:
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
 
                 for pattern in patterns:
                     import re
+
                     matches = re.findall(pattern, content)
                     for match in matches:
                         # Skip if it's in a comment or test data
                         if not self._is_legitimate_key_usage(content, match, file_path):
-                            self.issues.append(f"❌ Potential hardcoded credential in {file_path}: {match[:10]}...")
+                            self.issues.append(
+                                f"❌ Potential hardcoded credential in {file_path}: {match[:10]}..."
+                            )
 
             except Exception as e:
                 self.warnings.append(f"⚠️  Could not check {file_path}: {e}")
 
-    def _is_legitimate_key_usage(self, content: str, match: str, file_path: Path) -> bool:
+    def _is_legitimate_key_usage(
+        self, content: str, match: str, file_path: Path
+    ) -> bool:
         """Check if a potential key match is legitimate (not hardcoded)."""
         # Known legitimate test/example keys and addresses
         known_legitimate = [
@@ -151,23 +165,34 @@ class SecurityAuditor:
             "bitcoin",
             "btc",
             "onion",
-            ".onion"
+            ".onion",
         ]
 
-        lines = content.split('\n')
+        lines = content.split("\n")
         for i, line in enumerate(lines):
             if match in line:
                 # Check surrounding context
-                start = max(0, i-2)
-                end = min(len(lines), i+3)
-                context = '\n'.join(lines[start:end]).lower()
+                start = max(0, i - 2)
+                end = min(len(lines), i + 3)
+                context = "\n".join(lines[start:end]).lower()
 
                 for legit in legitimate_contexts:
                     if legit.lower() in context:
                         return True
 
                 # Check if it's in a variable assignment that looks legitimate
-                if any(phrase in line.lower() for phrase in ["api_key =", "key =", "token =", "secret =", "address =", "btc =", "bitcoin ="]):
+                if any(
+                    phrase in line.lower()
+                    for phrase in [
+                        "api_key =",
+                        "key =",
+                        "token =",
+                        "secret =",
+                        "address =",
+                        "btc =",
+                        "bitcoin =",
+                    ]
+                ):
                     return True
 
         return False
@@ -175,9 +200,15 @@ class SecurityAuditor:
     def _check_environment_variables(self):
         """Check for sensitive environment variables."""
         sensitive_vars = [
-            "OPENAI_API_KEY", "SHODAN_API_KEY", "GOOGLE_API_KEY",
-            "AWS_ACCESS_KEY", "AWS_SECRET_KEY", "DATABASE_URL",
-            "REDIS_URL", "JWT_SECRET", "SECRET_KEY"
+            "OPENAI_API_KEY",
+            "SHODAN_API_KEY",
+            "GOOGLE_API_KEY",
+            "AWS_ACCESS_KEY",
+            "AWS_SECRET_KEY",
+            "DATABASE_URL",
+            "REDIS_URL",
+            "JWT_SECRET",
+            "SECRET_KEY",
         ]
 
         exposed_vars = []
@@ -186,8 +217,12 @@ class SecurityAuditor:
                 exposed_vars.append(var)
 
         if exposed_vars:
-            self.warnings.append(f"⚠️  Sensitive environment variables detected: {', '.join(exposed_vars)}")
-            self.warnings.append("   💡 Consider using encrypted secrets manager instead")
+            self.warnings.append(
+                f"⚠️  Sensitive environment variables detected: {', '.join(exposed_vars)}"
+            )
+            self.warnings.append(
+                "   💡 Consider using encrypted secrets manager instead"
+            )
 
     def _check_git_security(self):
         """Check git security (files not tracked, etc.)."""
@@ -196,7 +231,7 @@ class SecurityAuditor:
         if not gitignore_path.exists():
             self.issues.append("❌ .gitignore file does not exist")
         else:
-            with open(gitignore_path, 'r') as f:
+            with open(gitignore_path, "r") as f:
                 gitignore_content = f.read()
 
             required_ignores = ["secrets.enc", "*.enc", "encryption.key"]
@@ -212,50 +247,68 @@ class SecurityAuditor:
             "config.ini",
             "config/api_config.json",
             "config/api_status.json",
-            "pyproject.toml"
+            "pyproject.toml",
         ]
 
         for config_file in config_files:
             file_path = self.workspace / config_file
             if file_path.exists():
                 try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
 
                     # Check for API keys in config files
-                    if any(keyword in content.upper() for keyword in ["API_KEY", "SECRET", "TOKEN", "PASSWORD"]):
+                    if any(
+                        keyword in content.upper()
+                        for keyword in ["API_KEY", "SECRET", "TOKEN", "PASSWORD"]
+                    ):
                         # More detailed check
-                        lines = content.split('\n')
+                        lines = content.split("\n")
                         for line in lines:
-                            if any(keyword in line.upper() for keyword in ["API_KEY", "SECRET", "TOKEN", "PASSWORD"]):
-                                if '=' in line and not line.strip().startswith('#'):
-                                    self.issues.append(f"❌ Potential sensitive data in {config_file}: {line.strip()[:50]}...")
+                            if any(
+                                keyword in line.upper()
+                                for keyword in [
+                                    "API_KEY",
+                                    "SECRET",
+                                    "TOKEN",
+                                    "PASSWORD",
+                                ]
+                            ):
+                                if "=" in line and not line.strip().startswith("#"):
+                                    self.issues.append(
+                                        f"❌ Potential sensitive data in {config_file}: {line.strip()[:50]}..."
+                                    )
 
                 except Exception as e:
                     self.warnings.append(f"⚠️  Could not check {config_file}: {e}")
 
     def _check_logs_for_sensitive_data(self):
         """Check log files for sensitive information."""
-        log_files = list(self.workspace.rglob("*.log")) + [self.workspace / "logs" / "api_validation_report.txt"]
+        log_files = list(self.workspace.rglob("*.log")) + [
+            self.workspace / "logs" / "api_validation_report.txt"
+        ]
 
         for log_file in log_files:
             if log_file.exists():
                 try:
-                    with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
 
                     # Check for API keys in logs
                     import re
+
                     api_key_patterns = [
-                        r'sk-[a-zA-Z0-9]{48}',
-                        r'xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+',
-                        r'AIza[0-9A-Za-z-_]{35}',
+                        r"sk-[a-zA-Z0-9]{48}",
+                        r"xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+",
+                        r"AIza[0-9A-Za-z-_]{35}",
                     ]
 
                     for pattern in api_key_patterns:
                         matches = re.findall(pattern, content)
                         if matches:
-                            self.issues.append(f"❌ API key found in log file {log_file}")
+                            self.issues.append(
+                                f"❌ API key found in log file {log_file}"
+                            )
 
                 except Exception as e:
                     self.warnings.append(f"⚠️  Could not check log file {log_file}: {e}")
@@ -281,7 +334,9 @@ class SecurityAuditor:
                 print(f"   {passed}")
 
         total_checks = len(self.issues) + len(self.warnings) + len(self.passed)
-        security_score = (len(self.passed) / total_checks) * 100 if total_checks > 0 else 0
+        security_score = (
+            (len(self.passed) / total_checks) * 100 if total_checks > 0 else 0
+        )
 
         print(f"\n🔒 Security Score: {security_score:.1f}%")
         if security_score >= 90:
@@ -295,7 +350,7 @@ class SecurityAuditor:
             "issues": self.issues,
             "warnings": self.warnings,
             "passed": self.passed,
-            "security_score": security_score
+            "security_score": security_score,
         }
 
 

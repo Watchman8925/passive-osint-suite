@@ -31,6 +31,7 @@ class QueryStatus(Enum):
 @dataclass
 class ObfuscatedQuery:
     """Represents an obfuscated query"""
+
     query_id: str
     url: str
     method: str
@@ -56,7 +57,7 @@ class QueryObfuscator:
             "completed_queries": 0,
             "failed_queries": 0,
             "avg_response_time": 0.0,
-            "active_queries": 0
+            "active_queries": 0,
         }
 
     async def start(self) -> None:
@@ -79,7 +80,7 @@ class QueryObfuscator:
         url: str,
         method: str = "GET",
         parameters: Optional[Dict[str, Any]] = None,
-        priority: QueryPriority = QueryPriority.NORMAL
+        priority: QueryPriority = QueryPriority.NORMAL,
     ) -> str:
         """Submit a single obfuscated query"""
         query_id = str(uuid.uuid4())
@@ -92,7 +93,7 @@ class QueryObfuscator:
             parameters=parameters,
             priority=priority,
             status=QueryStatus.PENDING,
-            submitted_at=time.time()
+            submitted_at=time.time(),
         )
 
         self.queries[query_id] = query
@@ -103,8 +104,7 @@ class QueryObfuscator:
         return query_id
 
     async def submit_batch(
-        self,
-        queries: List[Tuple[str, str, Dict[str, Any], QueryPriority]]
+        self, queries: List[Tuple[str, str, Dict[str, Any], QueryPriority]]
     ) -> str:
         """Submit a batch of obfuscated queries"""
         batch_id = str(uuid.uuid4())
@@ -118,7 +118,7 @@ class QueryObfuscator:
                 parameters=params,
                 priority=priority,
                 status=QueryStatus.PENDING,
-                submitted_at=time.time()
+                submitted_at=time.time(),
             )
             self.queries[query_id] = query
             self.stats["total_queries"] += 1
@@ -146,22 +146,24 @@ class QueryObfuscator:
     def obfuscate_query(self, query: str, operation_type: str) -> str:
         """
         Obfuscate a query string for anonymous execution.
-        
+
         Args:
             query: The original query string
             operation_type: Type of operation (e.g., 'search', 'lookup', 'analysis')
-        
+
         Returns:
             Obfuscated query string
         """
         import hashlib
         import base64
-        
+
         # Create obfuscated version using hash-based transformation
         # This is a simple example - in production, this would use more sophisticated techniques
-        query_hash = hashlib.sha256(f"{query}:{operation_type}:{time.time()}".encode()).digest()
+        query_hash = hashlib.sha256(
+            f"{query}:{operation_type}:{time.time()}".encode()
+        ).digest()
         obfuscated = base64.urlsafe_b64encode(query_hash).decode()[:16]
-        
+
         # Combine with operation type for context
         return f"{operation_type}_{obfuscated}"
 
@@ -171,8 +173,7 @@ class QueryObfuscator:
             try:
                 # Process pending queries
                 pending_queries = [
-                    q for q in self.queries.values()
-                    if q.status == QueryStatus.PENDING
+                    q for q in self.queries.values() if q.status == QueryStatus.PENDING
                 ]
 
                 # Sort by priority (highest first)
@@ -200,7 +201,7 @@ class QueryObfuscator:
                 "url": query.url,
                 "method": query.method,
                 "timestamp": time.time(),
-                "obfuscated": True
+                "obfuscated": True,
             }
             query.status = QueryStatus.COMPLETED
             query.completed_at = time.time()
@@ -211,8 +212,11 @@ class QueryObfuscator:
             # Update average response time
             response_time = query.completed_at - query.submitted_at
             self.stats["avg_response_time"] = (
-                (self.stats["avg_response_time"] * (self.stats["completed_queries"] - 1)) +
-                response_time
+                (
+                    self.stats["avg_response_time"]
+                    * (self.stats["completed_queries"] - 1)
+                )
+                + response_time
             ) / self.stats["completed_queries"]
 
             logger.info(f"Query {query.query_id} completed successfully")
@@ -236,14 +240,14 @@ async def obfuscated_request(
     url: str,
     method: str = "GET",
     parameters: Optional[Dict[str, Any]] = None,
-    priority: QueryPriority = QueryPriority.NORMAL
+    priority: QueryPriority = QueryPriority.NORMAL,
 ) -> str:
     """Submit an obfuscated HTTP request"""
     return await query_obfuscator.submit_query(url, method, parameters, priority)
 
 
 async def obfuscated_batch(
-    queries: List[Tuple[str, str, Dict[str, Any], QueryPriority]]
+    queries: List[Tuple[str, str, Dict[str, Any], QueryPriority]],
 ) -> str:
     """Submit a batch of obfuscated requests"""
     return await query_obfuscator.submit_batch(queries)

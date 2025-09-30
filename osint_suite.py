@@ -42,8 +42,7 @@ from modules.whois_history import WhoisHistory
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -100,16 +99,16 @@ class OSINTSuite:
     def _initialize_passive_modules(self):
         """Initialize passive intelligence gathering modules"""
         module_configs = {
-            'passive_search': PassiveSearchIntelligence,
-            'web_scraper': WebScraper,
-            'search_engine_dorking': SearchEngineDorking,
-            'certificate_transparency': CertificateTransparency,
-            'wayback_machine': WaybackMachine,
-            'paste_site_monitor': PasteSiteMonitor,
-            'social_media_footprint': SocialMediaFootprint,
-            'github_search': GitHubSearch,
-            'passive_dns_enum': PassiveDNSEnum,
-            'whois_history': WhoisHistory,
+            "passive_search": PassiveSearchIntelligence,
+            "web_scraper": WebScraper,
+            "search_engine_dorking": SearchEngineDorking,
+            "certificate_transparency": CertificateTransparency,
+            "wayback_machine": WaybackMachine,
+            "paste_site_monitor": PasteSiteMonitor,
+            "social_media_footprint": SocialMediaFootprint,
+            "github_search": GitHubSearch,
+            "passive_dns_enum": PassiveDNSEnum,
+            "whois_history": WhoisHistory,
         }
 
         for module_name, module_class in module_configs.items():
@@ -125,69 +124,76 @@ class OSINTSuite:
         logger.info("Validating OSINT Suite system...")
 
         results: Dict[str, Any] = {
-            'timestamp': datetime.now().isoformat(),
-            'api_keys': {},
-            'tor_status': {},
-            'passive_modules': {},
-            'ai_status': {},
-            'overall_health': 'unknown'
+            "timestamp": datetime.now().isoformat(),
+            "api_keys": {},
+            "tor_status": {},
+            "passive_modules": {},
+            "ai_status": {},
+            "overall_health": "unknown",
         }
 
         # Check API keys
         try:
             api_status = await self.api_manager.validate_all_services()
-            results['api_keys'] = {
+            results["api_keys"] = {
                 service: {
-                    'valid': status.is_valid,
-                    'active': status.is_active,
-                    'error': status.last_error
+                    "valid": status.is_valid,
+                    "active": status.is_active,
+                    "error": status.last_error,
                 }
                 for service, status in api_status.items()
             }
         except Exception as e:
-            results['api_keys'] = {'error': str(e)}
+            results["api_keys"] = {"error": str(e)}
 
         # Check Tor status
         try:
             tor_status = get_tor_status()
-            results['tor_status'] = tor_status
+            results["tor_status"] = tor_status
         except Exception as e:
-            results['tor_status'] = {'error': str(e)}
+            results["tor_status"] = {"error": str(e)}
 
         # Check passive modules
         for name, module in self.passive_modules.items():
-            results['passive_modules'][name] = module is not None
+            results["passive_modules"][name] = module is not None
 
         # Check AI status
-        results['ai_status'] = {
-            'llm_engine': self.llm_engine is not None,
-            'reporting_engine': self.reporting_engine is not None,
-            'realtime_feeds': self.realtime_feeds is not None
+        results["ai_status"] = {
+            "llm_engine": self.llm_engine is not None,
+            "reporting_engine": self.reporting_engine is not None,
+            "realtime_feeds": self.realtime_feeds is not None,
         }
 
         # Calculate overall health
-        api_count = sum(1 for s in results['api_keys'].values()
-                       if isinstance(s, dict) and s.get('valid'))
-        passive_count = sum(results['passive_modules'].values())
+        api_count = sum(
+            1
+            for s in results["api_keys"].values()
+            if isinstance(s, dict) and s.get("valid")
+        )
+        passive_count = sum(results["passive_modules"].values())
 
-        if api_count >= 3 and passive_count >= 8 and results['tor_status'].get('active'):
-            results['overall_health'] = 'excellent'
+        if (
+            api_count >= 3
+            and passive_count >= 8
+            and results["tor_status"].get("active")
+        ):
+            results["overall_health"] = "excellent"
         elif api_count >= 1 and passive_count >= 5:
-            results['overall_health'] = 'good'
+            results["overall_health"] = "good"
         elif passive_count >= 3:
-            results['overall_health'] = 'fair'
+            results["overall_health"] = "fair"
         else:
-            results['overall_health'] = 'poor'
+            results["overall_health"] = "poor"
 
         return results
 
     async def perform_passive_intelligence_gathering(
         self,
         target: str,
-        target_type: str = 'domain',
+        target_type: str = "domain",
         include_github: bool = True,
         include_wayback: bool = True,
-        include_certificates: bool = True
+        include_certificates: bool = True,
     ) -> Dict[str, Any]:
         """
         Perform comprehensive passive intelligence gathering.
@@ -202,118 +208,136 @@ class OSINTSuite:
         Returns:
             Comprehensive intelligence report
         """
-        logger.info(f"Starting passive intelligence gathering for {target} ({target_type})")
+        logger.info(
+            f"Starting passive intelligence gathering for {target} ({target_type})"
+        )
 
         results: Dict[str, Any] = {
-            'target': target,
-            'target_type': target_type,
-            'timestamp': datetime.now().isoformat(),
-            'sources': {},
-            'summary': {},
-            'recommendations': []
+            "target": target,
+            "target_type": target_type,
+            "timestamp": datetime.now().isoformat(),
+            "sources": {},
+            "summary": {},
+            "recommendations": [],
         }
 
         # Passive search across multiple sources
-        if self.passive_modules.get('passive_search'):
+        if self.passive_modules.get("passive_search"):
             try:
-                search_results = self.passive_modules['passive_search'].analyze_target(target, target_type)
-                results['sources']['passive_search'] = search_results
+                search_results = self.passive_modules["passive_search"].analyze_target(
+                    target, target_type
+                )
+                results["sources"]["passive_search"] = search_results
                 logger.info("Passive search completed")
             except Exception as e:
                 logger.error(f"Passive search failed: {e}")
 
         # Web scraping (if appropriate for target type)
-        if self.passive_modules.get('web_scraper') and target_type in ['domain', 'url']:
+        if self.passive_modules.get("web_scraper") and target_type in ["domain", "url"]:
             try:
-                scrape_results = self.passive_modules['web_scraper'].scrape(target)
-                results['sources']['web_scraping'] = scrape_results
+                scrape_results = self.passive_modules["web_scraper"].scrape(target)
+                results["sources"]["web_scraping"] = scrape_results
                 logger.info("Web scraping completed")
             except Exception as e:
                 logger.error(f"Web scraping failed: {e}")
 
         # Search engine dorking
-        if self.passive_modules.get('search_engine_dorking'):
+        if self.passive_modules.get("search_engine_dorking"):
             try:
-                dork_results = self.passive_modules['search_engine_dorking'].dork(target)
-                results['sources']['search_engine_dorking'] = dork_results
+                dork_results = self.passive_modules["search_engine_dorking"].dork(
+                    target
+                )
+                results["sources"]["search_engine_dorking"] = dork_results
                 logger.info("Search engine dorking completed")
             except Exception as e:
                 logger.error(f"Search engine dorking failed: {e}")
 
         # Certificate transparency
-        if include_certificates and self.passive_modules.get('certificate_transparency'):
+        if include_certificates and self.passive_modules.get(
+            "certificate_transparency"
+        ):
             try:
-                cert_results = self.passive_modules['certificate_transparency'].search(target)
-                results['sources']['certificate_transparency'] = cert_results
+                cert_results = self.passive_modules["certificate_transparency"].search(
+                    target
+                )
+                results["sources"]["certificate_transparency"] = cert_results
                 logger.info("Certificate transparency search completed")
             except Exception as e:
                 logger.error(f"Certificate transparency search failed: {e}")
 
         # Wayback Machine
-        if include_wayback and self.passive_modules.get('wayback_machine'):
+        if include_wayback and self.passive_modules.get("wayback_machine"):
             try:
-                wayback_results = self.passive_modules['wayback_machine'].fetch_snapshots(target)
-                results['sources']['wayback_machine'] = wayback_results
+                wayback_results = self.passive_modules[
+                    "wayback_machine"
+                ].fetch_snapshots(target)
+                results["sources"]["wayback_machine"] = wayback_results
                 logger.info("Wayback Machine search completed")
             except Exception as e:
                 logger.error(f"Wayback Machine search failed: {e}")
 
         # Paste site monitoring
-        if self.passive_modules.get('paste_site_monitor'):
+        if self.passive_modules.get("paste_site_monitor"):
             try:
-                paste_results = self.passive_modules['paste_site_monitor'].search_pastes(target)
-                results['sources']['paste_sites'] = paste_results
+                paste_results = self.passive_modules[
+                    "paste_site_monitor"
+                ].search_pastes(target)
+                results["sources"]["paste_sites"] = paste_results
                 logger.info("Paste site monitoring completed")
             except Exception as e:
                 logger.error(f"Paste site monitoring failed: {e}")
 
         # Social media footprint
-        if self.passive_modules.get('social_media_footprint'):
+        if self.passive_modules.get("social_media_footprint"):
             try:
-                social_results = self.passive_modules['social_media_footprint'].scrape_profiles(target)
-                results['sources']['social_media'] = social_results
+                social_results = self.passive_modules[
+                    "social_media_footprint"
+                ].scrape_profiles(target)
+                results["sources"]["social_media"] = social_results
                 logger.info("Social media footprint analysis completed")
             except Exception as e:
                 logger.error(f"Social media footprint analysis failed: {e}")
 
         # GitHub search
-        if include_github and self.passive_modules.get('github_search'):
+        if include_github and self.passive_modules.get("github_search"):
             try:
-                github_results = self.passive_modules['github_search'].search(target)
-                results['sources']['github'] = github_results
+                github_results = self.passive_modules["github_search"].search(target)
+                results["sources"]["github"] = github_results
                 logger.info("GitHub search completed")
             except Exception as e:
                 logger.error(f"GitHub search failed: {e}")
 
         # Passive DNS enumeration
-        if self.passive_modules.get('passive_dns_enum'):
+        if self.passive_modules.get("passive_dns_enum"):
             try:
-                dns_results = self.passive_modules['passive_dns_enum'].enumerate(target)
-                results['sources']['passive_dns'] = dns_results
+                dns_results = self.passive_modules["passive_dns_enum"].enumerate(target)
+                results["sources"]["passive_dns"] = dns_results
                 logger.info("Passive DNS enumeration completed")
             except Exception as e:
                 logger.error(f"Passive DNS enumeration failed: {e}")
 
         # WHOIS history
-        if self.passive_modules.get('whois_history'):
+        if self.passive_modules.get("whois_history"):
             try:
-                whois_results = self.passive_modules['whois_history'].get_history(target)
-                results['sources']['whois_history'] = whois_results
+                whois_results = self.passive_modules["whois_history"].get_history(
+                    target
+                )
+                results["sources"]["whois_history"] = whois_results
                 logger.info("WHOIS history analysis completed")
             except Exception as e:
                 logger.error(f"WHOIS history analysis failed: {e}")
 
         # Generate AI-powered summary if available
-        if self.llm_engine and results['sources']:
+        if self.llm_engine and results["sources"]:
             try:
                 ai_summary = await self.llm_engine.analyze_intelligence(results)
-                results['summary']['ai_analysis'] = ai_summary
+                results["summary"]["ai_analysis"] = ai_summary
                 logger.info("AI-powered analysis completed")
             except Exception as e:
                 logger.error(f"AI analysis failed: {e}")
 
         # Generate recommendations
-        results['recommendations'] = self._generate_recommendations(results)
+        results["recommendations"] = self._generate_recommendations(results)
 
         logger.info(f"Passive intelligence gathering completed for {target}")
         return results
@@ -322,43 +346,62 @@ class OSINTSuite:
         """Generate investigation recommendations based on findings"""
         recommendations = []
 
-        sources = results.get('sources', {})
+        sources = results.get("sources", {})
 
         # Check for concerning findings
-        if 'certificate_transparency' in sources and sources['certificate_transparency']:
-            recommendations.append("Review SSL certificate history for potential domain impersonation")
+        if (
+            "certificate_transparency" in sources
+            and sources["certificate_transparency"]
+        ):
+            recommendations.append(
+                "Review SSL certificate history for potential domain impersonation"
+            )
 
-        if 'paste_sites' in sources and sources['paste_sites']:
-            recommendations.append("Investigate paste site leaks for sensitive information exposure")
+        if "paste_sites" in sources and sources["paste_sites"]:
+            recommendations.append(
+                "Investigate paste site leaks for sensitive information exposure"
+            )
 
-        if 'github' in sources and sources['github']:
-            recommendations.append("Review GitHub repositories for exposed credentials or sensitive code")
+        if "github" in sources and sources["github"]:
+            recommendations.append(
+                "Review GitHub repositories for exposed credentials or sensitive code"
+            )
 
-        if 'wayback_machine' in sources and sources['wayback_machine']:
-            recommendations.append("Analyze historical website changes for security incidents")
+        if "wayback_machine" in sources and sources["wayback_machine"]:
+            recommendations.append(
+                "Analyze historical website changes for security incidents"
+            )
 
-        if 'social_media' in sources and sources['social_media']:
-            recommendations.append("Monitor social media accounts for information disclosure")
+        if "social_media" in sources and sources["social_media"]:
+            recommendations.append(
+                "Monitor social media accounts for information disclosure"
+            )
 
         # General recommendations
         if len(sources) >= 5:
-            recommendations.append("High-volume intelligence gathered - consider focused follow-up investigations")
+            recommendations.append(
+                "High-volume intelligence gathered - consider focused follow-up investigations"
+            )
         elif len(sources) <= 2:
-            recommendations.append("Limited passive intelligence found - consider active reconnaissance if authorized")
+            recommendations.append(
+                "Limited passive intelligence found - consider active reconnaissance if authorized"
+            )
 
         if not recommendations:
-            recommendations.append("Continue monitoring target for new intelligence developments")
+            recommendations.append(
+                "Continue monitoring target for new intelligence developments"
+            )
 
         return recommendations
 
     async def generate_custom_report(
         self,
         intelligence_data: Dict[str, Any],
-        report_type: str = 'executive_summary',
-        style: str = 'professional',
-        length: str = 'medium',
+        report_type: str = "executive_summary",
+        style: str = "professional",
+        length: str = "medium",
         include_charts: bool = True,
-        custom_sections: Optional[List[str]] = None
+        custom_sections: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Generate a custom report with specified parameters.
@@ -374,42 +417,52 @@ class OSINTSuite:
         Returns:
             Generated report data
         """
-        logger.info(f"Generating {report_type} report in {style} style ({length} length)")
+        logger.info(
+            f"Generating {report_type} report in {style} style ({length} length)"
+        )
 
         try:
             # Use the reporting engine to generate the report
             report_data: Dict[str, Any] = {
-                'intelligence_data': intelligence_data,
-                'report_type': report_type,
-                'style': style,
-                'length': length,
-                'include_charts': include_charts,
-                'custom_sections': custom_sections or [],
-                'generated_at': datetime.now().isoformat(),
-                'generated_by': 'OSINT Suite v2.0'
+                "intelligence_data": intelligence_data,
+                "report_type": report_type,
+                "style": style,
+                "length": length,
+                "include_charts": include_charts,
+                "custom_sections": custom_sections or [],
+                "generated_at": datetime.now().isoformat(),
+                "generated_by": "OSINT Suite v2.0",
             }
 
             # Generate the report using the reporting engine
             if self.reporting_engine:
-                if report_type == 'executive_summary':
-                    report = self.reporting_engine.generate_executive_summary(intelligence_data)
-                elif report_type == 'technical':
-                    report = self.reporting_engine.generate_technical_report(intelligence_data)
-                elif report_type == 'threat_assessment':
-                    report = self.reporting_engine.generate_threat_assessment(intelligence_data)
+                if report_type == "executive_summary":
+                    report = self.reporting_engine.generate_executive_summary(
+                        intelligence_data
+                    )
+                elif report_type == "technical":
+                    report = self.reporting_engine.generate_technical_report(
+                        intelligence_data
+                    )
+                elif report_type == "threat_assessment":
+                    report = self.reporting_engine.generate_threat_assessment(
+                        intelligence_data
+                    )
                 else:
                     report = self.reporting_engine.generate_custom_report(report_data)
 
                 # Add metadata
-                report.update({
-                    'metadata': {
-                        'report_type': report_type,
-                        'style': style,
-                        'length': length,
-                        'sources_count': len(intelligence_data.get('sources', {})),
-                        'generation_timestamp': datetime.now().isoformat()
+                report.update(
+                    {
+                        "metadata": {
+                            "report_type": report_type,
+                            "style": style,
+                            "length": length,
+                            "sources_count": len(intelligence_data.get("sources", {})),
+                            "generation_timestamp": datetime.now().isoformat(),
+                        }
                     }
-                })
+                )
 
                 logger.info(f"Report generated successfully: {report_type}")
                 return report
@@ -420,29 +473,31 @@ class OSINTSuite:
         except Exception as e:
             logger.error(f"Report generation failed: {e}")
             return {
-                'error': str(e),
-                'report_type': report_type,
-                'generated_at': datetime.now().isoformat()
+                "error": str(e),
+                "report_type": report_type,
+                "generated_at": datetime.now().isoformat(),
             }
 
     def _generate_fallback_report(self, report_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a basic report when the reporting engine is unavailable"""
-        intelligence_data = report_data['intelligence_data']
+        intelligence_data = report_data["intelligence_data"]
 
         report: Dict[str, Any] = {
-            'title': f"OSINT Intelligence Report - {intelligence_data.get('target', 'Unknown Target')}",
-            'executive_summary': f"Passive intelligence gathering report for {intelligence_data.get('target', 'target')}.",
-            'key_findings': [],
-            'sources_analyzed': list(intelligence_data.get('sources', {}).keys()),
-            'recommendations': intelligence_data.get('recommendations', []),
-            'metadata': report_data
+            "title": f"OSINT Intelligence Report - {intelligence_data.get('target', 'Unknown Target')}",
+            "executive_summary": f"Passive intelligence gathering report for {intelligence_data.get('target', 'target')}.",
+            "key_findings": [],
+            "sources_analyzed": list(intelligence_data.get("sources", {}).keys()),
+            "recommendations": intelligence_data.get("recommendations", []),
+            "metadata": report_data,
         }
 
         # Extract key findings from sources
-        sources = intelligence_data.get('sources', {})
+        sources = intelligence_data.get("sources", {})
         for source_name, source_data in sources.items():
             if source_data:
-                report['key_findings'].append(f"Intelligence gathered from {source_name}")
+                report["key_findings"].append(
+                    f"Intelligence gathered from {source_name}"
+                )
 
         return report
 
@@ -452,17 +507,24 @@ class OSINTSuite:
 
         # Validate system before starting
         validation = await self.validate_system()
-        health = validation.get('overall_health', 'unknown')
+        health = validation.get("overall_health", "unknown")
 
-        if health in ['poor', 'unknown']:
-            logger.warning(f"System health is {health} - some features may not work properly")
+        if health in ["poor", "unknown"]:
+            logger.warning(
+                f"System health is {health} - some features may not work properly"
+            )
 
         logger.info(f"System health: {health}")
-        logger.info(f"Active API services: {sum(1 for s in validation.get('api_keys', {}).values() if isinstance(s, dict) and s.get('valid', False))}")
-        logger.info(f"Passive modules loaded: {sum(validation.get('passive_modules', {}).values())}")
+        logger.info(
+            f"Active API services: {sum(1 for s in validation.get('api_keys', {}).values() if isinstance(s, dict) and s.get('valid', False))}"
+        )
+        logger.info(
+            f"Passive modules loaded: {sum(validation.get('passive_modules', {}).values())}"
+        )
 
         # Start the FastAPI server
         import uvicorn
+
         config = uvicorn.Config(app, host=host, port=port, log_level="info")
         server = uvicorn.Server(config)
 
@@ -476,6 +538,7 @@ class OSINTSuite:
     def run_cli_interface(self):
         """Run the command-line interface"""
         from main import OSINTSuite as CLISuite
+
         cli_suite = CLISuite()
         cli_suite.main_menu()
 
@@ -488,26 +551,41 @@ async def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="OSINT Suite - Comprehensive Intelligence Platform")
+    parser = argparse.ArgumentParser(
+        description="OSINT Suite - Comprehensive Intelligence Platform"
+    )
     parser.add_argument("--web", action="store_true", help="Start web interface")
     parser.add_argument("--host", default="127.0.0.1", help="Web interface host")
     parser.add_argument("--port", type=int, default=8000, help="Web interface port")
-    parser.add_argument("--cli", action="store_true", help="Start command-line interface")
-    parser.add_argument("--validate", action="store_true", help="Validate system and exit")
-    parser.add_argument("--tor-check", action="store_true", help="Check Tor connectivity")
+    parser.add_argument(
+        "--cli", action="store_true", help="Start command-line interface"
+    )
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate system and exit"
+    )
+    parser.add_argument(
+        "--tor-check", action="store_true", help="Check Tor connectivity"
+    )
 
     args = parser.parse_args()
 
     if args.validate:
         validation = await osint_suite.validate_system()
         print(f"System Health: {validation.get('overall_health', 'unknown').upper()}")
-        print(f"API Keys: {sum(1 for s in validation.get('api_keys', {}).values() if isinstance(s, dict) and s.get('valid', False))}/18 active")
-        print(f"Passive Modules: {sum(validation.get('passive_modules', {}).values())}/10 loaded")
-        print(f"Tor Status: {validation.get('tor_status', {}).get('active', 'unknown')}")
+        print(
+            f"API Keys: {sum(1 for s in validation.get('api_keys', {}).values() if isinstance(s, dict) and s.get('valid', False))}/18 active"
+        )
+        print(
+            f"Passive Modules: {sum(validation.get('passive_modules', {}).values())}/10 loaded"
+        )
+        print(
+            f"Tor Status: {validation.get('tor_status', {}).get('active', 'unknown')}"
+        )
         return
 
     if args.tor_check:
         from utils.transport import get_tor_status
+
         tor_status = get_tor_status()
         print(f"Tor Active: {tor_status.get('active', False)}")
         print(f"Tor IP: {tor_status.get('ip', 'unknown')}")

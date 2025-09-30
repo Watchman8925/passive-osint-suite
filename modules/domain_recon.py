@@ -21,22 +21,22 @@ class DomainRecon(OSINTUtils):
         """Comprehensive domain analysis"""
         self.logger.info(f"Starting domain analysis for: {domain}")
 
-        if not self.validate_input(domain, 'domain'):
+        if not self.validate_input(domain, "domain"):
             self.logger.error(f"Invalid domain format: {domain}")
             return {"status": "error", "error": f"Invalid domain format: {domain}"}
 
         try:
             self.results = {
-                'domain': domain,
-                'timestamp': datetime.now().isoformat(),
-                'whois_info': self.get_whois_info(domain),
-                'dns_records': self.get_dns_records(domain),
-                'subdomains': self.find_subdomains(domain),
-                'security_info': self.get_security_info(domain),
-                'threat_intel': self.get_threat_intelligence(domain),
-                'certificate_info': self.get_certificate_info(domain),
-                'technology_stack': self.get_technology_stack(domain),
-                'social_presence': self.find_social_presence(domain)
+                "domain": domain,
+                "timestamp": datetime.now().isoformat(),
+                "whois_info": self.get_whois_info(domain),
+                "dns_records": self.get_dns_records(domain),
+                "subdomains": self.find_subdomains(domain),
+                "security_info": self.get_security_info(domain),
+                "threat_intel": self.get_threat_intelligence(domain),
+                "certificate_info": self.get_certificate_info(domain),
+                "technology_stack": self.get_technology_stack(domain),
+                "social_presence": self.find_social_presence(domain),
             }
 
             return {"status": "success", "data": self.results}
@@ -67,12 +67,12 @@ class DomainRecon(OSINTUtils):
             return whois_data
         except Exception as e:
             self.logger.error(f"WHOIS lookup failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def get_dns_records(self, domain):
         """Get DNS records (prefers secure DoH via Tor, falls back to system DNS)."""
         dns_records = {}
-        record_types = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA']
+        record_types = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"]
 
         for record_type in record_types:
             try:
@@ -123,8 +123,8 @@ class DomainRecon(OSINTUtils):
             if response:
                 data = response.json()
                 for cert in data:
-                    name_value = cert.get('name_value', '')
-                    for subdomain in name_value.split('\n'):
+                    name_value = cert.get("name_value", "")
+                    for subdomain in name_value.split("\n"):
                         subdomain = subdomain.strip()
                         if subdomain and domain in subdomain:
                             subdomains.add(subdomain)
@@ -136,19 +136,19 @@ class DomainRecon(OSINTUtils):
     def get_subdomains_securitytrails(self, domain):
         """Get subdomains from SecurityTrails"""
         subdomains = set()
-        api_key = self.get_api_key('SECURITYTRAILS_API_KEY')
+        api_key = self.get_api_key("SECURITYTRAILS_API_KEY")
 
         if not api_key:
             return subdomains
 
         try:
             url = f"https://api.securitytrails.com/v1/domain/{domain}/subdomains"
-            headers = {'APIKEY': api_key}
+            headers = {"APIKEY": api_key}
             response = self.make_request(url, headers=headers)
 
             if response:
                 data = response.json()
-                for subdomain in data.get('subdomains', []):
+                for subdomain in data.get("subdomains", []):
                     subdomains.add(f"{subdomain}.{domain}")
 
         except Exception as e:
@@ -159,7 +159,7 @@ class DomainRecon(OSINTUtils):
     def get_subdomains_virustotal(self, domain):
         """Get subdomains from VirusTotal"""
         subdomains = set()
-        api_key = self.get_api_key('VIRUSTOTAL_API_KEY')
+        api_key = self.get_api_key("VIRUSTOTAL_API_KEY")
 
         if not api_key:
             return subdomains
@@ -171,7 +171,7 @@ class DomainRecon(OSINTUtils):
 
             if response:
                 data = response.json()
-                for subdomain in data.get('subdomains', []):
+                for subdomain in data.get("subdomains", []):
                     subdomains.add(subdomain)
 
         except Exception as e:
@@ -182,58 +182,56 @@ class DomainRecon(OSINTUtils):
     def get_security_info(self, domain):
         """Get security information"""
         security_info = {
-            'shodan_data': self.get_shodan_info(domain),
-            'greynoise_data': self.get_greynoise_info(domain),
-            'abuse_data': self.get_abuse_info(domain)
+            "shodan_data": self.get_shodan_info(domain),
+            "greynoise_data": self.get_greynoise_info(domain),
+            "abuse_data": self.get_abuse_info(domain),
         }
         return security_info
 
     def get_shodan_info(self, domain):
         """Get Shodan information"""
-        api_key = self.get_api_key('SHODAN_API_KEY')
+        api_key = self.get_api_key("SHODAN_API_KEY")
         if not api_key:
-            return {'error': 'No API key'}
+            return {"error": "No API key"}
 
         try:
             import shodan
+
             api = shodan.Shodan(api_key)
-            results = api.search(f'hostname:{domain}')
+            results = api.search(f"hostname:{domain}")
 
-            shodan_data = {
-                'total_results': results['total'],
-                'hosts': []
-            }
+            shodan_data = {"total_results": results["total"], "hosts": []}
 
-            for result in results['matches'][:5]:  # Limit to first 5 results
+            for result in results["matches"][:5]:  # Limit to first 5 results
                 host_info = {
-                    'ip': result['ip_str'],
-                    'port': result['port'],
-                    'org': result.get('org', ''),
-                    'location': f"{result.get('location', {}).get('city', '')}, {result.get('location', {}).get('country_name', '')}",
-                    'product': result.get('product', ''),
-                    'version': result.get('version', '')
+                    "ip": result["ip_str"],
+                    "port": result["port"],
+                    "org": result.get("org", ""),
+                    "location": f"{result.get('location', {}).get('city', '')}, {result.get('location', {}).get('country_name', '')}",
+                    "product": result.get("product", ""),
+                    "version": result.get("version", ""),
                 }
-                shodan_data['hosts'].append(host_info)
+                shodan_data["hosts"].append(host_info)
 
             return shodan_data
 
         except Exception as e:
             self.logger.error(f"Shodan lookup failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def get_greynoise_info(self, domain):
         """Get GreyNoise information"""
-        api_key = self.get_api_key('GREYNOISE_API_KEY')
+        api_key = self.get_api_key("GREYNOISE_API_KEY")
         if not api_key:
-            return {'error': 'No API key'}
+            return {"error": "No API key"}
 
         try:
             # First resolve domain to IP via DoH (passive-friendly)
-            ip_answers = self.doh_query(domain, record_type='A')
+            ip_answers = self.doh_query(domain, record_type="A")
             ip = ip_answers[0] if ip_answers else None
 
             url = f"https://api.greynoise.io/v3/community/{ip}"
-            headers = {'key': api_key}
+            headers = {"key": api_key}
             response = self.make_request(url, headers=headers)
 
             if response:
@@ -241,54 +239,60 @@ class DomainRecon(OSINTUtils):
 
         except Exception as e:
             self.logger.error(f"GreyNoise lookup failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def get_abuse_info(self, domain):
         """Get abuse/threat information"""
         # Placeholder for abuse information gathering
-        return {'status': 'not_implemented'}
+        return {"status": "not_implemented"}
 
     def get_threat_intelligence(self, domain):
         """Get threat intelligence"""
         threat_info = {
-            'alienvault_otx': self.get_alienvault_info(domain),
-            'urlvoid_check': self.check_urlvoid(domain)
+            "alienvault_otx": self.get_alienvault_info(domain),
+            "urlvoid_check": self.check_urlvoid(domain),
         }
         return threat_info
 
     def get_alienvault_info(self, domain):
         """Get AlienVault OTX information"""
-        api_key = self.get_api_key('ALIENVAULT_API_KEY')
+        api_key = self.get_api_key("ALIENVAULT_API_KEY")
         if not api_key:
-            return {'error': 'No API key'}
+            return {"error": "No API key"}
 
         try:
-            url = f"https://otx.alienvault.com/api/v1/indicators/domain/{domain}/general"
-            headers = {'X-OTX-API-KEY': api_key}
+            url = (
+                f"https://otx.alienvault.com/api/v1/indicators/domain/{domain}/general"
+            )
+            headers = {"X-OTX-API-KEY": api_key}
             response = self.make_request(url, headers=headers)
 
             if response:
                 data = response.json()
                 return {
-                    'pulse_count': len(data.get('pulse_info', {}).get('pulses', [])),
-                    'malware_families': data.get('malware', {}).get('data', []),
-                    'url_list': data.get('url_list', {}).get('url_list', [])[:10]  # Limit results
+                    "pulse_count": len(data.get("pulse_info", {}).get("pulses", [])),
+                    "malware_families": data.get("malware", {}).get("data", []),
+                    "url_list": data.get("url_list", {}).get("url_list", [])[
+                        :10
+                    ],  # Limit results
                 }
 
         except Exception as e:
             self.logger.error(f"AlienVault OTX lookup failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def check_urlvoid(self, domain):
         """Check URLVoid for reputation"""
         # Placeholder - URLVoid requires web scraping or paid API
-        return {'status': 'not_implemented'}
+        return {"status": "not_implemented"}
 
     def get_certificate_info(self, domain):
         """Get SSL certificate information"""
         # This operation is active (opens a TCP connection). Ask for operator permission
-        if not self.require_active_permission(reason=f"certificate retrieval for {domain}"):
-            return {'error': 'Active checks disabled or not permitted by operator'}
+        if not self.require_active_permission(
+            reason=f"certificate retrieval for {domain}"
+        ):
+            return {"error": "Active checks disabled or not permitted by operator"}
 
         try:
             import socket
@@ -300,24 +304,24 @@ class DomainRecon(OSINTUtils):
                     cert = ssock.getpeercert()
 
             cert_info = {
-                'subject': dict(x[0] for x in cert['subject']),
-                'issuer': dict(x[0] for x in cert['issuer']),
-                'version': cert['version'],
-                'serial_number': cert['serialNumber'],
-                'not_before': cert['notBefore'],
-                'not_after': cert['notAfter'],
-                'subject_alt_names': [x[1] for x in cert.get('subjectAltName', [])]
+                "subject": dict(x[0] for x in cert["subject"]),
+                "issuer": dict(x[0] for x in cert["issuer"]),
+                "version": cert["version"],
+                "serial_number": cert["serialNumber"],
+                "not_before": cert["notBefore"],
+                "not_after": cert["notAfter"],
+                "subject_alt_names": [x[1] for x in cert.get("subjectAltName", [])],
             }
 
             return cert_info
 
         except Exception as e:
             self.logger.error(f"Certificate info lookup failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def get_technology_stack(self, domain):
         """Get technology stack information"""
-        builtwith_key = self.get_api_key('BUILTWITH_API_KEY')
+        builtwith_key = self.get_api_key("BUILTWITH_API_KEY")
 
         if builtwith_key:
             try:
@@ -329,7 +333,7 @@ class DomainRecon(OSINTUtils):
             except Exception as e:
                 self.logger.error(f"BuiltWith lookup failed: {e}")
 
-        return {'status': 'no_api_key_or_failed'}
+        return {"status": "no_api_key_or_failed"}
 
     def find_social_presence(self, domain):
         """Find social media presence"""
@@ -338,11 +342,11 @@ class DomainRecon(OSINTUtils):
         company_name = extracted.domain
 
         social_platforms = {
-            'twitter': f"https://twitter.com/{company_name}",
-            'linkedin': f"https://linkedin.com/company/{company_name}",
-            'facebook': f"https://facebook.com/{company_name}",
-            'instagram': f"https://instagram.com/{company_name}",
-            'youtube': f"https://youtube.com/c/{company_name}"
+            "twitter": f"https://twitter.com/{company_name}",
+            "linkedin": f"https://linkedin.com/company/{company_name}",
+            "facebook": f"https://facebook.com/{company_name}",
+            "instagram": f"https://instagram.com/{company_name}",
+            "youtube": f"https://youtube.com/c/{company_name}",
         }
 
         found_profiles = {}
@@ -367,13 +371,13 @@ Generated: {self.results['timestamp']}
 
 ## WHOIS Information
 """
-        whois_info = self.results.get('whois_info', {})
+        whois_info = self.results.get("whois_info", {})
         for key, value in whois_info.items():
             if value:
                 report += f"- {key.replace('_', ' ').title()}: {value}\n"
 
         report += "\n## DNS Records\n"
-        dns_records = self.results.get('dns_records', {})
+        dns_records = self.results.get("dns_records", {})
         for record_type, records in dns_records.items():
             if records:
                 report += f"- {record_type}: {', '.join(records)}\n"

@@ -19,14 +19,14 @@ class DocumentIntelligence(OSINTUtils):
         super().__init__()
         self.results = {}
         self.known_file_sites = {
-            'pastebin.com': self.scrape_pastebin,
-            'github.com': self.scrape_github_gist,
-            'gitlab.com': self.scrape_gitlab_snippet,
-            'hastebin.com': self.scrape_hastebin,
-            '0bin.net': self.scrape_zerobin,
-            'dpaste.com': self.scrape_dpaste,
-            'ideone.com': self.scrape_ideone,
-            'codepad.org': self.scrape_codepad,
+            "pastebin.com": self.scrape_pastebin,
+            "github.com": self.scrape_github_gist,
+            "gitlab.com": self.scrape_gitlab_snippet,
+            "hastebin.com": self.scrape_hastebin,
+            "0bin.net": self.scrape_zerobin,
+            "dpaste.com": self.scrape_dpaste,
+            "ideone.com": self.scrape_ideone,
+            "codepad.org": self.scrape_codepad,
         }
 
     def check_rate_limit(self, service: str) -> bool:
@@ -48,39 +48,28 @@ class DocumentIntelligence(OSINTUtils):
 
         try:
             self.results = {
-                'search_term': search_term,
-                'timestamp': datetime.now().isoformat(),
-                'paste_sites': self.search_paste_sites(search_term),
-                'file_sharing_sites': self.search_file_sharing_sites(search_term),
-                'document_databases': self.search_document_databases(search_term),
-                'leak_intelligence': self.analyze_leak_intelligence(search_term),
-                'content_analysis': self.analyze_content_patterns(search_term),
-                'risk_assessment': self.assess_document_risk(search_term)
+                "search_term": search_term,
+                "timestamp": datetime.now().isoformat(),
+                "paste_sites": self.search_paste_sites(search_term),
+                "file_sharing_sites": self.search_file_sharing_sites(search_term),
+                "document_databases": self.search_document_databases(search_term),
+                "leak_intelligence": self.analyze_leak_intelligence(search_term),
+                "content_analysis": self.analyze_content_patterns(search_term),
+                "risk_assessment": self.assess_document_risk(search_term),
             }
 
-            return normalize_result({
-                "status": "success",
-                "data": self.results
-            })
+            return normalize_result({"status": "success", "data": self.results})
 
         except Exception as e:
             self.logger.error(f"Document leak analysis failed: {e}")
-            return normalize_result({
-                "status": "error",
-                "error": str(e)
-            })
+            return normalize_result({"status": "error", "error": str(e)})
 
     def search_paste_sites(self, search_term: str) -> Dict:
         """Search various paste sites for leaked content"""
         results = {}
 
         # Search sites that don't require API keys
-        free_sites = [
-            'pastebin.com',
-            'hastebin.com',
-            'dpaste.com',
-            'codepad.org'
-        ]
+        free_sites = ["pastebin.com", "hastebin.com", "dpaste.com", "codepad.org"]
 
         for site in free_sites:
             try:
@@ -91,15 +80,13 @@ class DocumentIntelligence(OSINTUtils):
                 self.logger.warning(f"Failed to search {site}: {e}")
 
         # Search sites with API keys if available
-        api_sites = {
-            'pastebin': self.search_pastebin_api
-        }
+        api_sites = {"pastebin": self.search_pastebin_api}
 
         for site_name, search_func in api_sites.items():
             try:
                 site_results = search_func(search_term)
                 if site_results:
-                    results[site_name + '_api'] = site_results
+                    results[site_name + "_api"] = site_results
             except Exception as e:
                 self.logger.warning(f"Failed to search {site_name} API: {e}")
 
@@ -114,10 +101,10 @@ class DocumentIntelligence(OSINTUtils):
 
             if search_results:
                 return {
-                    'site': site_url,
-                    'search_term': search_term,
-                    'found_pastes': search_results,
-                    'search_method': 'google_dork'
+                    "site": site_url,
+                    "search_term": search_term,
+                    "found_pastes": search_results,
+                    "search_method": "google_dork",
                 }
 
         except Exception as e:
@@ -132,10 +119,10 @@ class DocumentIntelligence(OSINTUtils):
             # For now, return mock results structure
             return [
                 {
-                    'url': 'example_paste_url',
-                    'title': 'Example Paste',
-                    'snippet': 'Example content snippet',
-                    'date': datetime.now().isoformat()
+                    "url": "example_paste_url",
+                    "title": "Example Paste",
+                    "snippet": "Example content snippet",
+                    "date": datetime.now().isoformat(),
                 }
             ]
         except Exception as e:
@@ -148,25 +135,25 @@ class DocumentIntelligence(OSINTUtils):
         if not api_key:
             return None
 
-        if not self.check_rate_limit('pastebin'):
+        if not self.check_rate_limit("pastebin"):
             return None
 
         try:
             # Pastebin API search
             url = "https://pastebin.com/api/api_post.php"
             data = {
-                'api_dev_key': api_key,
-                'api_option': 'search',
-                'api_paste_key': search_term
+                "api_dev_key": api_key,
+                "api_option": "search",
+                "api_paste_key": search_term,
             }
 
             response = requests.post(url, data=data, timeout=30)
             if response and response.status_code == 200:
                 # Parse Pastebin API response
                 return {
-                    'search_term': search_term,
-                    'results': response.text,
-                    'api_used': True
+                    "search_term": search_term,
+                    "results": response.text,
+                    "api_used": True,
                 }
 
         except Exception as e:
@@ -180,12 +167,12 @@ class DocumentIntelligence(OSINTUtils):
 
         # Sites to search
         file_sites = [
-            'mediafire.com',
-            'mega.nz',
-            'dropbox.com',
-            'onedrive.live.com',
-            'drive.google.com',
-            'docs.google.com'
+            "mediafire.com",
+            "mega.nz",
+            "dropbox.com",
+            "onedrive.live.com",
+            "drive.google.com",
+            "docs.google.com",
         ]
 
         for site in file_sites:
@@ -207,10 +194,10 @@ class DocumentIntelligence(OSINTUtils):
 
             if search_results:
                 return {
-                    'site': site_url,
-                    'search_term': search_term,
-                    'found_documents': search_results,
-                    'file_types': ['pdf', 'doc', 'docx', 'txt']
+                    "site": site_url,
+                    "search_term": search_term,
+                    "found_documents": search_results,
+                    "file_types": ["pdf", "doc", "docx", "txt"],
                 }
 
         except Exception as e:
@@ -225,11 +212,11 @@ class DocumentIntelligence(OSINTUtils):
             # For now, return structure
             return [
                 {
-                    'url': 'example_document_url',
-                    'title': 'Example Document',
-                    'file_type': 'pdf',
-                    'size': 'unknown',
-                    'date': datetime.now().isoformat()
+                    "url": "example_document_url",
+                    "title": "Example Document",
+                    "file_type": "pdf",
+                    "size": "unknown",
+                    "date": datetime.now().isoformat(),
                 }
             ]
         except Exception as e:
@@ -243,12 +230,12 @@ class DocumentIntelligence(OSINTUtils):
         # Archive.org search
         archive_results = self.search_archive_org(search_term)
         if archive_results:
-            results['archive_org'] = archive_results
+            results["archive_org"] = archive_results
 
         # Government document sites
         gov_results = self.search_government_sites(search_term)
         if gov_results:
-            results['government_sites'] = gov_results
+            results["government_sites"] = gov_results
 
         return results
 
@@ -257,20 +244,20 @@ class DocumentIntelligence(OSINTUtils):
         try:
             url = "https://archive.org/advancedsearch.php"
             params = {
-                'q': f'"{search_term}"',
-                'fl[]': 'identifier,title,mediatype',
-                'sort[]': 'date desc',
-                'rows': '10',
-                'output': 'json'
+                "q": f'"{search_term}"',
+                "fl[]": "identifier,title,mediatype",
+                "sort[]": "date desc",
+                "rows": "10",
+                "output": "json",
             }
 
             response = self.make_request(url, params=params)
             if response and response.status_code == 200:
                 data = response.json()
                 return {
-                    'search_term': search_term,
-                    'total_results': data.get('response', {}).get('numFound', 0),
-                    'documents': data.get('response', {}).get('docs', [])
+                    "search_term": search_term,
+                    "total_results": data.get("response", {}).get("numFound", 0),
+                    "documents": data.get("response", {}).get("docs", []),
                 }
 
         except Exception as e:
@@ -280,12 +267,7 @@ class DocumentIntelligence(OSINTUtils):
 
     def search_government_sites(self, search_term: str) -> List[Dict]:
         """Search government document sites"""
-        gov_sites = [
-            'govinfo.gov',
-            'federalregister.gov',
-            'congress.gov',
-            'foia.gov'
-        ]
+        gov_sites = ["govinfo.gov", "federalregister.gov", "congress.gov", "foia.gov"]
 
         results = []
         for site in gov_sites:
@@ -304,10 +286,10 @@ class DocumentIntelligence(OSINTUtils):
             # This would implement site-specific search logic
             return [
                 {
-                    'site': site,
-                    'title': f'Example {site} document',
-                    'url': f'https://{site}/example',
-                    'date': datetime.now().isoformat()
+                    "site": site,
+                    "title": f"Example {site} document",
+                    "url": f"https://{site}/example",
+                    "date": datetime.now().isoformat(),
                 }
             ]
         except Exception as e:
@@ -317,29 +299,29 @@ class DocumentIntelligence(OSINTUtils):
     def analyze_leak_intelligence(self, search_term: str) -> Dict:
         """Analyze leak intelligence and patterns"""
         return {
-            'leak_sources': [],
-            'exposure_timeline': [],
-            'affected_entities': [],
-            'severity_assessment': 'unknown',
-            'containment_status': 'unknown'
+            "leak_sources": [],
+            "exposure_timeline": [],
+            "affected_entities": [],
+            "severity_assessment": "unknown",
+            "containment_status": "unknown",
         }
 
     def analyze_content_patterns(self, search_term: str) -> Dict:
         """Analyze content patterns and metadata"""
         return {
-            'content_hashes': [],
-            'file_signatures': [],
-            'metadata_patterns': [],
-            'classification': 'unknown'
+            "content_hashes": [],
+            "file_signatures": [],
+            "metadata_patterns": [],
+            "classification": "unknown",
         }
 
     def assess_document_risk(self, search_term: str) -> Dict:
         """Assess risk associated with document leaks"""
         return {
-            'confidentiality_level': 'unknown',
-            'exposure_risk': 'low',
-            'legal_implications': [],
-            'recommended_actions': []
+            "confidentiality_level": "unknown",
+            "exposure_risk": "low",
+            "legal_implications": [],
+            "recommended_actions": [],
         }
 
     def extract_document_content(self, url: str) -> Optional[Dict]:
@@ -348,13 +330,13 @@ class DocumentIntelligence(OSINTUtils):
             response = self.make_request(url)
             if response and response.status_code == 200:
                 content = response.content
-                content_type = response.headers.get('content-type', '')
+                content_type = response.headers.get("content-type", "")
 
                 # Extract text based on content type
-                if 'pdf' in content_type.lower():
+                if "pdf" in content_type.lower():
                     text_content = self.extract_pdf_text(content)
-                elif 'text' in content_type.lower():
-                    text_content = content.decode('utf-8', errors='ignore')
+                elif "text" in content_type.lower():
+                    text_content = content.decode("utf-8", errors="ignore")
                 else:
                     text_content = "Binary content - cannot extract text"
 
@@ -362,12 +344,12 @@ class DocumentIntelligence(OSINTUtils):
                 content_hash = hashlib.sha256(content).hexdigest()
 
                 return {
-                    'url': url,
-                    'content_type': content_type,
-                    'content_length': len(content),
-                    'text_content': text_content[:1000],  # First 1000 chars
-                    'content_hash': content_hash,
-                    'extracted_at': datetime.now().isoformat()
+                    "url": url,
+                    "content_type": content_type,
+                    "content_length": len(content),
+                    "text_content": text_content[:1000],  # First 1000 chars
+                    "content_hash": content_hash,
+                    "extracted_at": datetime.now().isoformat(),
                 }
 
         except Exception as e:
@@ -381,6 +363,7 @@ class DocumentIntelligence(OSINTUtils):
             # Try to use PyPDF2 if available
             try:
                 import PyPDF2
+
                 pdf_reader = PyPDF2.PdfReader(pdf_content)
                 text = ""
                 for page in pdf_reader.pages:
@@ -401,13 +384,13 @@ class DocumentIntelligence(OSINTUtils):
                 headers = dict(response.headers)
 
                 return {
-                    'url': url,
-                    'content_type': headers.get('content-type'),
-                    'content_length': headers.get('content-length'),
-                    'last_modified': headers.get('last-modified'),
-                    'etag': headers.get('etag'),
-                    'server': headers.get('server'),
-                    'all_headers': headers
+                    "url": url,
+                    "content_type": headers.get("content-type"),
+                    "content_length": headers.get("content-length"),
+                    "last_modified": headers.get("last-modified"),
+                    "etag": headers.get("etag"),
+                    "server": headers.get("server"),
+                    "all_headers": headers,
                 }
 
         except Exception as e:
@@ -415,14 +398,16 @@ class DocumentIntelligence(OSINTUtils):
 
         return None
 
-    def monitor_document_leaks(self, search_terms: List[str], interval_minutes: int = 60) -> Dict:
+    def monitor_document_leaks(
+        self, search_terms: List[str], interval_minutes: int = 60
+    ) -> Dict:
         """Monitor for document leaks over time"""
         return {
-            'monitoring_terms': search_terms,
-            'interval_minutes': interval_minutes,
-            'status': 'monitoring_started',
-            'last_check': datetime.now().isoformat(),
-            'alerts': []
+            "monitoring_terms": search_terms,
+            "interval_minutes": interval_minutes,
+            "status": "monitoring_started",
+            "last_check": datetime.now().isoformat(),
+            "alerts": [],
         }
 
     # Site-specific scraping methods

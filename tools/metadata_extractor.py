@@ -14,8 +14,10 @@ import hashlib
 import mimetypes
 from typing import Dict, List, Any, Union
 from pathlib import Path
+
 try:
     from PIL import Image, ExifTags  # type: ignore
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -32,10 +34,10 @@ class MetadataExtractor(OSINTUtils):
     def __init__(self):
         super().__init__()
         self.supported_formats = {
-            'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'],
-            'document': ['.pdf', '.doc', '.docx', '.txt', '.rtf'],
-            'audio': ['.mp3', '.wav', '.flac', '.aac'],
-            'video': ['.mp4', '.avi', '.mov', '.mkv']
+            "image": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+            "document": [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+            "audio": [".mp3", ".wav", ".flac", ".aac"],
+            "video": [".mp4", ".avi", ".mov", ".mkv"],
         }
 
     def analyze_file(self, file_path: str) -> Dict[str, Any]:
@@ -47,8 +49,12 @@ class MetadataExtractor(OSINTUtils):
             "file_path": file_path,
             "file_name": os.path.basename(file_path),
             "file_size": os.path.getsize(file_path),
-            "modified_time": datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat(),
-            "created_time": datetime.fromtimestamp(os.path.getctime(file_path)).isoformat(),
+            "modified_time": datetime.fromtimestamp(
+                os.path.getmtime(file_path)
+            ).isoformat(),
+            "created_time": datetime.fromtimestamp(
+                os.path.getctime(file_path)
+            ).isoformat(),
         }
 
         # Get file type
@@ -61,9 +67,9 @@ class MetadataExtractor(OSINTUtils):
 
         # Extract format-specific metadata
         file_ext = Path(file_path).suffix.lower()
-        if file_ext in self.supported_formats['image']:
+        if file_ext in self.supported_formats["image"]:
             file_info["metadata"] = self._extract_image_metadata(file_path)
-        elif file_ext in self.supported_formats['document']:
+        elif file_ext in self.supported_formats["document"]:
             file_info["metadata"] = self._extract_document_metadata(file_path)
         else:
             file_info["metadata"] = {"type": "unsupported"}
@@ -73,12 +79,12 @@ class MetadataExtractor(OSINTUtils):
     def _calculate_hashes(self, file_path: str) -> Dict[str, str]:
         """Calculate various hashes for the file"""
         hashes = {}
-        hash_algorithms = ['md5', 'sha1', 'sha256']
+        hash_algorithms = ["md5", "sha1", "sha256"]
 
         for algo in hash_algorithms:
             try:
                 hash_obj = hashlib.new(algo)
-                with open(file_path, 'rb') as f:
+                with open(file_path, "rb") as f:
                     for chunk in iter(lambda: f.read(4096), b""):
                         hash_obj.update(chunk)
                 hashes[algo] = hash_obj.hexdigest()
@@ -92,23 +98,27 @@ class MetadataExtractor(OSINTUtils):
         try:
             if not PIL_AVAILABLE or Image is None:
                 return {"error": "PIL not available for image processing"}
-                
+
             with Image.open(file_path) as img:
                 metadata = {
                     "format": img.format,
                     "size": img.size,
                     "mode": img.mode,
-                    "exif": {}
+                    "exif": {},
                 }
 
                 # Extract EXIF data
-                if hasattr(img, '_getexif') and img._getexif():
+                if hasattr(img, "_getexif") and img._getexif():
                     exif_data = img._getexif()
                     for tag, value in exif_data.items():
-                        tag_name = ExifTags.TAGS.get(tag, tag) if ExifTags and ExifTags.TAGS else str(tag)
+                        tag_name = (
+                            ExifTags.TAGS.get(tag, tag)
+                            if ExifTags and ExifTags.TAGS
+                            else str(tag)
+                        )
                         if isinstance(value, bytes):
                             try:
-                                value = value.decode('utf-8', errors='ignore')
+                                value = value.decode("utf-8", errors="ignore")
                             except Exception:
                                 value = str(value)
                         metadata["exif"][tag_name] = str(value)
@@ -123,9 +133,9 @@ class MetadataExtractor(OSINTUtils):
 
         try:
             # Basic text file analysis
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-                metadata["line_count"] = str(len(content.split('\n')))
+                metadata["line_count"] = str(len(content.split("\n")))
                 metadata["word_count"] = str(len(content.split()))
                 metadata["char_count"] = str(len(content))
                 metadata["encoding"] = "utf-8"
@@ -134,7 +144,7 @@ class MetadataExtractor(OSINTUtils):
                 sensitive_patterns = {
                     "emails": len(self._find_emails(content)),
                     "phones": len(self._find_phone_numbers(content)),
-                    "urls": len(self._find_urls(content))
+                    "urls": len(self._find_urls(content)),
                 }
                 metadata["sensitive_data"] = str(sensitive_patterns)
 
@@ -149,22 +159,27 @@ class MetadataExtractor(OSINTUtils):
     def _find_emails(self, text: str) -> List[str]:
         """Find email addresses in text"""
         import re
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+
+        email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return re.findall(email_pattern, text)
 
     def _find_phone_numbers(self, text: str) -> List[str]:
         """Find phone numbers in text"""
         import re
-        phone_pattern = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
+
+        phone_pattern = r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"
         return re.findall(phone_pattern, text)
 
     def _find_urls(self, text: str) -> List[str]:
         """Find URLs in text"""
         import re
-        url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+
+        url_pattern = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
         return re.findall(url_pattern, text)
 
-    def analyze_directory(self, directory_path: str, recursive: bool = False) -> List[Dict[str, Any]]:
+    def analyze_directory(
+        self, directory_path: str, recursive: bool = False
+    ) -> List[Dict[str, Any]]:
         """Analyze all files in a directory"""
         results = []
         path_obj = Path(directory_path)
@@ -186,12 +201,16 @@ class MetadataExtractor(OSINTUtils):
             return "No files analyzed"
 
         total_files = len(analysis_results)
-        total_size = sum(result.get('file_size', 0) for result in analysis_results if 'file_size' in result)
+        total_size = sum(
+            result.get("file_size", 0)
+            for result in analysis_results
+            if "file_size" in result
+        )
 
         # Count file types
         file_types = {}
         for result in analysis_results:
-            mime_type = result.get('mime_type', 'unknown')
+            mime_type = result.get("mime_type", "unknown")
             file_types[mime_type] = file_types.get(mime_type, 0) + 1
 
         report = f"""
@@ -218,7 +237,7 @@ Detailed Results:
     def _format_size(self, size_bytes: Union[int, float]) -> str:
         """Format file size in human readable format"""
         size_bytes = float(size_bytes)
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.1f} {unit}"
             size_bytes /= 1024.0

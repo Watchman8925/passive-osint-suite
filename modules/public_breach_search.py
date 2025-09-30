@@ -12,17 +12,21 @@ class PublicBreachSearch(OSINTUtils):
         """
         url = f"https://haveibeenpwned.com/unifiedsearch/{email_or_domain}"
         try:
-            resp = self.request_with_fallback('get', url, timeout=20, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=20, allow_fallback=True
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 breaches = []
                 for b in data.get("Breaches", []):
-                    breaches.append({
-                        "title": b.get("Title"),
-                        "domain": b.get("Domain"),
-                        "breach_date": b.get("BreachDate"),
-                        "description": b.get("Description")
-                    })
+                    breaches.append(
+                        {
+                            "title": b.get("Title"),
+                            "domain": b.get("Domain"),
+                            "breach_date": b.get("BreachDate"),
+                            "description": b.get("Description"),
+                        }
+                    )
                 return {"status": "success", "breaches": breaches}
             else:
                 return {"status": "error", "error": f"HTTP {resp.status_code}"}

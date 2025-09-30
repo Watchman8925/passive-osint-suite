@@ -22,7 +22,9 @@ class BitbucketPassive(OSINTUtils):
         repositories = []
 
         try:
-            resp = self.request_with_fallback('get', url, timeout=20, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=20, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -35,42 +37,42 @@ class BitbucketPassive(OSINTUtils):
                     # Extract repository name and URL
                     title_link = card.select_one("a[href*='/'], h3 a")
                     if title_link:
-                        repo_info['name'] = title_link.text.strip()
-                        href = title_link.get('href')
+                        repo_info["name"] = title_link.text.strip()
+                        href = title_link.get("href")
                         if href:
                             href_str = str(href)
-                            if not href_str.startswith('http'):
-                                repo_info['url'] = self.base_url + href_str
+                            if not href_str.startswith("http"):
+                                repo_info["url"] = self.base_url + href_str
                             else:
-                                repo_info['url'] = href_str
+                                repo_info["url"] = href_str
 
                     # Extract description
                     desc_elem = card.select_one("p, .description")
                     if desc_elem:
-                        repo_info['description'] = desc_elem.text.strip()
+                        repo_info["description"] = desc_elem.text.strip()
 
                     # Extract owner/workspace
                     owner_elem = card.select_one(".owner, .workspace")
                     if owner_elem:
-                        repo_info['owner'] = owner_elem.text.strip()
+                        repo_info["owner"] = owner_elem.text.strip()
 
                     # Extract language
                     lang_elem = card.select_one(".language, .lang")
                     if lang_elem:
-                        repo_info['language'] = lang_elem.text.strip()
+                        repo_info["language"] = lang_elem.text.strip()
 
                     # Extract last updated
                     updated_elem = card.select_one(".updated, .date")
                     if updated_elem:
-                        repo_info['last_updated'] = updated_elem.text.strip()
+                        repo_info["last_updated"] = updated_elem.text.strip()
 
-                    if repo_info.get('name'):
+                    if repo_info.get("name"):
                         repositories.append(repo_info)
 
                 return {
                     "status": "success",
                     "total_found": len(repositories),
-                    "repositories": repositories
+                    "repositories": repositories,
                 }
             else:
                 status_code = resp.status_code if resp else "unknown"
@@ -87,7 +89,9 @@ class BitbucketPassive(OSINTUtils):
         users = []
 
         try:
-            resp = self.request_with_fallback('get', url, timeout=15, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", url, timeout=15, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -98,31 +102,27 @@ class BitbucketPassive(OSINTUtils):
 
                     name_link = card.select_one("a[href*='/'], h3 a")
                     if name_link:
-                        user_info['username'] = name_link.text.strip()
-                        href = name_link.get('href')
+                        user_info["username"] = name_link.text.strip()
+                        href = name_link.get("href")
                         if href:
                             href_str = str(href)
-                            if not href_str.startswith('http'):
-                                user_info['profile_url'] = self.base_url + href_str
+                            if not href_str.startswith("http"):
+                                user_info["profile_url"] = self.base_url + href_str
                             else:
-                                user_info['profile_url'] = href_str
+                                user_info["profile_url"] = href_str
 
                     bio_elem = card.select_one(".bio, .description")
                     if bio_elem:
-                        user_info['bio'] = bio_elem.text.strip()
+                        user_info["bio"] = bio_elem.text.strip()
 
                     location_elem = card.select_one(".location")
                     if location_elem:
-                        user_info['location'] = location_elem.text.strip()
+                        user_info["location"] = location_elem.text.strip()
 
-                    if user_info.get('username'):
+                    if user_info.get("username"):
                         users.append(user_info)
 
-                return {
-                    "status": "success",
-                    "total_found": len(users),
-                    "users": users
-                }
+                return {"status": "success", "total_found": len(users), "users": users}
             else:
                 status_code = resp.status_code if resp else "unknown"
                 return {"status": "error", "error": f"HTTP {status_code}"}
@@ -135,48 +135,52 @@ class BitbucketPassive(OSINTUtils):
         Extract detailed information from a specific Bitbucket repository page
         """
         try:
-            resp = self.request_with_fallback('get', repo_url, timeout=15, allow_fallback=True)
+            resp = self.request_with_fallback(
+                "get", repo_url, timeout=15, allow_fallback=True
+            )
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
                 info = {
-                    'url': repo_url,
-                    'name': '',
-                    'description': '',
-                    'owner': '',
-                    'language': '',
-                    'size': '',
-                    'last_commit': '',
-                    'readme_preview': ''
+                    "url": repo_url,
+                    "name": "",
+                    "description": "",
+                    "owner": "",
+                    "language": "",
+                    "size": "",
+                    "last_commit": "",
+                    "readme_preview": "",
                 }
 
                 # Extract repository name
                 name_elem = soup.select_one("h1, .repo-name")
                 if name_elem:
-                    info['name'] = name_elem.text.strip()
+                    info["name"] = name_elem.text.strip()
 
                 # Extract owner
                 owner_elem = soup.select_one(".owner, .workspace")
                 if owner_elem:
-                    info['owner'] = owner_elem.text.strip()
+                    info["owner"] = owner_elem.text.strip()
 
                 # Extract description
                 desc_elem = soup.select_one(".description, p.summary")
                 if desc_elem:
-                    info['description'] = desc_elem.text.strip()
+                    info["description"] = desc_elem.text.strip()
 
                 # Extract language
                 lang_elem = soup.select_one(".language, .lang")
                 if lang_elem:
-                    info['language'] = lang_elem.text.strip()
+                    info["language"] = lang_elem.text.strip()
 
                 # Extract README preview
                 readme_elem = soup.select_one("#readme, .readme")
                 if readme_elem:
                     # Get first few paragraphs
                     paragraphs = readme_elem.select("p")
-                    preview = ' '.join([p.text.strip() for p in paragraphs[:3]])
-                    info['readme_preview'] = preview[:500] + '...' if len(preview) > 500 else preview
+                    preview = " ".join([p.text.strip() for p in paragraphs[:3]])
+                    info["readme_preview"] = (
+                        preview[:500] + "..." if len(preview) > 500 else preview
+                    )
 
                 return {"status": "success", "repository_info": info}
             else:

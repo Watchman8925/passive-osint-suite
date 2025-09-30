@@ -14,29 +14,44 @@ import urllib.parse
 
 logger = logging.getLogger(__name__)
 
+
 class WebDiscoveryEngine:
     """Web discovery engine using open source tools"""
 
     def __init__(self):
         self.tools = {
-            'httpx': self._check_tool('httpx'),
-            'gau': self._check_tool('gau'),
-            'waybackurls': self._check_tool('waybackurls'),
-            'gospider': self._check_tool('gospider'),
-            'hakrawler': self._check_tool('hakrawler'),
-            'katana': self._check_tool('katana')
+            "httpx": self._check_tool("httpx"),
+            "gau": self._check_tool("gau"),
+            "waybackurls": self._check_tool("waybackurls"),
+            "gospider": self._check_tool("gospider"),
+            "hakrawler": self._check_tool("hakrawler"),
+            "katana": self._check_tool("katana"),
         }
 
     def _check_tool(self, tool_name: str) -> bool:
         """Check if a tool is available"""
         try:
-            subprocess.run([tool_name, '--help' if tool_name not in ['gau', 'waybackurls', 'gospider'] else '-h'],
-                         capture_output=True, timeout=5)
+            subprocess.run(
+                [
+                    tool_name,
+                    "--help"
+                    if tool_name not in ["gau", "waybackurls", "gospider"]
+                    else "-h",
+                ],
+                capture_output=True,
+                timeout=5,
+            )
             return True
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+        except (
+            subprocess.TimeoutExpired,
+            FileNotFoundError,
+            subprocess.CalledProcessError,
+        ):
             return False
 
-    def discover_urls_from_wayback(self, domain: str, include_subs: bool = True) -> Dict[str, Any]:
+    def discover_urls_from_wayback(
+        self, domain: str, include_subs: bool = True
+    ) -> Dict[str, Any]:
         """
         Discover URLs from Wayback Machine using Gau
 
@@ -47,24 +62,19 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing discovered URLs
         """
-        if not self.tools['gau']:
+        if not self.tools["gau"]:
             return {"error": "Gau not available"}
 
         try:
-            cmd = ['gau', domain]
+            cmd = ["gau", domain]
             if include_subs:
-                cmd.append('--subs')
+                cmd.append("--subs")
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
             urls = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 urls = [line.strip() for line in lines if line.strip()]
 
             # Categorize URLs
@@ -75,7 +85,7 @@ class WebDiscoveryEngine:
                 "domain": domain,
                 "total_urls": len(urls),
                 "urls": urls[:1000],  # Limit for performance
-                "categories": url_categories
+                "categories": url_categories,
             }
 
         except subprocess.TimeoutExpired:
@@ -91,20 +101,17 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing extracted URLs
         """
-        if not self.tools['waybackurls']:
+        if not self.tools["waybackurls"]:
             return {"error": "Waybackurls not available"}
 
         try:
             result = subprocess.run(
-                ['waybackurls', domain],
-                capture_output=True,
-                text=True,
-                timeout=120
+                ["waybackurls", domain], capture_output=True, text=True, timeout=120
             )
 
             urls = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 urls = [line.strip() for line in lines if line.strip()]
 
             # Remove duplicates and categorize
@@ -116,7 +123,7 @@ class WebDiscoveryEngine:
                 "domain": domain,
                 "total_urls": len(unique_urls),
                 "urls": unique_urls[:1000],  # Limit for performance
-                "categories": url_categories
+                "categories": url_categories,
             }
 
         except subprocess.TimeoutExpired:
@@ -133,22 +140,28 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing crawling results
         """
-        if not self.tools['gospider']:
+        if not self.tools["gospider"]:
             return {"error": "Gospider not available"}
 
         try:
-            cmd = ['gospider', '-s', url, '-d', str(depth), '-t', '10', '-c', '5', '--json']
+            cmd = [
+                "gospider",
+                "-s",
+                url,
+                "-d",
+                str(depth),
+                "-t",
+                "10",
+                "-c",
+                "5",
+                "--json",
+            ]
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
             findings = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
                         try:
@@ -160,8 +173,8 @@ class WebDiscoveryEngine:
             # Extract URLs from findings
             urls = []
             for finding in findings:
-                if 'output' in finding:
-                    urls.append(finding['output'])
+                if "output" in finding:
+                    urls.append(finding["output"])
 
             url_categories = self._categorize_urls(urls)
 
@@ -173,7 +186,7 @@ class WebDiscoveryEngine:
                 "urls_discovered": len(urls),
                 "urls": urls[:500],  # Limit for performance
                 "categories": url_categories,
-                "raw_findings": findings[:100]  # Sample findings
+                "raw_findings": findings[:100],  # Sample findings
             }
 
         except subprocess.TimeoutExpired:
@@ -189,7 +202,7 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing probe results
         """
-        if not self.tools['httpx']:
+        if not self.tools["httpx"]:
             return {"error": "Httpx not available"}
 
         if not urls:
@@ -197,16 +210,18 @@ class WebDiscoveryEngine:
 
         try:
             # Write URLs to temporary file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False
+            ) as f:
                 for url in urls:
-                    f.write(url + '\n')
+                    f.write(url + "\n")
                 url_file = f.name
 
             result = subprocess.run(
-                ['httpx', '-l', url_file, '-json', '-threads', '10', '-timeout', '10'],
+                ["httpx", "-l", url_file, "-json", "-threads", "10", "-timeout", "10"],
                 capture_output=True,
                 text=True,
-                timeout=300
+                timeout=300,
             )
 
             # Clean up temp file
@@ -214,7 +229,7 @@ class WebDiscoveryEngine:
 
             results = []
             if result.returncode == 0 and result.stdout:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in lines:
                     if line.strip():
                         try:
@@ -226,17 +241,27 @@ class WebDiscoveryEngine:
             # Summarize results
             summary = {
                 "total_probed": len(urls),
-                "successful": len([r for r in results if r.get('status_code', 0) < 400]),
-                "redirects": len([r for r in results if 300 <= r.get('status_code', 0) < 400]),
-                "client_errors": len([r for r in results if 400 <= r.get('status_code', 0) < 500]),
-                "server_errors": len([r for r in results if r.get('status_code', 0) >= 500])
+                "successful": len(
+                    [r for r in results if r.get("status_code", 0) < 400]
+                ),
+                "redirects": len(
+                    [r for r in results if 300 <= r.get("status_code", 0) < 400]
+                ),
+                "client_errors": len(
+                    [r for r in results if 400 <= r.get("status_code", 0) < 500]
+                ),
+                "server_errors": len(
+                    [r for r in results if r.get("status_code", 0) >= 500]
+                ),
             }
 
             return {
                 "success": True,
                 "summary": summary,
                 "results": results[:200],  # Limit for performance
-                "raw_output": result.stdout[:5000] if len(result.stdout) > 5000 else result.stdout
+                "raw_output": result.stdout[:5000]
+                if len(result.stdout) > 5000
+                else result.stdout,
             }
 
         except subprocess.TimeoutExpired:
@@ -259,7 +284,7 @@ class WebDiscoveryEngine:
             "documents": [],
             "api_endpoints": [],
             "forms": [],
-            "other": []
+            "other": [],
         }
 
         for url in urls:
@@ -267,17 +292,25 @@ class WebDiscoveryEngine:
 
             # Check file extensions
             path = parsed.path
-            if any(ext in path for ext in ['.js', '.jsx', '.ts', '.tsx']):
+            if any(ext in path for ext in [".js", ".jsx", ".ts", ".tsx"]):
                 categories["javascript"].append(url)
-            elif any(ext in path for ext in ['.css', '.scss', '.sass']):
+            elif any(ext in path for ext in [".css", ".scss", ".sass"]):
                 categories["css"].append(url)
-            elif any(ext in path for ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']):
+            elif any(
+                ext in path
+                for ext in [".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp"]
+            ):
                 categories["images"].append(url)
-            elif any(ext in path for ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']):
+            elif any(
+                ext in path
+                for ext in [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx"]
+            ):
                 categories["documents"].append(url)
-            elif any(pattern in path for pattern in ['/api/', '/v1/', '/v2/', '/graphql']):
+            elif any(
+                pattern in path for pattern in ["/api/", "/v1/", "/v2/", "/graphql"]
+            ):
                 categories["api_endpoints"].append(url)
-            elif 'form' in path or 'submit' in path:
+            elif "form" in path or "submit" in path:
                 categories["forms"].append(url)
             else:
                 categories["other"].append(url)
@@ -294,7 +327,7 @@ class WebDiscoveryEngine:
         Returns:
             Dictionary containing extracted URLs
         """
-        js_urls = [url for url in urls if '.js' in url.lower()]
+        js_urls = [url for url in urls if ".js" in url.lower()]
         if not js_urls:
             return {"error": "No JavaScript URLs provided"}
 
@@ -303,10 +336,10 @@ class WebDiscoveryEngine:
             try:
                 # Use curl to fetch JS content (simple approach)
                 result = subprocess.run(
-                    ['curl', '-s', '--max-time', '10', js_url],
+                    ["curl", "-s", "--max-time", "10", js_url],
                     capture_output=True,
                     text=True,
-                    timeout=15
+                    timeout=15,
                 )
 
                 if result.returncode == 0 and result.stdout:
@@ -325,7 +358,7 @@ class WebDiscoveryEngine:
             "success": True,
             "js_files_analyzed": len(js_urls),
             "urls_extracted": len(unique_urls),
-            "extracted_urls": unique_urls[:500]  # Limit for performance
+            "extracted_urls": unique_urls[:500],  # Limit for performance
         }
 
     def comprehensive_web_discovery(self, domain: str) -> Dict[str, Any]:
@@ -341,12 +374,16 @@ class WebDiscoveryEngine:
         discovery: Dict[str, Any] = {
             "domain": domain,
             "timestamp": None,  # Would be set by caller
-            "discoveries": {}
+            "discoveries": {},
         }
 
         # Wayback Machine discovery
-        discovery["discoveries"]["wayback_gau"] = self.discover_urls_from_wayback(domain)
-        discovery["discoveries"]["wayback_urls"] = self.extract_urls_from_wayback(domain)
+        discovery["discoveries"]["wayback_gau"] = self.discover_urls_from_wayback(
+            domain
+        )
+        discovery["discoveries"]["wayback_urls"] = self.extract_urls_from_wayback(
+            domain
+        )
 
         # Get URLs from Wayback results for further analysis
         all_urls = []
@@ -359,7 +396,9 @@ class WebDiscoveryEngine:
 
         # Probe discovered URLs
         if unique_urls:
-            discovery["discoveries"]["http_probing"] = self.probe_http_endpoints(unique_urls[:100])  # Limit for performance
+            discovery["discoveries"]["http_probing"] = self.probe_http_endpoints(
+                unique_urls[:100]
+            )  # Limit for performance
 
         # Extract JavaScript URLs and analyze them
         if unique_urls:
@@ -368,6 +407,8 @@ class WebDiscoveryEngine:
 
         # Crawl main domain
         main_url = f"https://{domain}"
-        discovery["discoveries"]["site_crawling"] = self.crawl_website(main_url, depth=1)
+        discovery["discoveries"]["site_crawling"] = self.crawl_website(
+            main_url, depth=1
+        )
 
         return discovery

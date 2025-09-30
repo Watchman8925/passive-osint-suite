@@ -40,6 +40,7 @@ class PassiveDNSEnum(OSINTUtils):
                         original = entry[0]
                         # Extract hostname
                         from urllib.parse import urlparse
+
                         parsed = urlparse(original)
                         hostname = parsed.hostname
                         if hostname and hostname.endswith(domain):

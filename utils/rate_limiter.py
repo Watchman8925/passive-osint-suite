@@ -51,6 +51,7 @@ class RateLimiter:
 
         return False
 
+
 class ServiceRateLimiter:
     """Rate limiter for external services"""
 
@@ -79,21 +80,21 @@ class ServiceRateLimiter:
     def _set_default_limits(self):
         """Set default rate limits for common services"""
         default_limits = {
-            'shodan': 1,
-            'alienvault': 2,
-            'greynoise': 10,
-            'virustotal': 4,
-            'securitytrails': 1,
-            'hostio': 10,
-            'projectdiscovery': 5,
-            'intelx': 2,
-            'hunter': 10,
-            'googlesearch': 100,
-            'etherscan': 5,
-            'coinmarketcap': 10,
-            'flightaware': 1,
-            'opencage': 2500,
-            'mapbox': 60000
+            "shodan": 1,
+            "alienvault": 2,
+            "greynoise": 10,
+            "virustotal": 4,
+            "securitytrails": 1,
+            "hostio": 10,
+            "projectdiscovery": 5,
+            "intelx": 2,
+            "hunter": 10,
+            "googlesearch": 100,
+            "etherscan": 5,
+            "coinmarketcap": 10,
+            "flightaware": 1,
+            "opencage": 2500,
+            "mapbox": 60000,
         }
 
         for service, limit in default_limits.items():
@@ -109,7 +110,9 @@ class ServiceRateLimiter:
                 # No rate limit configured, allow request
                 return True
 
-    def wait_for_rate_limit(self, service_name: str, tokens: int = 1, timeout: float = 60.0) -> bool:
+    def wait_for_rate_limit(
+        self, service_name: str, tokens: int = 1, timeout: float = 60.0
+    ) -> bool:
         """Wait for rate limit to allow request"""
         with self._lock:
             limiter = self.limiters.get(service_name)
@@ -133,18 +136,19 @@ class ServiceRateLimiter:
         if limiter:
             limiter._refill_tokens()  # Ensure up to date
             return {
-                'service': service_name,
-                'rate_per_minute': limiter.rate_per_minute,
-                'available_tokens': limiter.tokens,
-                'limited': True
+                "service": service_name,
+                "rate_per_minute": limiter.rate_per_minute,
+                "available_tokens": limiter.tokens,
+                "limited": True,
             }
         else:
             return {
-                'service': service_name,
-                'rate_per_minute': -1,
-                'available_tokens': -1,
-                'limited': False
+                "service": service_name,
+                "rate_per_minute": -1,
+                "available_tokens": -1,
+                "limited": False,
             }
+
 
 class RequestThrottler:
     """Throttle requests to prevent overwhelming services"""
@@ -165,6 +169,7 @@ class RequestThrottler:
                 time.sleep(sleep_time)
 
             self.last_request_time = time.time()
+
 
 class AdaptiveRateLimiter:
     """Adaptive rate limiter that adjusts based on API responses"""
@@ -194,7 +199,7 @@ class AdaptiveRateLimiter:
                 self.backoff_until = time.time() + retry_after
             else:
                 # Exponential backoff
-                backoff_time = min(300, 2 ** self.consecutive_errors)  # Max 5 minutes
+                backoff_time = min(300, 2**self.consecutive_errors)  # Max 5 minutes
                 self.backoff_until = time.time() + backoff_time
 
             # Reduce rate on errors
@@ -218,9 +223,11 @@ class AdaptiveRateLimiter:
         with self._lock:
             return self.current_rate
 
+
 # Global rate limiting instances
 service_rate_limiter = ServiceRateLimiter()
 request_throttler = RequestThrottler()
+
 
 def rate_limited(service_name: str, tokens: int = 1):
     """
@@ -231,6 +238,7 @@ def rate_limited(service_name: str, tokens: int = 1):
         def api_call():
             return make_request()
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             if not service_rate_limiter.check_rate_limit(service_name, tokens):
@@ -242,7 +250,9 @@ def rate_limited(service_name: str, tokens: int = 1):
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
+
 
 def wait_for_rate_limit(service_name: str, tokens: int = 1, timeout: float = 60.0):
     """Wait for rate limit to allow request"""

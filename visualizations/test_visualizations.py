@@ -18,8 +18,7 @@ def test_visualization_imports():
     print("Testing visualization imports...")
 
     try:
-        from visualizations.intelligence_visualizer import \
-            IntelligenceVisualizer  # noqa: F401
+        from visualizations.intelligence_visualizer import IntelligenceVisualizer  # noqa: F401
 
         print("✓ Intelligence visualizer imported successfully")
     except ImportError as e:
@@ -27,8 +26,7 @@ def test_visualization_imports():
         return False
 
     try:
-        from visualizations.financial_flow_visualizer import \
-            FinancialFlowVisualizer  # noqa: F401
+        from visualizations.financial_flow_visualizer import FinancialFlowVisualizer  # noqa: F401
 
         print("✓ Financial flow visualizer imported successfully")
     except ImportError as e:
@@ -51,8 +49,7 @@ def test_intelligence_visualizer():
     print("\nTesting intelligence visualizer...")
 
     try:
-        from visualizations.intelligence_visualizer import \
-            IntelligenceVisualizer
+        from visualizations.intelligence_visualizer import IntelligenceVisualizer
 
         viz = IntelligenceVisualizer()
 
@@ -110,8 +107,7 @@ def test_financial_visualizer():
     print("\nTesting financial visualizer...")
 
     try:
-        from visualizations.financial_flow_visualizer import \
-            FinancialFlowVisualizer
+        from visualizations.financial_flow_visualizer import FinancialFlowVisualizer
 
         viz = FinancialFlowVisualizer()
 
@@ -197,8 +193,7 @@ def test_visualization_export():
     print("\nTesting visualization export...")
 
     try:
-        from visualizations.intelligence_visualizer import \
-            IntelligenceVisualizer
+        from visualizations.intelligence_visualizer import IntelligenceVisualizer
 
         viz = IntelligenceVisualizer()
 

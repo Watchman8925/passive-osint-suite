@@ -20,6 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import the unified module system
 from modules import MODULE_REGISTRY
+
 # Import core utilities
 from utils.osint_utils import OSINTUtils
 

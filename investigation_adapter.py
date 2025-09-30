@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class InvestigationItem:
     """Investigation data structure"""
+
     id: str
     advanced_id: Optional[str]
     name: str
@@ -66,7 +67,7 @@ class PersistentInvestigationStore:
             return
 
         try:
-            with open(self.investigations_file, 'r') as f:
+            with open(self.investigations_file, "r") as f:
                 data = json.load(f)
 
             for item in data:
@@ -81,7 +82,7 @@ class PersistentInvestigationStore:
         """Save investigations to JSON file"""
         try:
             data = [item.to_dict() for item in self._items.values()]
-            with open(self.investigations_file, 'w') as f:
+            with open(self.investigations_file, "w") as f:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             logger.error(f"Failed to save investigations: {e}")
@@ -105,7 +106,7 @@ class PersistentInvestigationStore:
 
         if plan_file.exists():
             try:
-                with open(plan_file, 'r') as f:
+                with open(plan_file, "r") as f:
                     plan_data = json.load(f)
                 # Prefer Plan.from_dict if it exists, otherwise try constructing Plan directly.
                 plan_from_dict = getattr(Plan, "from_dict", None)
@@ -116,12 +117,15 @@ class PersistentInvestigationStore:
                     return Plan(**plan_data)
                 except Exception:
                     # If neither method works, fall through to rebuild the plan below.
-                    logger.debug(f"Plan.from_dict not available and Plan(**data) failed for {investigation.id}; will rebuild")
+                    logger.debug(
+                        f"Plan.from_dict not available and Plan(**data) failed for {investigation.id}; will rebuild"
+                    )
             except Exception as e:
                 logger.warning(f"Failed to load plan for {investigation.id}: {e}")
 
         # Build new plan if not found
         from planner import Planner
+
         planner = Planner()
         # Prefer a builder method if available on Planner (name may vary across versions)
         builder = getattr(planner, "build_plan", None)
@@ -131,22 +135,49 @@ class PersistentInvestigationStore:
                 if callable(builder):
                     break
         if callable(builder):
-            return cast(Plan, builder(
-                investigation.id,
-                investigation.investigation_type,
-                investigation.targets
-            ))
+            return cast(
+                Plan,
+                builder(
+                    investigation.id,
+                    investigation.investigation_type,
+                    investigation.targets,
+                ),
+            )
         # Fall back to constructing Plan directly using best-effort attempts
         try:
-            return Plan(investigation.id, investigation.investigation_type, investigation.targets)  # type: ignore
+            return Plan(
+                investigation.id,
+                investigation.investigation_type,
+                investigation.targets,
+            )  # type: ignore
         except Exception:
             # Try a variety of keyword signatures that different Plan versions might accept.
             kwargs_variants = [
-                {"id": investigation.id, "investigation_type": investigation.investigation_type, "targets": investigation.targets},
-                {"id": investigation.id, "type": investigation.investigation_type, "targets": investigation.targets},
-                {"id": investigation.id, "investigationType": investigation.investigation_type, "targets": investigation.targets},
-                {"id": investigation.id, "name": investigation.name, "targets": investigation.targets},
-                {"uid": investigation.id, "investigation_type": investigation.investigation_type, "targets": investigation.targets},
+                {
+                    "id": investigation.id,
+                    "investigation_type": investigation.investigation_type,
+                    "targets": investigation.targets,
+                },
+                {
+                    "id": investigation.id,
+                    "type": investigation.investigation_type,
+                    "targets": investigation.targets,
+                },
+                {
+                    "id": investigation.id,
+                    "investigationType": investigation.investigation_type,
+                    "targets": investigation.targets,
+                },
+                {
+                    "id": investigation.id,
+                    "name": investigation.name,
+                    "targets": investigation.targets,
+                },
+                {
+                    "uid": investigation.id,
+                    "investigation_type": investigation.investigation_type,
+                    "targets": investigation.targets,
+                },
                 {"id": investigation.id, "targets": investigation.targets},
             ]
             for kwargs in kwargs_variants:
@@ -182,7 +213,7 @@ class PersistentInvestigationStore:
                         except Exception:
                             serialized = str(plan)
 
-            with open(plan_file, 'w') as f:
+            with open(plan_file, "w") as f:
                 json.dump(serialized, f, indent=2, default=str)
         except Exception as e:
             logger.error(f"Failed to persist plan for {investigation_id}: {e}")
@@ -196,7 +227,7 @@ class PersistentInvestigationStore:
     def add_task_result(self, investigation_id: str, task_id: str, result: Any):
         """Add task result to investigation"""
         if investigation_id in self._items:
-            if 'task_results' not in self._items[investigation_id].results:
-                self._items[investigation_id].results['task_results'] = {}
-            self._items[investigation_id].results['task_results'][task_id] = result
+            if "task_results" not in self._items[investigation_id].results:
+                self._items[investigation_id].results["task_results"] = {}
+            self._items[investigation_id].results["task_results"][task_id] = result
             self._save_investigations()

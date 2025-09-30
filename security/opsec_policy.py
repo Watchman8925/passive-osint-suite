@@ -6,7 +6,9 @@ Operational security policies and enforcement
 from typing import Any, Dict, Optional
 
 
-def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
+def enforce_policy(
+    action: Optional[str] = None, context: Optional[Dict[str, Any]] = None, **kwargs
+) -> Dict[str, Any]:
     """
     Enforce OPSEC policies for actions
 
@@ -26,22 +28,22 @@ def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any
     if action and not kwargs:
         # Old pattern: enforce_policy(action, context)
         operation_type = action
-        target = context.get('target') if context else None
-        actor = context.get('actor') if context else None
+        target = context.get("target") if context else None
+        actor = context.get("actor") if context else None
     else:
         # New pattern: enforce_policy(operation_type=..., target=..., actor=...)
-        operation_type = kwargs.get('operation_type', action or 'unknown')
-        target = kwargs.get('target')
-        actor = kwargs.get('actor')
+        operation_type = kwargs.get("operation_type", action or "unknown")
+        target = kwargs.get("target")
+        actor = kwargs.get("actor")
 
     # Basic policy enforcement framework (policies available for future use)
     _policies = {
-        'network_scan': {'max_requests': 100, 'cooldown': 60},
-        'api_call': {'max_requests': 1000, 'cooldown': 60},
-        'file_access': {'allowed_paths': ['/tmp', '/var/log']},
-        'external_command': {'allowed_commands': []},
-        'domain_lookup': {'max_requests': 500, 'cooldown': 30},
-        'ip_lookup': {'max_requests': 500, 'cooldown': 30},
+        "network_scan": {"max_requests": 100, "cooldown": 60},
+        "api_call": {"max_requests": 1000, "cooldown": 60},
+        "file_access": {"allowed_paths": ["/tmp", "/var/log"]},
+        "external_command": {"allowed_commands": []},
+        "domain_lookup": {"max_requests": 500, "cooldown": 30},
+        "ip_lookup": {"max_requests": 500, "cooldown": 30},
     }
 
     # Policy lookup (currently unused but available for future enforcement)
@@ -49,12 +51,12 @@ def enforce_policy(action: Optional[str] = None, context: Optional[Dict[str, Any
 
     # For now, allow all operations but log them
     result = {
-        'allowed': True,
-        'actions': [],
-        'operation_type': operation_type,
-        'target': target,
-        'actor': actor,
-        'timestamp': __import__('time').time()
+        "allowed": True,
+        "actions": [],
+        "operation_type": operation_type,
+        "target": target,
+        "actor": actor,
+        "timestamp": __import__("time").time(),
     }
 
     return result
@@ -73,10 +75,10 @@ class PolicyEngine:
     def record_violation(self, operation_type: str, target: str, reason: str):
         """Record a policy violation"""
         violation = {
-            'operation_type': operation_type,
-            'target': target,
-            'reason': reason,
-            'timestamp': __import__('time').time()
+            "operation_type": operation_type,
+            "target": target,
+            "reason": reason,
+            "timestamp": __import__("time").time(),
         }
         self.violations.append(violation)
 
@@ -87,9 +89,9 @@ class PolicyEngine:
     def get_policy_stats(self) -> Dict[str, Any]:
         """Get policy engine statistics"""
         return {
-            'total_policies': self.total_policies,
-            'operations_evaluated': self.operations_evaluated,
-            'total_violations': len(self.violations)
+            "total_policies": self.total_policies,
+            "operations_evaluated": self.operations_evaluated,
+            "total_violations": len(self.violations),
         }
 
 
