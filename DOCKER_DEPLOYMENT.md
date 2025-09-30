@@ -390,3 +390,25 @@ For issues:
 2. Verify all 48 modules loaded
 3. Check disk space and memory usage
 4. Review environment variables in `.env`
+
+## ✅ Docker Compliance and Security Automation
+
+This project includes guardrails to help you maintain container best practices and security:
+
+- Dockerfile linting: Hadolint runs on every push/PR to flag issues. See `.github/workflows/docker-lint.yml` and `.hadolint.yaml`.
+- Image vulnerability scanning: Trivy scans HIGH/CRITICAL and uploads SARIF to your repo’s Security tab.
+- Image best-practice lint: Dockle audits the built image and fails on critical findings.
+- Supply chain: CI builds multi-arch images with SBOM and SLSA provenance and signs all tags using Cosign keyless; CI also verifies signatures.
+- Hardened runtime: Use `docker-compose.override.hardened.yml` to enforce read-only rootfs, drop all capabilities, enable no-new-privileges, tmpfs for /tmp, and resource limits.
+
+Local tips (optional):
+
+- Apply hardening with Compose override:
+   docker compose -f docker-compose.yml -f docker-compose.override.hardened.yml up -d
+
+- Run Hadolint locally:
+   docker run --rm -i hadolint/hadolint < Dockerfile
+
+- Run Dockle locally after a build:
+   docker build -t local/osint-suite:dev .
+   docker run --rm goodwithtech/dockle:v0.4.13 local/osint-suite:dev

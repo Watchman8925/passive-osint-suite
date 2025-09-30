@@ -1,0 +1,21 @@
+services:
+  osint-suite:
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Allow networking and DNS resolution
+    # If specific capabilities are required, add them minimally here
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+      nproc: 1024
+    # Grant write access to mounted volumes only
+    volumes:
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./policies:/app/policies

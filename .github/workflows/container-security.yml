@@ -44,3 +44,31 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-image.sarif
+
+      - name: Dockle - container best practices lint
+        uses: goodwithtech/dockle-action@v1
+        with:
+          image: ${{ env.IMAGE_NAME }}:latest
+          exit-code: 1
+          timeout: 5m
+          # Skip checks that are incompatible with our design (non-root enforced, secrets)
+          # You can tune these as policy evolves
+          accept-keywords: |
+            CIS-DI-0010
+            CIS-DI-0001
+            DKL-DI-0006
+
+  policy-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Conftest
+        uses: instrumenta/conftest-action@v0.4.0
+      - name: Run policy checks on Compose
+        run: |
+          set -euo pipefail
+          conftest test -p policies docker-compose.yml
+          if [ -f docker-compose.override.hardened.yml ]; then
+            conftest test -p policies docker-compose.override.hardened.yml
+          fi

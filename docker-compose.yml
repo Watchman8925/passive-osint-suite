@@ -5,6 +5,7 @@ services:
     container_name: osint-suite
     ports:
       - "8000:8000"
+    user: "osint"
     environment:
       - OSINT_USE_KEYRING=${OSINT_USE_KEYRING:-false}
       - OSINT_TEST_MODE=${OSINT_TEST_MODE:-false}

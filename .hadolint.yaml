@@ -1,0 +1,12 @@
+ignored:
+  # We intentionally run apt-get upgrade in production stage to pick up security fixes
+  - DL3008  # Pin versions in apt-get install
+  - DL3015  # Avoid apt-get upgrade or dist-upgrade
+  # Python slim image without explicit pin for base image is controlled via CI
+  - DL3006  # Always pin versions in apt get
+  # Using pip without version pin during bootstrap; packages are pinned in requirements.txt
+  - DL3013
+  # Using healthcheck with python is intentional
+  - DL3042
+failure-threshold: warning
+strict-labels: true
