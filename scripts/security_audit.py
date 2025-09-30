@@ -8,8 +8,7 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 def check_file_permissions() -> List[str]:
     """Check for overly permissive file permissions"""

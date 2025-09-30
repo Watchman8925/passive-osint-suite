@@ -425,6 +425,24 @@ python -m pytest tests/
 
 # Run linting
 ruff check .
+
+### Using Dockerized Ruff (no host installation required)
+
+If you don't have Ruff installed locally, use the provided Docker wrapper:
+
+```bash
+# Check for lint issues
+scripts/run_ruff.sh check
+
+# Auto-fix lint issues  
+scripts/run_ruff.sh fix
+
+# Check code formatting
+scripts/run_ruff.sh format-check
+
+# Auto-format code
+scripts/run_ruff.sh format
+```
 ```
 
 ### Code Standards

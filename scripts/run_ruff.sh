@@ -9,7 +9,7 @@ set -euo pipefail
 #   scripts/run_ruff.sh format-check  # ruff format --check . (read-only)
 #   scripts/run_ruff.sh <args...>     # pass arbitrary args to ruff
 
-IMAGE="ghcr.io/astral-sh/ruff:v0.7.2"
+IMAGE="python:3.12-slim"
 WORKDIR="/work"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -47,4 +47,4 @@ exec docker run --rm \
   -v "$(pwd)":"${WORKDIR}" \
   -w "${WORKDIR}" \
   "${IMAGE}" \
-  ruff "${cmd[@]}"
+  sh -c "pip install ruff==0.7.2 >/dev/null 2>&1 && ruff ${cmd[*]}"

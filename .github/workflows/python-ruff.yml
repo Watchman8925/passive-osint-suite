@@ -15,14 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Ruff (check)
-        uses: astral-sh/ruff-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          version: 0.7.2
-          args: check .
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: pip install ruff==0.7.2
+
+      - name: Run Ruff (check)
+        run: ruff check .
 
       - name: Run Ruff Format (check)
-        uses: astral-sh/ruff-action@v1
-        with:
-          version: 0.7.2
-          args: format --check .
+        run: ruff format --check .
