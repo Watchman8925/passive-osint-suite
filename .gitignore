@@ -17,6 +17,7 @@ node_modules/
 web/dist/
 .parcel-cache/
 *.tsbuildinfo
+web/tsconfig.tsbuildinfo
 .DS_Store
 security/master.key
 security/encryption.key

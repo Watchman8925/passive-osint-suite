@@ -305,6 +305,55 @@ docker run --rm -v osint_postgres_data:/data -v $(pwd):/backup alpine tar czf /b
 tar czf osint_data_backup.tar.gz output/ logs/ policies/
 ```
 
+### Hardened Runtime Flags (Recommended)
+
+For single-container runs, apply restrictive flags at runtime:
+
+```bash
+docker run -d \
+   --name osint-suite \
+   --read-only \
+   --cap-drop ALL \
+   --security-opt no-new-privileges \
+   --pids-limit 256 \
+   --memory 2g --memory-swap 2g \
+   -v osint-data:/app/output \
+   -p 8000:8000 \
+   watchman89/passive-osint-suite:latest
+```
+
+Notes:
+- The container runs as a non-root user by default.
+- Mount `/app/output` as a volume to allow writes with a read-only rootfs.
+- Adjust memory and PID limits to your environment.
+
+### Compose Production Override (Example)
+
+Create `docker-compose.override.yml` with hardening options:
+
+```yaml
+services:
+   osint-suite:
+      read_only: true
+      cap_drop: ["ALL"]
+      security_opt:
+         - no-new-privileges:true
+      deploy:
+         resources:
+            limits:
+               cpus: '4.0'
+               memory: 8g
+            reservations:
+               memory: 4g
+      volumes:
+         - osint-data:/app/output
+
+volumes:
+   osint-data:
+```
+
+Then run `docker-compose up -d` to apply overrides.
+
 ## 🔄 Updates and Maintenance
 
 ### Update Application
