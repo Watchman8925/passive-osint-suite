@@ -42,18 +42,15 @@ RUN python -m pip install --no-cache-dir --upgrade "pip==25.2" setuptools wheel
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint
 
-# Copy Python packages and cache from builder
-COPY --from=builder /root/.local /home/osint/.local
-COPY --from=builder /home/osint/.cache /home/osint/.cache
+# Copy Python packages from builder with correct ownership to avoid large chown operations
+COPY --from=builder --chown=osint:osint /root/.local /home/osint/.local
 
 # Set up application
 WORKDIR /app
 COPY --chown=osint:osint . .
 
-# Create required directories with proper permissions
-RUN mkdir -p /app/output/encrypted /app/output/audit /app/output/logs /app/logs /app/policies \
-    && chown -R osint:osint /app \
-    && chown -R osint:osint /home/osint
+# Create required directories with proper permissions without recursive chown
+RUN install -d -o osint -g osint /app/output/encrypted /app/output/audit /app/output/logs /app/logs /app/policies
 
 # Switch to non-root user
 USER osint
@@ -64,6 +61,14 @@ ENV PYTHONPATH=/app
 ENV OSINT_USE_KEYRING=false
 ENV OSINT_TEST_MODE=false
 ENV HF_HOME=/home/osint/.cache/huggingface
+
+# OCI labels
+LABEL org.opencontainers.image.source="https://github.com/Watchman8925/passive-osint-suite" \
+    org.opencontainers.image.description="Passive OSINT Suite API server (hardened)" \
+    org.opencontainers.image.licenses="MIT"
+
+# Ensure Hugging Face cache directory exists for the non-root user
+RUN mkdir -p "$HF_HOME"
 
 # Enhanced health check for analysis modules
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
