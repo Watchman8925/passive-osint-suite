@@ -249,21 +249,31 @@ if TYPE_CHECKING:
 
 
 class AppConfig:
-    """Application configuration"""
+    """Application configuration - all secrets must be provided via environment variables"""
 
-    SECRET_KEY = os.getenv(
-        "OSINT_SECRET_KEY", "change-this-secret-key-in-production-environment"
-    )
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL", "postgresql://user:pass@localhost/osint_db"
-    )
+    # Critical: Fail fast if SECRET_KEY is not set
+    SECRET_KEY = os.getenv("OSINT_SECRET_KEY")
+    if not SECRET_KEY or SECRET_KEY == "change-this-secret-key-in-production-environment":
+        raise ValueError(
+            "OSINT_SECRET_KEY environment variable must be set to a secure random value. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+        )
+
+    # Database configuration with secure defaults only for local dev
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/osint_db")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+
+    # AI configuration (optional)
     AI_MODEL_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
     AI_MODEL_URL = os.getenv("AI_MODEL_URL", "https://api.perplexity.ai")
     AI_MODEL_PROVIDER = os.getenv("AI_MODEL_PROVIDER", "perplexity")
     AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "llama-3.1-sonar-large-128k-online")
-    CORS_ORIGINS = ["http://localhost:3000", "http://localhost:8000"]  # Added for CORS
+
+    # CORS configuration - allow customization via env
+    cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000")
+    CORS_ORIGINS = [origin.strip() for origin in cors_origins_str.split(",")]
 
 
 # Ensure we have a valid base class to inherit from (handles pydantic fallback)
@@ -271,20 +281,50 @@ BaseModelBase = BaseModel
 
 
 class InvestigationCreate(BaseModelBase):
-    """Model for creating new investigations"""
+    """Model for creating new investigations with input validation"""
 
-    name: Optional[str] = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = None
-    targets: List[str] = Field(default_factory=list)
-    investigation_type: Optional[str] = Field(
-        ..., pattern="^(domain|ip|email|phone|company|person)$"
+    name: str = Field(..., min_length=1, max_length=200, description="Investigation name")
+    description: Optional[str] = Field(None, max_length=2000, description="Investigation description")
+    targets: List[str] = Field(..., min_items=1, max_items=100, description="List of targets to investigate")
+    investigation_type: str = Field(
+        ..., pattern="^(domain|ip|email|phone|company|person)$",
+        description="Type of investigation"
     )
-    priority: Optional[str] = Field(
-        default="medium", pattern="^(low|medium|high|critical)$"
+    priority: str = Field(
+        default="medium", pattern="^(low|medium|high|critical)$",
+        description="Investigation priority level"
     )
-    tags: List[str] = Field(default_factory=list)  # type: ignore[assignment]
+    tags: List[str] = Field(default_factory=list, max_items=20)  # type: ignore[assignment]
     scheduled_start: Optional[datetime] = None
     auto_reporting: bool = True
+
+    @classmethod
+    def validate_name(cls, v):
+        """Sanitize investigation name to prevent injection attacks"""
+        import re
+        if not v or not v.strip():
+            raise ValueError("Investigation name cannot be empty")
+        # Remove potentially dangerous characters
+        sanitized = re.sub(r'[<>"\';(){}]', '', v)
+        if len(sanitized) != len(v):
+            raise ValueError("Investigation name contains invalid characters")
+        return sanitized.strip()
+
+    @classmethod
+    def validate_targets(cls, v):
+        """Validate targets list"""
+        if not v:
+            raise ValueError("At least one target is required")
+        # Check for duplicate targets
+        if len(v) != len(set(v)):
+            raise ValueError("Duplicate targets not allowed")
+        # Basic validation for each target
+        for target in v:
+            if not target or not target.strip():
+                raise ValueError("Empty target not allowed")
+            if len(target) > 500:
+                raise ValueError("Target value too long (max 500 characters)")
+        return [t.strip() for t in v]
 
 
 class OSINTTask(BaseModelBase):
@@ -636,12 +676,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Initialize Rate Limiting
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+
+    limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    logging.info("✅ Rate limiting initialized")
+except ImportError:
+    logging.warning("⚠️  slowapi not installed - rate limiting disabled")
+    # Create a no-op limiter for compatibility
+    class NoOpLimiter:
+        def limit(self, *args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+    limiter = NoOpLimiter()  # type: ignore
+    app.state.limiter = limiter
+except Exception as e:
+    logging.error(f"Failed to initialize rate limiter: {e}")
+    limiter = NoOpLimiter()  # type: ignore
+    app.state.limiter = limiter
+
 # Initialize Security Framework Middleware
 try:
     # app = init_security_middleware(cast(Any, app))  # type: ignore
     pass  # Security middleware initialization skipped
 except Exception:
-    logging.warning("Security middleware initialization failed or skipped")
+    logging.warning("Security middleware initialization skipped")
 
 # Additional Middleware
 try:
@@ -651,13 +716,16 @@ try:
             allow_origins=AppConfig.CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-            allow_headers=["*"],
+            # Restrict allowed headers for security
+            allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Client-Info"],
         )
 
     if GZipMiddleware is not None:
         app.add_middleware(cast(Any, GZipMiddleware), minimum_size=1000)
-except Exception:
-    logging.warning("Middleware registration failed or middleware unavailable")
+
+    logging.info("✅ Middleware initialized")
+except Exception as e:
+    logging.error(f"Middleware registration failed: {e}")
 
 # ============================================================================
 # Rate Limiting and Authentication
@@ -807,7 +875,8 @@ def rate_limit(limit: int, window_seconds: int):
 
 
 @app.get("/api/health")
-async def health_check():
+@limiter.limit("300/minute")  # Higher limit for health checks
+async def health_check(request: Request):
     """Primary health check endpoint consumed by dashboard ribbon."""
     # Basic service status placeholders (assume connected if objects exist)
     redis_status = "connected" if getattr(app.state, "redis", None) else "unknown"
@@ -823,6 +892,60 @@ async def health_check():
             "ai_engine": ai_status,
         },
     }
+
+
+@app.get("/api/health/detailed")
+@limiter.limit("60/minute")
+async def detailed_health_check(request: Request):
+    """Detailed health check with service connectivity tests."""
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "2.0.0",
+        "services": {},
+        "degraded_services": [],
+    }
+
+    # Check Redis
+    try:
+        if app.state.redis:
+            await asyncio.wait_for(app.state.redis.ping(), timeout=2.0)
+            health_status["services"]["redis"] = {"status": "healthy", "response_time_ms": "<2000"}
+        else:
+            health_status["services"]["redis"] = {"status": "not_configured"}
+    except asyncio.TimeoutError:
+        health_status["services"]["redis"] = {"status": "timeout", "error": "Connection timeout"}
+        health_status["degraded_services"].append("redis")
+        health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["services"]["redis"] = {"status": "unhealthy", "error": str(e)}
+        health_status["degraded_services"].append("redis")
+        health_status["status"] = "degraded"
+
+    # Check Elasticsearch
+    try:
+        if app.state.es:
+            health_status["services"]["elasticsearch"] = {"status": "configured"}
+        else:
+            health_status["services"]["elasticsearch"] = {"status": "not_configured"}
+    except Exception as e:
+        health_status["services"]["elasticsearch"] = {"status": "error", "error": str(e)}
+
+    # Check AI Engine
+    health_status["services"]["ai_engine"] = {
+        "status": "ready" if app.state.ai_engine else "not_configured"
+    }
+
+    # Check Graph DB
+    try:
+        if app.state.graph_db:
+            health_status["services"]["graph_db"] = {"status": "configured"}
+        else:
+            health_status["services"]["graph_db"] = {"status": "not_configured"}
+    except Exception:
+        health_status["services"]["graph_db"] = {"status": "not_configured"}
+
+    return health_status
 
 
 @app.get("/tor/status")
@@ -1403,20 +1526,32 @@ async def get_module_info(module_name: str):
 @app.post("/api/dev/token")
 async def dev_token(sub: str = "dev-user", expires_minutes: int = 60):
     """Issue a development JWT for local VS Code extension.
-    Enabled only when ENABLE_DEV_AUTH=1 environment variable is set.
-    NOT for production use.
+    Enabled ONLY in development mode with ENABLE_DEV_AUTH=1.
+    NEVER enable this in production.
     """
+    # Strict environment check - must be development AND explicitly enabled
+    if AppConfig.ENVIRONMENT != "development":
+        raise HTTPException(status_code=404, detail="Not found")
+
     if os.getenv("ENABLE_DEV_AUTH") != "1":
         raise HTTPException(status_code=403, detail="Dev auth disabled")
+
+    # Log security warning
+    logging.warning(
+        f"DEV AUTH: Issuing development token for user={sub}. "
+        "This should NEVER happen in production!"
+    )
+
     now = datetime.utcnow()
     payload = {
         "sub": sub,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=expires_minutes)).timestamp()),
         "scopes": ["investigations:read", "investigations:write"],
+        "env": "development",  # Mark as dev token
     }
     token = jwt.encode(payload, AppConfig.SECRET_KEY, algorithm="HS256")
-    return {"token": token, "expires_in": expires_minutes * 60}
+    return {"token": token, "expires_in": expires_minutes * 60, "warning": "Development token only"}
 
 
 @app.post("/api/ai/analyze")

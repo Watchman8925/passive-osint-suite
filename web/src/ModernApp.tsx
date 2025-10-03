@@ -67,6 +67,9 @@ import {
   Minimize2
 } from 'lucide-react';
 
+// Get API URL from environment variable with fallback
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const ModernApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -76,10 +79,28 @@ const ModernApp = () => {
   const [selectedModule, setSelectedModule] = useState(null);
 
   useEffect(() => {
-    // Check API status
-    fetch('http://localhost:8000/health')
-      .then(() => setApiStatus('online'))
-      .catch(() => setApiStatus('offline'));
+    // Check API status with proper error handling
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/health`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          setApiStatus('online');
+        } else {
+          setApiStatus('offline');
+        }
+      } catch (error) {
+        console.error('API health check failed:', error);
+        setApiStatus('offline');
+      }
+    };
+
+    checkHealth();
+    // Re-check every 30 seconds
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const navigation = [

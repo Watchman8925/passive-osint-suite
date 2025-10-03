@@ -33,6 +33,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+try:
+    import aiofiles
+    AIOFILES_AVAILABLE = True
+except ImportError:
+    AIOFILES_AVAILABLE = False
+    logging.warning("aiofiles not installed - using synchronous file I/O (not recommended)")
+
 from planner import Planner
 
 try:  # Optional import; advanced orchestrator
@@ -131,6 +138,7 @@ class PersistentInvestigationStore:
     # Persistence helpers
     # ------------------------------------------------------------------
     def _load(self):
+        """Load investigations from disk (synchronous - only called during init)"""
         if not self.index_file.exists():
             return
         try:
@@ -144,10 +152,19 @@ class PersistentInvestigationStore:
         except Exception as e:  # pragma: no cover
             logger.error(f"Failed to load investigations: {e}")
 
-    def _flush(self):
+    async def _flush(self):
+        """Flush investigations to disk asynchronously"""
         try:
             serialized = [inv.to_dict() for inv in self._items.values()]
-            self.index_file.write_text(json.dumps(serialized, indent=2))
+            json_data = json.dumps(serialized, indent=2)
+
+            if AIOFILES_AVAILABLE:
+                # Async file write
+                async with aiofiles.open(self.index_file, 'w') as f:
+                    await f.write(json_data)
+            else:
+                # Fallback to sync write (blocking!)
+                self.index_file.write_text(json_data)
         except Exception as e:  # pragma: no cover
             logger.error(f"Failed to write investigations: {e}")
 
@@ -223,7 +240,7 @@ class PersistentInvestigationStore:
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Failed to create advanced investigation mirror: {e}")
             self._items[inv_id] = inv
-            self._flush()
+            await self._flush()
             return inv_id
 
     async def list_investigations(
@@ -274,7 +291,7 @@ class PersistentInvestigationStore:
                 return
             inv.status = SimpleStatus.running
             inv.started_at = datetime.now(timezone.utc)
-            self._flush()
+        await self._flush()  # Moved outside lock
         # Build an initial plan (planner integration)
         try:
             planner: Any = Planner()
@@ -332,7 +349,7 @@ class PersistentInvestigationStore:
             if not inv:
                 raise ValueError("Investigation not found")
             inv.ai_analysis[analysis_type] = result
-            self._flush()
+        await self._flush()  # Moved outside lock
 
     async def get_progress(
         self, investigation_id: str, owner_id: str
@@ -554,8 +571,8 @@ class PersistentInvestigationStore:
             inv.archived = True
             if inv.status == SimpleStatus.running:
                 inv.status = SimpleStatus.completed
-            self._flush()
-            return True
+        await self._flush()  # Moved outside lock
+        return True
 
     # ------------------------------------------------------------------
     # Demo Helpers (no-advanced-manager synthetic tasks)
