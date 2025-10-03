@@ -2,6 +2,43 @@
 
 A comprehensive, production-ready Open Source Intelligence (OSINT) gathering suite with enterprise-grade security, anonymity, and operational security features. Designed for autonomous intelligence collection with modern web interface, API integration, and advanced analysis capabilities.
 
+## ⚡ Recent Updates (v2.0.0)
+
+**Critical security improvements and code quality enhancements have been implemented:**
+
+✅ **Security Hardening**
+- Eliminated hardcoded secrets - all secrets now required via environment variables
+- Implemented comprehensive input validation (XSS, SQL injection, command injection prevention)
+- Added rate limiting on all API endpoints
+- Secured development endpoints with strict environment checks
+- Enforced strong passwords in Docker configuration
+
+✅ **Reliability Improvements**
+- Implemented async file I/O (non-blocking operations)
+- Added detailed health check endpoints with service connectivity testing
+- Created React error boundaries for graceful error handling
+- Fixed silent failure patterns throughout the codebase
+
+✅ **Code Quality**
+- Added 5 new security dependencies (slowapi, aiofiles, structlog, pybreaker, pyjwt)
+- Implemented environment-based configuration for frontend API URLs
+- Created comprehensive documentation (Security Guide, Setup Guide, Review Summary)
+
+**📚 New Documentation:**
+- [QUICK_START.md](QUICK_START.md) - Get running in 5 minutes
+- [SECURITY_GUIDE.md](SECURITY_GUIDE.md) - Security best practices & deployment checklist
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Comprehensive installation & deployment guide
+- [CODE_REVIEW_SUMMARY.md](CODE_REVIEW_SUMMARY.md) - Detailed review of all changes
+
+**⚠️ Breaking Changes:**
+- `.env` file configuration is now **required** (app won't start without proper secrets)
+- Docker passwords must be explicitly set (no weak defaults)
+- Frontend needs rebuild after environment variable changes
+
+See [CODE_REVIEW_SUMMARY.md](CODE_REVIEW_SUMMARY.md) for complete details.
+
+---
+
 ## 🚀 Quick Start
 
 ### Automated Setup (Recommended)

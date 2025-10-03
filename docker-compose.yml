@@ -68,7 +68,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set in .env file}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana-dashboards:/etc/grafana/provisioning/dashboards
@@ -99,7 +99,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-osint_audit}
       - POSTGRES_USER=${POSTGRES_USER:-osint_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env file}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-audit-db.sql:/docker-entrypoint-initdb.d/init.sql
