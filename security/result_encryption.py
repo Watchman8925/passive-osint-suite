@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class ResultEncryption:
             key_material = self.master_key.encode()
 
         # Use PBKDF2 with SHA-256 for key derivation (secure for sensitive data)
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=salt,

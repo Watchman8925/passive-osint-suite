@@ -5,6 +5,7 @@ Passive analysis of cryptocurrency addresses and transactions
 
 import time
 from datetime import datetime
+from urllib.parse import urlparse
 
 from utils.osint_utils import OSINTUtils
 
@@ -74,7 +75,10 @@ class CryptocurrencyIntelligence(OSINTUtils):
                     data = response.json()
 
                     # Use strict domain matching to prevent URL confusion attacks
-                    if "blockstream.info" in api_url:
+                    parsed_url = urlparse(api_url)
+                    domain = parsed_url.netloc
+                    
+                    if domain == "blockstream.info":
                         bitcoin_info["blockstream"] = {
                             "total_received": data.get("chain_stats", {}).get(
                                 "funded_txo_sum", 0
@@ -93,14 +97,14 @@ class CryptocurrencyIntelligence(OSINTUtils):
                                 "tx_count", 0
                             ),
                         }
-                    elif "api.blockcypher.com" in api_url:
+                    elif domain == "api.blockcypher.com":
                         bitcoin_info["blockcypher"] = {
                             "balance": data.get("balance", 0) / 100000000,
                             "total_received": data.get("total_received", 0) / 100000000,
                             "total_sent": data.get("total_sent", 0) / 100000000,
                             "transaction_count": data.get("n_tx", 0),
                         }
-                    elif "chain.api.btc.com" in api_url:
+                    elif domain == "chain.api.btc.com":
                         if data.get("data"):
                             bitcoin_info["btc_com"] = {
                                 "balance": data["data"].get("balance", 0) / 100000000,

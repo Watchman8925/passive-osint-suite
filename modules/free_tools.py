@@ -203,7 +203,7 @@ class FreeToolsOSINT(OSINTUtils):
                 )
                 analysis["contains_url"] = bool(
                     re.search(
-                        r"http[s]?://(?:[a-zA-Z]|[0-9]|[\$\-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+                        r"http[s]?://(?:[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%])+",
                         content,
                     )
                 )
@@ -441,7 +441,7 @@ class FreeToolsOSINT(OSINTUtils):
                 r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text
             ),
             "urls": re.findall(
-                r"http[s]?://(?:[a-zA-Z]|[0-9]|[\$\-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+                r"http[s]?://(?:[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%])+",
                 text,
             ),
             "ip_addresses": re.findall(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", text),
