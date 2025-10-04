@@ -3,6 +3,7 @@ Result Encryption System for OSINT Suite
 Provides secure encryption and storage of intelligence results
 """
 
+import base64
 import hashlib
 import json
 import logging
@@ -11,6 +12,9 @@ import secrets
 import time
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
 
 logger = logging.getLogger(__name__)
 
@@ -118,32 +122,36 @@ class ResultEncryption:
             logger.error(f"Failed to save encrypted results: {e}")
 
     def _generate_key(
-        self, password: Optional[str] = None, salt: Optional[str] = None
-    ) -> str:
-        """Generate encryption key from password and salt"""
+        self, password: Optional[str] = None, salt: Optional[bytes] = None
+    ) -> Fernet:
+        """Generate encryption key from password and salt using PBKDF2"""
         if password:
-            salt = salt or secrets.token_hex(16)
-            key_material = f"{password}{salt}{self.master_key}"
+            salt = salt or os.urandom(16)
+            key_material = f"{password}{self.master_key}".encode()
         else:
-            salt = salt or secrets.token_hex(16)
-            key_material = f"{self.master_key}{salt}"
+            salt = salt or os.urandom(16)
+            key_material = self.master_key.encode()
 
-        return hashlib.sha256(key_material.encode()).hexdigest()
+        # Use PBKDF2 with SHA-256 for key derivation (secure for sensitive data)
+        kdf = PBKDF2(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=480000,  # OWASP recommended minimum
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(key_material))
+        return Fernet(key)
 
-    def _simple_encrypt(self, data: str, key: str) -> str:
-        """Simple XOR encryption (replace with proper encryption in production)"""
-        encrypted = []
-        key_bytes = key.encode()
+    def _simple_encrypt(self, data: str, fernet: Fernet) -> str:
+        """Encrypt data using Fernet (AES-128 in CBC mode with HMAC)"""
+        encrypted_bytes = fernet.encrypt(data.encode())
+        return base64.urlsafe_b64encode(encrypted_bytes).decode()
 
-        for i, char in enumerate(data):
-            key_char = key_bytes[i % len(key_bytes)]
-            encrypted.append(chr(ord(char) ^ key_char))
-
-        return "".join(encrypted)
-
-    def _simple_decrypt(self, data: str, key: str) -> str:
-        """Simple XOR decryption"""
-        return self._simple_encrypt(data, key)
+    def _simple_decrypt(self, data: str, fernet: Fernet) -> str:
+        """Decrypt data using Fernet"""
+        encrypted_bytes = base64.urlsafe_b64decode(data.encode())
+        decrypted_bytes = fernet.decrypt(encrypted_bytes)
+        return decrypted_bytes.decode()
 
     def encrypt_result(
         self,
@@ -181,12 +189,13 @@ class ResultEncryption:
             }
 
             # Generate salt and key
-            salt = secrets.token_hex(16)
-            key = self._generate_key(password, salt)
+            salt_bytes = os.urandom(16)
+            salt = base64.urlsafe_b64encode(salt_bytes).decode()
+            fernet = self._generate_key(password, salt_bytes)
 
             # Encrypt data
             json_data = json.dumps(data_to_encrypt)
-            encrypted_data = self._simple_encrypt(json_data, key)
+            encrypted_data = self._simple_encrypt(json_data, fernet)
 
             # Create result object
             result = EncryptedResult(
@@ -252,10 +261,11 @@ class ResultEncryption:
                 file_data = json.load(f)
 
             # Generate decryption key
-            key = self._generate_key(password, file_data["salt"])
+            salt_bytes = base64.urlsafe_b64decode(file_data["salt"].encode())
+            fernet = self._generate_key(password, salt_bytes)
 
             # Decrypt data
-            decrypted_json = self._simple_decrypt(file_data["encrypted_data"], key)
+            decrypted_json = self._simple_decrypt(file_data["encrypted_data"], fernet)
             data = json.loads(decrypted_json)
 
             # Mark as accessed

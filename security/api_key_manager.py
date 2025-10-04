@@ -686,6 +686,7 @@ class APIConfigurationManager:
             for alt_name in alt_names:
                 api_key = os.getenv(alt_name)
                 if api_key:
+                    # Log only metadata, never the actual key value
                     logger.info(
                         f"Found API key for {service.service_name} using alternative name: {alt_name}"
                     )

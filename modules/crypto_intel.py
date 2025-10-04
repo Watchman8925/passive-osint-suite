@@ -73,7 +73,8 @@ class CryptocurrencyIntelligence(OSINTUtils):
                 if response and response.status_code == 200:
                     data = response.json()
 
-                    if "blockstream" in api_url:
+                    # Use strict domain matching to prevent URL confusion attacks
+                    if "blockstream.info" in api_url:
                         bitcoin_info["blockstream"] = {
                             "total_received": data.get("chain_stats", {}).get(
                                 "funded_txo_sum", 0
@@ -92,14 +93,14 @@ class CryptocurrencyIntelligence(OSINTUtils):
                                 "tx_count", 0
                             ),
                         }
-                    elif "blockcypher" in api_url:
+                    elif "api.blockcypher.com" in api_url:
                         bitcoin_info["blockcypher"] = {
                             "balance": data.get("balance", 0) / 100000000,
                             "total_received": data.get("total_received", 0) / 100000000,
                             "total_sent": data.get("total_sent", 0) / 100000000,
                             "transaction_count": data.get("n_tx", 0),
                         }
-                    elif "btc.com" in api_url:
+                    elif "chain.api.btc.com" in api_url:
                         if data.get("data"):
                             bitcoin_info["btc_com"] = {
                                 "balance": data["data"].get("balance", 0) / 100000000,

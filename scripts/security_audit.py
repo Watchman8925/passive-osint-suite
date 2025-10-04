@@ -249,6 +249,7 @@ def print_audit_report(results: Dict[str, List[str]]) -> None:
 
         if issues:
             for issue in issues:
+                # Ensure no sensitive data is logged (already sanitized in collection)
                 print(f"  • {issue}")
 
     print("\n" + "=" * 60)

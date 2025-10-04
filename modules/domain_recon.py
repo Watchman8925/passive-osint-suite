@@ -299,6 +299,8 @@ class DomainRecon(OSINTUtils):
             import ssl
 
             context = ssl.create_default_context()
+            # Disable insecure SSL/TLS versions (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             with socket.create_connection((domain, 443), timeout=10) as sock:
                 with context.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert = ssock.getpeercert()

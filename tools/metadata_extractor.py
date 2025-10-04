@@ -174,7 +174,7 @@ class MetadataExtractor(OSINTUtils):
         """Find URLs in text"""
         import re
 
-        url_pattern = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
+        url_pattern = r"http[s]?://(?:[a-zA-Z]|[0-9]|[\$\-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
         return re.findall(url_pattern, text)
 
     def analyze_directory(

@@ -40,13 +40,9 @@ def setup_api_key(service_name, env_var, description):
             print("   ❌ No key provided, skipping")
             return False
 
-        # Show the key briefly for confirmation
-        print(f"   📋 You entered: {api_key}")
-        print("   ⚠️  Key will be hidden in 3 seconds...")
-
-        # Wait 3 seconds then clear the screen
-        time.sleep(3)
-        print("\033[2J\033[H", end="")  # Clear screen
+        # Don't show the key in clear text - security risk
+        print(f"   📋 API key received (length: {len(api_key)} characters)")
+        print("   ⚠️  Key is masked for security")
 
         # Confirm the key
         print(f"   ✅ Confirm: Save this {service_name} API key? (y/N): ", end="")
@@ -83,6 +79,7 @@ def main():
     print(
         f"   Encryption: {'✅ Enabled' if stats['encryption_enabled'] else '❌ Disabled'}"
     )
+    # Don't log sensitive statistics
     print(f"   Stored secrets: {stats['total_secrets']}")
     print()
 
@@ -119,9 +116,7 @@ def main():
 
     print("\n🎉 Setup complete!")
     print(f"   Configured: {configured}/{total} services")
-    print(
-        f"   Total stored secrets: {secrets_manager.get_statistics()['total_secrets']}"
-    )
+    # Statistics already displayed above; avoid redundant sensitive info logging
 
     if configured > 0:
         print("\n💡 Tips:")

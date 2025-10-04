@@ -19,6 +19,8 @@ def execute(context: Dict[str, Any], domain: str, port: int = 443) -> Capability
         cert_dict = None
         try:
             ctx = ssl.create_default_context()
+            # Disable insecure SSL/TLS versions (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
+            ctx.minimum_version = ssl.TLSVersion.TLSv1_2
             with socket.create_connection((domain, port), timeout=5) as sock:
                 with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert_dict = ssock.getpeercert()

@@ -105,13 +105,11 @@ class SecretsManager:
                 encrypted_data = self._cipher.encrypt(json_data.encode())
                 with open(self.secrets_file, "wb") as f:
                     f.write(encrypted_data)
+                # Set restrictive permissions
+                os.chmod(self.secrets_file, 0o600)
             else:
-                # Fallback to unencrypted (not recommended)
-                with open(self.secrets_file, "w") as f:
-                    f.write(json_data)
-
-            # Set restrictive permissions
-            os.chmod(self.secrets_file, 0o600)
+                # Never store secrets in clear text - encryption is mandatory
+                raise RuntimeError("Encryption is not initialized. Cannot store secrets in clear text.")
 
         except Exception as e:
             print(f"Warning: Could not save secrets file: {e}")

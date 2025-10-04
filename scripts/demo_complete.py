@@ -441,7 +441,7 @@ def show_final_statistics():
         print(f"Policy Evaluations: {policy_stats.get('operations_evaluated', 0)}")
         print(f"Policy Violations: {policy_stats.get('total_violations', 0)}")
 
-        # Secrets manager stats
+        # Secrets manager stats (only counts, not values)
         secrets_stats = secrets_manager.get_statistics()
         print(f"Stored Secrets: {secrets_stats.get('total_secrets', 0)}")
 

@@ -180,6 +180,10 @@ export class SecurityAPI {
   }
 
   async resolveAlert(alertId: string, notes?: string): Promise<SecurityAlert> {
+    // Validate alertId to prevent SSRF - must be alphanumeric/UUID format
+    if (!/^[a-zA-Z0-9-]+$/.test(alertId)) {
+      throw new Error('Invalid alert ID format');
+    }
     const response = await apiClient.client.post(`/api/security/alerts/${alertId}/resolve`, { notes });
     return response.data;
   }
