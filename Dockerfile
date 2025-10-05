@@ -18,7 +18,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages with better caching and error handling
-RUN python -m pip install --no-cache-dir --user --upgrade "pip==25.2" setuptools wheel && \
+RUN python -m pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Create cache directory for models (they will be downloaded at runtime)
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure latest secure pip in production environment
-RUN python -m pip install --no-cache-dir --upgrade "pip==25.2" setuptools wheel
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint

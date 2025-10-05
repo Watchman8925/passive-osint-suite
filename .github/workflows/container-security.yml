@@ -13,9 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag ${{ github.event.repository.name }}:test
+      
       - name: Run dockle
         uses: goodwithtech/dockle-action@v0.4.15
         with:
-          image: ${{ github.event.repository.name }}
-          dockerfile: Dockerfile
+          image: ${{ github.event.repository.name }}:test
+          exit-code: 1
+          exit-level: warn

@@ -44,9 +44,39 @@ jobs:
       - name: Install puppet-lint
         run: gem install puppet-lint
 
+      - name: Check for Puppet files
+        id: check-puppet
+        run: |
+          if find . -name "*.pp" -type f | grep -q .; then
+            echo "has_puppet_files=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_puppet_files=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run puppet-lint
+        if: steps.check-puppet.outputs.has_puppet_files == 'true'
         run: puppet-lint . --sarif > puppet-lint-results.sarif
         continue-on-error: true
+
+      - name: Create empty SARIF file if no Puppet files
+        if: steps.check-puppet.outputs.has_puppet_files == 'false'
+        run: |
+          echo '{
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "puppet-lint",
+                    "informationUri": "https://github.com/puppetlabs/puppet-lint",
+                    "version": "0.0.0"
+                  }
+                },
+                "results": []
+              }
+            ]
+          }' > puppet-lint-results.sarif
 
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
