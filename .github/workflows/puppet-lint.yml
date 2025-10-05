@@ -44,11 +44,23 @@ jobs:
       - name: Install puppet-lint
         run: gem install puppet-lint
 
+      - name: Check for Puppet files
+        id: check-puppet
+        run: |
+          if find . -name "*.pp" -type f | grep -q .; then
+            echo "puppet_files_exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "puppet_files_exist=false" >> $GITHUB_OUTPUT
+            echo "No Puppet manifest files (*.pp) found in repository"
+          fi
+
       - name: Run puppet-lint
+        if: steps.check-puppet.outputs.puppet_files_exist == 'true'
         run: puppet-lint . --sarif > puppet-lint-results.sarif
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
+        if: steps.check-puppet.outputs.puppet_files_exist == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: puppet-lint-results.sarif

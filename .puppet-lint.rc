@@ -1,0 +1,13 @@
+# Puppet Lint Configuration
+# This repository does not currently contain Puppet manifests (*.pp files)
+# This configuration file exists to satisfy the puppet-lint workflow
+
+# Disable checks that are not applicable for an empty Puppet codebase
+--no-documentation-check
+--no-autoloader_layout-check
+
+# Set output format
+--log-format '%{path}:%{line} %{KIND}: %{message} (%{check})'
+
+# Continue on error
+--error-level all
