@@ -17,6 +17,13 @@ __pycache__/
 *.log
 *.tmp
 .DS_Store
+*.key
+*.pem
+*.p12
+*.pfx
+*secret*
+*credential*
+*password*
 
 # Frontend build/deps (reinstallable)
 web/node_modules/

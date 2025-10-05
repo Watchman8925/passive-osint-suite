@@ -1,5 +1,17 @@
 # Multi-stage Docker build for OSINT Suite
-FROM python:3.12-slim AS builder
+# 
+# Security Features:
+# - Pinned base image digest for reproducibility and security
+# - Multi-stage build to minimize attack surface
+# - Non-root user (osint) for runtime
+# - Minimal runtime dependencies
+# - No secrets or credentials in image
+# - Automated vulnerability scanning (Trivy, Hadolint, Dockle)
+# 
+# For detailed security information, see DOCKER_SECURITY.md
+
+# Builder stage - Compile dependencies
+FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -26,7 +38,8 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
     chown -R osint:osint /home/osint/.cache
 
 # Production stage
-FROM python:3.12-slim AS production
+# Use same pinned base image for consistency
+FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS production
 
 # Upgrade base packages and install minimal runtime deps (remove tor; rely on tor-proxy container)
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
