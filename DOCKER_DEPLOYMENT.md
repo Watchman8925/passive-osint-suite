@@ -401,13 +401,27 @@ This project includes guardrails to help you maintain container best practices a
 - Supply chain: CI builds multi-arch images with SBOM and SLSA provenance and signs all tags using Cosign keyless; CI also verifies signatures.
 - Hardened runtime: Use `docker-compose.override.hardened.yml` to enforce read-only rootfs, drop all capabilities, enable no-new-privileges, tmpfs for /tmp, and resource limits.
 
+**Enhanced Security Features:**
+- Pinned base image digest for reproducibility
+- Automated Trivy scanning workflow (`.github/workflows/trivy-scan.yml`)
+- Comprehensive security scanning script (`scripts/scan_docker_image.sh`)
+
+For detailed security documentation, see **[DOCKER_SECURITY.md](DOCKER_SECURITY.md)**.
+
 Local tips (optional):
+
+- Run comprehensive security scan:
+   ./scripts/scan_docker_image.sh local/osint-suite:dev
 
 - Apply hardening with Compose override:
    docker compose -f docker-compose.yml -f docker-compose.override.hardened.yml up -d
 
 - Run Hadolint locally:
    docker run --rm -i hadolint/hadolint < Dockerfile
+
+- Run Trivy locally:
+   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+     aquasec/trivy:latest image --severity HIGH,CRITICAL local/osint-suite:dev
 
 - Run Dockle locally after a build:
    docker build -t local/osint-suite:dev .
