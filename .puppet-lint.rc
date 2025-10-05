@@ -1,0 +1,17 @@
+# Puppet Lint Configuration
+
+# Ignore specific rules
+ignore = 
+  # Ignore trailing whitespace
+  trailing_whitespace
+  # Ignore variable scope
+  variable_scope
+
+# Set the severity level for warnings
+severity = warning
+
+# Specify the file types to lint
+file_types = 
+  *.pp
+
+# Custom rules can be added here
