@@ -1,0 +1,14 @@
+# Dockle Ignore File
+# Add checkpoints that are acceptable for this project
+
+# CIS-DI-0001: Create a user for the container
+# Ignored: We already create and use a non-root 'osint' user
+
+# CIS-DI-0005: Enable Content trust for Docker
+# Ignored: This is a build-time security feature that may not be applicable
+
+# CIS-DI-0006: Add HEALTHCHECK instruction to the container image
+# Ignored: We have a HEALTHCHECK instruction in the Dockerfile
+
+# DKL-DI-0006: Avoid latest tag
+# Ignored: We use specific versions in requirements.txt

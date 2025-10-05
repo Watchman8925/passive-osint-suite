@@ -18,7 +18,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages with better caching and error handling
-RUN python -m pip install --no-cache-dir --user --upgrade "pip==25.2" setuptools wheel && \
+RUN python -m pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Create cache directory for models (they will be downloaded at runtime)
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure latest secure pip in production environment
-RUN python -m pip install --no-cache-dir --upgrade "pip==25.2" setuptools wheel
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint
@@ -65,7 +65,12 @@ ENV HF_HOME=/home/osint/.cache/huggingface
 # OCI labels
 LABEL org.opencontainers.image.source="https://github.com/Watchman8925/passive-osint-suite" \
     org.opencontainers.image.description="Passive OSINT Suite API server (hardened)" \
-    org.opencontainers.image.licenses="MIT"
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.title="Passive OSINT Suite" \
+    org.opencontainers.image.vendor="Watchman8925" \
+    org.opencontainers.image.documentation="https://github.com/Watchman8925/passive-osint-suite/blob/main/README.md" \
+    maintainer="Watchman8925" \
+    security.compliance="CIS Docker Benchmarks"
 
 # Ensure Hugging Face cache directory exists for the non-root user
 RUN mkdir -p "$HF_HOME"
