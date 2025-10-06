@@ -123,12 +123,18 @@ class ResultEncryption:
         """Generate encryption key from password and salt"""
         if password:
             salt = salt or secrets.token_hex(16)
-            key_material = f"{password}{salt}{self.master_key}"
+            # Use PBKDF2 for password-based key derivation
+            # (encode password/master_key as bytes, ensure salt is bytes)
+            salt_bytes = salt.encode() if isinstance(salt, str) else salt
+            key_material = (password + self.master_key).encode()
+            key = hashlib.pbkdf2_hmac(
+                "sha256", key_material, salt_bytes, 100_000
+            )
+            return key.hex()
         else:
             salt = salt or secrets.token_hex(16)
             key_material = f"{self.master_key}{salt}"
-
-        return hashlib.sha256(key_material.encode()).hexdigest()
+            return hashlib.sha256(key_material.encode()).hexdigest()
 
     def _simple_encrypt(self, data: str, key: str) -> str:
         """Simple XOR encryption (replace with proper encryption in production)"""
