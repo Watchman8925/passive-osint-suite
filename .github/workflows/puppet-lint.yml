@@ -43,20 +43,21 @@ jobs:
           RUBY_VERSION="2.7.8"
           RUBY_PATH="/opt/hostedtoolcache/Ruby/${RUBY_VERSION}/x64"
           
-          # Check if Ruby is already available in tool cache (for self-hosted runners)
+          # Check if Ruby is already available in tool cache
           if [ -f "${RUBY_PATH}.complete" ]; then
             echo "✓ Ruby ${RUBY_VERSION} already installed in tool cache"
             echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
             exit 0
           fi
           
-          # Check if Ruby is available via ruby/setup-ruby (GitHub-hosted runners)
-          if command -v ruby &> /dev/null && ruby -v | grep -q "ruby 2.7"; then
-            echo "✓ Ruby 2.7.x is already available, skipping installation"
+          # Detect if we're on a GitHub-hosted runner by checking runner name
+          # GitHub-hosted runners have names like "GitHub Actions X" or "Hosted Agent"
+          # Self-hosted runners typically have custom names
+          if [[ "${RUNNER_NAME:-}" == "GitHub Actions"* ]] || [[ "${RUNNER_NAME:-}" == "Hosted Agent"* ]]; then
+            echo "✓ Detected GitHub-hosted runner, ruby/setup-ruby will handle Ruby installation"
             exit 0
           fi
           
-          # If we reach here, we're on a self-hosted runner and need to install Ruby
           echo "Installing Ruby ${RUBY_VERSION} for self-hosted runner..."
           
           # Create lock file to prevent parallel installation
