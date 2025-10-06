@@ -112,7 +112,35 @@ jobs:
         run: gem install puppet-lint
 
       - name: Run puppet-lint
-        run: puppet-lint . --sarif > puppet-lint-results.sarif
+        run: |
+          # Find all .pp files (Puppet manifests)
+          PP_FILES=$(find . -name "*.pp" -type f 2>/dev/null)
+          
+          if [ -z "$PP_FILES" ]; then
+            echo "No Puppet files (.pp) found in repository, skipping puppet-lint scan"
+            # Create an empty SARIF file for upload
+            cat > puppet-lint-results.sarif << 'EOF'
+          {
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [
+              {
+                "tool": {
+                  "driver": {
+                    "name": "puppet-lint",
+                    "informationUri": "https://github.com/puppetlabs/puppet-lint",
+                    "version": "5.1.0"
+                  }
+                },
+                "results": []
+              }
+            ]
+          }
+          EOF
+          else
+            echo "Found Puppet files, running puppet-lint scan..."
+            puppet-lint $PP_FILES --sarif > puppet-lint-results.sarif || true
+          fi
         continue-on-error: true
 
       - name: Upload analysis results to GitHub
