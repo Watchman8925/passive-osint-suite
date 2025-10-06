@@ -35,6 +35,72 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Ruby on self-hosted runner
+        run: |
+          set -euo pipefail
+          
+          # Ruby version to install
+          RUBY_VERSION="2.7.8"
+          RUBY_PATH="/opt/hostedtoolcache/Ruby/${RUBY_VERSION}/x64"
+          
+          # Check if Ruby is already available in tool cache (for self-hosted runners)
+          if [ -f "${RUBY_PATH}.complete" ]; then
+            echo "✓ Ruby ${RUBY_VERSION} already installed in tool cache"
+            echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
+            exit 0
+          fi
+          
+          # Check if Ruby is available via ruby/setup-ruby (GitHub-hosted runners)
+          if command -v ruby &> /dev/null && ruby -v | grep -q "ruby 2.7"; then
+            echo "✓ Ruby 2.7.x is already available, skipping installation"
+            exit 0
+          fi
+          
+          # If we reach here, we're on a self-hosted runner and need to install Ruby
+          echo "Installing Ruby ${RUBY_VERSION} for self-hosted runner..."
+          
+          # Create lock file to prevent parallel installation
+          LOCK_FILE="/tmp/ruby-install.lock"
+          exec 200>"$LOCK_FILE"
+          
+          # Try to acquire lock (non-blocking first, then wait if needed)
+          if ! flock -n 200; then
+            echo "Another Ruby installation is in progress, waiting..."
+            flock 200
+          fi
+          
+          # Check again after acquiring lock (another process may have completed installation)
+          if [ -f "${RUBY_PATH}.complete" ]; then
+            echo "✓ Ruby was installed by another process"
+            flock -u 200
+            echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
+            exit 0
+          fi
+          
+          # Install ruby-build if not present
+          if ! command -v ruby-build &> /dev/null; then
+            echo "Installing ruby-build..."
+            RUBY_BUILD_DIR="/tmp/ruby-build-$$"
+            git clone https://github.com/rbenv/ruby-build.git "$RUBY_BUILD_DIR"
+            PREFIX=/usr/local sudo "$RUBY_BUILD_DIR/install.sh"
+            rm -rf "$RUBY_BUILD_DIR"
+          fi
+          
+          # Install Ruby to the tool cache
+          echo "Installing Ruby ${RUBY_VERSION} to ${RUBY_PATH}..."
+          sudo mkdir -p "$(dirname ${RUBY_PATH})"
+          sudo ruby-build ${RUBY_VERSION} ${RUBY_PATH}
+          
+          # Mark installation as complete
+          sudo touch "${RUBY_PATH}.complete"
+          echo "✓ Ruby installation complete"
+          
+          # Release lock
+          flock -u 200
+          
+          # Add Ruby to PATH
+          echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@55283cc23133118229fd3f97f9336ee23a179fcf # v1.146.0
         with:
