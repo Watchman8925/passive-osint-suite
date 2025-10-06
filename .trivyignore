@@ -1,7 +1,14 @@
 # Trivy Ignore File
+# Add CVE IDs that are acceptable or false positives
+# Format: CVE-YYYY-NNNN
+
+# Example: CVE-2023-12345
+# Reason: This vulnerability doesn't apply to our use case because
+
+# Python base image vulnerabilities that are acceptable in slim images
+# Add specific CVEs here if needed after initial scan
+
 # Add CVE IDs here to suppress known false positives or accepted risks
 # Format: One CVE ID per line
-# Example:
-# CVE-2023-12345
 
 # Add your ignored CVEs below this line
