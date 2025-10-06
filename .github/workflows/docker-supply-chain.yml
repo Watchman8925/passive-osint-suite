@@ -1,0 +1,49 @@
+# GitHub Actions workflow for automated Docker build, SBOM, signing, and verification
+name: Build, Sign, and Verify Docker Image
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build-sign-verify:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDKIT: 1
+      DOCKER_CONTENT_TRUST: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build with provenance and SBOM
+        run: |
+          GIT_COMMIT=$(git rev-parse HEAD)
+          docker build --attest=provenance=mode=max --attest=sbom=type=spdx \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --build-arg GIT_REPO="https://github.com/Watchman8925/passive-osint-suite" \
+            -t watchman8925/passive-osint-suite:latest \
+            -f Dockerfile .
+      - name: Push image (signed)
+        run: |
+          docker push watchman8925/passive-osint-suite:latest
+      - name: Verify signature
+        run: |
+          docker trust inspect --pretty watchman8925/passive-osint-suite:latest
+      - name: Install syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh
+          mv ./bin/syft /usr/local/bin/syft
+      - name: Verify SBOM
+        run: |
+          syft watchman8925/passive-osint-suite:latest
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: syft.json

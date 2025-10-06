@@ -12,6 +12,9 @@
 
 # Builder stage - Compile dependencies
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS builder
+# Supply chain provenance build args
+ARG GIT_COMMIT
+ARG GIT_REPO
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -40,6 +43,9 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
 # Production stage
 # Use same pinned base image for consistency
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS production
+# Supply chain provenance build args
+ARG GIT_COMMIT
+ARG GIT_REPO
 
 # Upgrade base packages and install minimal runtime deps (remove tor; rely on tor-proxy container)
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
@@ -83,7 +89,9 @@ LABEL org.opencontainers.image.source="https://github.com/Watchman8925/passive-o
     org.opencontainers.image.vendor="Watchman8925" \
     org.opencontainers.image.documentation="https://github.com/Watchman8925/passive-osint-suite/blob/main/README.md" \
     maintainer="Watchman8925" \
-    security.compliance="CIS Docker Benchmarks"
+    security.compliance="CIS Docker Benchmarks" \
+    org.opencontainers.image.revision=${GIT_COMMIT} \
+    org.opencontainers.image.source=${GIT_REPO}
 
 # Ensure Hugging Face cache directory exists for the non-root user
 RUN mkdir -p "$HF_HOME"
