@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# Minimal permissions for GitHub token (principle of least privilege)
+permissions:
+  contents: read
+
 jobs:
   build-sign-verify:
     runs-on: ubuntu-latest
