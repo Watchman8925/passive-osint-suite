@@ -35,21 +35,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for Puppet files
+        id: check-puppet
+        run: |
+          if find . -name "*.pp" -type f 2>/dev/null | grep -q .; then
+            echo "has_puppet=true" >> $GITHUB_OUTPUT
+            echo "Found Puppet files in repository"
+          else
+            echo "has_puppet=false" >> $GITHUB_OUTPUT
+            echo "No Puppet files found in repository"
+          fi
+
       - name: Setup Ruby
+        if: steps.check-puppet.outputs.has_puppet == 'true'
         uses: ruby/setup-ruby@55283cc23133118229fd3f97f9336ee23a179fcf # v1.146.0
         with:
           ruby-version: 2.7
-          bundler-cache: true
+          bundler-cache: false
 
       - name: Install puppet-lint
+        if: steps.check-puppet.outputs.has_puppet == 'true'
         run: gem install puppet-lint
 
       - name: Run puppet-lint
-        run: puppet-lint . --sarif > puppet-lint-results.sarif
+        if: steps.check-puppet.outputs.has_puppet == 'true'
+        run: |
+          PP_FILES=$(find . -name "*.pp" -type f 2>/dev/null)
+          echo "Running puppet-lint on Puppet files..."
+          puppet-lint $PP_FILES --sarif > puppet-lint-results.sarif || true
         continue-on-error: true
+
+      - name: Create empty SARIF for repositories without Puppet
+        if: steps.check-puppet.outputs.has_puppet == 'false'
+        run: |
+          echo "Creating empty SARIF file (no Puppet files to scan)"
+          echo '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"puppet-lint","informationUri":"https://github.com/puppetlabs/puppet-lint","version":"5.1.0"}},"results":[]}]}' > puppet-lint-results.sarif
 
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
+        if: always()
         with:
           sarif_file: puppet-lint-results.sarif
           wait-for-processing: true
