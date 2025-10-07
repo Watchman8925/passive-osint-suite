@@ -69,3 +69,5 @@ tmp/
 .ruff_cache/
 **/.ruff_cache/
 
+puppet-lint-results.sarif
+trivy-results.sarif
