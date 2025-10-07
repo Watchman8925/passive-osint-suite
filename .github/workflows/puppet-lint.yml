@@ -35,112 +35,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ruby on self-hosted runner
-        continue-on-error: true
+      - name: Check for Puppet files
+        id: check-puppet
         run: |
-          set -euo pipefail
-          
-          # Ruby version to install
-          RUBY_VERSION="2.7.8"
-          RUBY_PATH="/opt/hostedtoolcache/Ruby/${RUBY_VERSION}/x64"
-          
-          # Check if Ruby is already available in tool cache
-          if [ -f "${RUBY_PATH}.complete" ]; then
-            echo "✓ Ruby ${RUBY_VERSION} already installed in tool cache"
-            echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
-            exit 0
+          if find . -name "*.pp" -type f 2>/dev/null | grep -q .; then
+            echo "has_puppet=true" >> $GITHUB_OUTPUT
+            echo "Found Puppet files in repository"
+          else
+            echo "has_puppet=false" >> $GITHUB_OUTPUT
+            echo "No Puppet files found in repository"
           fi
-          
-          # Detect if we're on a GitHub-hosted runner by checking runner name
-          # GitHub-hosted runners have names like "GitHub Actions X" or "Hosted Agent"
-          # Self-hosted runners typically have custom names
-          if [[ "${RUNNER_NAME:-}" == "GitHub Actions"* ]] || [[ "${RUNNER_NAME:-}" == "Hosted Agent"* ]]; then
-            echo "✓ Detected GitHub-hosted runner, ruby/setup-ruby will handle Ruby installation"
-            exit 0
-          fi
-          
-          echo "Installing Ruby ${RUBY_VERSION} for self-hosted runner..."
-          
-          # Create lock file to prevent parallel installation
-          LOCK_FILE="/tmp/ruby-install.lock"
-          exec 200>"$LOCK_FILE"
-          
-          # Try to acquire lock (non-blocking first, then wait if needed)
-          if ! flock -n 200; then
-            echo "Another Ruby installation is in progress, waiting..."
-            flock 200
-          fi
-          
-          # Check again after acquiring lock (another process may have completed installation)
-          if [ -f "${RUBY_PATH}.complete" ]; then
-            echo "✓ Ruby was installed by another process"
-            flock -u 200
-            echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
-            exit 0
-          fi
-          
-          # Install ruby-build if not present
-          if ! command -v ruby-build &> /dev/null; then
-            echo "Installing ruby-build..."
-            RUBY_BUILD_DIR="/tmp/ruby-build-$$"
-            git clone https://github.com/rbenv/ruby-build.git "$RUBY_BUILD_DIR"
-            PREFIX=/usr/local sudo "$RUBY_BUILD_DIR/install.sh"
-            rm -rf "$RUBY_BUILD_DIR"
-          fi
-          
-          # Install Ruby to the tool cache
-          echo "Installing Ruby ${RUBY_VERSION} to ${RUBY_PATH}..."
-          sudo mkdir -p "$(dirname ${RUBY_PATH})"
-          sudo ruby-build ${RUBY_VERSION} ${RUBY_PATH}
-          
-          # Mark installation as complete
-          sudo touch "${RUBY_PATH}.complete"
-          echo "✓ Ruby installation complete"
-          
-          # Release lock
-          flock -u 200
-          
-          # Add Ruby to PATH
-          echo "${RUBY_PATH}/bin" >> $GITHUB_PATH
 
       - name: Setup Ruby
+        if: steps.check-puppet.outputs.has_puppet == 'true'
         uses: ruby/setup-ruby@55283cc23133118229fd3f97f9336ee23a179fcf # v1.146.0
         with:
           ruby-version: 2.7
           bundler-cache: false
 
       - name: Install puppet-lint
+        if: steps.check-puppet.outputs.has_puppet == 'true'
         run: gem install puppet-lint
 
       - name: Run puppet-lint
+        if: steps.check-puppet.outputs.has_puppet == 'true'
         run: |
-          # Find all .pp files (Puppet manifests)
           PP_FILES=$(find . -name "*.pp" -type f 2>/dev/null)
-          
-          if [ -z "$PP_FILES" ]; then
-            echo "No Puppet files (.pp) found in repository, skipping puppet-lint scan"
-            # Create an empty SARIF file for upload
-            echo '{
-              "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-              "version": "2.1.0",
-              "runs": [
-                {
-                  "tool": {
-                    "driver": {
-                      "name": "puppet-lint",
-                      "informationUri": "https://github.com/puppetlabs/puppet-lint",
-                      "version": "5.1.0"
-                    }
-                  },
-                  "results": []
-                }
-              ]
-            }' > puppet-lint-results.sarif
-          else
-            echo "Found Puppet files, running puppet-lint scan..."
-            puppet-lint $PP_FILES --sarif > puppet-lint-results.sarif || true
-          fi
+          echo "Running puppet-lint on Puppet files..."
+          puppet-lint $PP_FILES --sarif > puppet-lint-results.sarif || true
         continue-on-error: true
+
+      - name: Create empty SARIF for repositories without Puppet
+        if: steps.check-puppet.outputs.has_puppet == 'false'
+        run: |
+          echo "Creating empty SARIF file (no Puppet files to scan)"
+          echo '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"puppet-lint","informationUri":"https://github.com/puppetlabs/puppet-lint","version":"5.1.0"}},"results":[]}]}' > puppet-lint-results.sarif
 
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
