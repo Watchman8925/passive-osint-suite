@@ -109,7 +109,9 @@ class SecretsManager:
                 os.chmod(self.secrets_file, 0o600)
             else:
                 # Never store secrets in clear text - encryption is mandatory
-                raise RuntimeError("Encryption is not initialized. Cannot store secrets in clear text.")
+                raise RuntimeError(
+                    "Encryption is not initialized. Cannot store secrets in clear text."
+                )
 
         except Exception as e:
             print(f"Warning: Could not save secrets file: {e}")

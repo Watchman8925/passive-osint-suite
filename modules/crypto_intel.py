@@ -77,7 +77,7 @@ class CryptocurrencyIntelligence(OSINTUtils):
                     # Use strict domain matching to prevent URL confusion attacks
                     parsed_url = urlparse(api_url)
                     domain = parsed_url.netloc
-                    
+
                     if domain == "blockstream.info":
                         bitcoin_info["blockstream"] = {
                             "total_received": data.get("chain_stats", {}).get(

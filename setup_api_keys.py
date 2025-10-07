@@ -10,7 +10,6 @@ API keys are encrypted and stored securely using Fernet encryption.
 import sys
 import os
 import getpass
-import time
 
 # Add security module to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "security"))

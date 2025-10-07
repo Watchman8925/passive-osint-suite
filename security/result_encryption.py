@@ -4,7 +4,6 @@ Provides secure encryption and storage of intelligence results
 """
 
 import base64
-import hashlib
 import json
 import logging
 import os
