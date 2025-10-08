@@ -127,9 +127,7 @@ class ResultEncryption:
             # (encode password/master_key as bytes, ensure salt is bytes)
             salt_bytes = salt.encode() if isinstance(salt, str) else salt
             key_material = (password + self.master_key).encode()
-            key = hashlib.pbkdf2_hmac(
-                "sha256", key_material, salt_bytes, 100_000
-            )
+            key = hashlib.pbkdf2_hmac("sha256", key_material, salt_bytes, 100_000)
             return key.hex()
         else:
             salt = salt or secrets.token_hex(16)
