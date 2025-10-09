@@ -35,13 +35,10 @@ from uuid import uuid4
 
 try:
     import aiofiles
-
     AIOFILES_AVAILABLE = True
 except ImportError:
     AIOFILES_AVAILABLE = False
-    logging.warning(
-        "aiofiles not installed - using synchronous file I/O (not recommended)"
-    )
+    logging.warning("aiofiles not installed - using synchronous file I/O (not recommended)")
 
 from planner import Planner
 
@@ -163,7 +160,7 @@ class PersistentInvestigationStore:
 
             if AIOFILES_AVAILABLE:
                 # Async file write
-                async with aiofiles.open(self.index_file, "w") as f:
+                async with aiofiles.open(self.index_file, 'w') as f:
                     await f.write(json_data)
             else:
                 # Fallback to sync write (blocking!)

@@ -7,71 +7,15 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: {}
-
-permissions:
-  contents: read
 
 jobs:
   dockle:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Free disk space
-        run: |
-          echo "Disk space before cleanup:"
-          df -h
-          # Remove unnecessary files to free up space
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo docker system prune -af
-          echo "Disk space after cleanup:"
-          df -h
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: |
-          docker build -t passive-osint-suite:test .
-        timeout-minutes: 20
-
-      - name: Run Dockle security scanner
-        continue-on-error: true
-        run: |
-          # Install Dockle
-          VERSION=$(curl --silent "https://api.github.com/repos/goodwithtech/dockle/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-          curl -L -o dockle.tar.gz https://github.com/goodwithtech/dockle/releases/download/v${VERSION}/dockle_${VERSION}_Linux-64bit.tar.gz
-          tar zxvf dockle.tar.gz
-          sudo mv dockle /usr/local/bin
-          
-          # Run Dockle with appropriate settings
-          dockle \
-            --exit-code 0 \
-            --exit-level warn \
-            --format json \
-            --output dockle-results.json \
-            --ignore CIS-DI-0001 \
-            --ignore CIS-DI-0005 \
-            --ignore CIS-DI-0006 \
-            --ignore DKL-DI-0006 \
-            passive-osint-suite:test || true
-          
-          # Display results
-          echo "Dockle scan results:"
-          dockle \
-            --exit-code 0 \
-            --exit-level warn \
-            passive-osint-suite:test || true
-
-      - name: Upload Dockle results
-        uses: actions/upload-artifact@v4
-        if: always()
+        uses: actions/checkout@v2
+      - name: Run dockle
+        uses: goodwithtech/dockle-action@v0.4.15
         with:
-          name: dockle-results
-          path: dockle-results.json
-          retention-days: 7
+          image: ${{ github.event.repository.name }}
+          dockerfile: Dockerfile

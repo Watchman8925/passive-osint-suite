@@ -253,10 +253,7 @@ class AppConfig:
 
     # Critical: Fail fast if SECRET_KEY is not set
     SECRET_KEY = os.getenv("OSINT_SECRET_KEY")
-    if (
-        not SECRET_KEY
-        or SECRET_KEY == "change-this-secret-key-in-production-environment"
-    ):
+    if not SECRET_KEY or SECRET_KEY == "change-this-secret-key-in-production-environment":
         raise ValueError(
             "OSINT_SECRET_KEY environment variable must be set to a secure random value. "
             "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
@@ -264,9 +261,7 @@ class AppConfig:
 
     # Database configuration with secure defaults only for local dev
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL", "postgresql://user:pass@localhost/osint_db"
-    )
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/osint_db")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
 
@@ -277,9 +272,7 @@ class AppConfig:
     AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "llama-3.1-sonar-large-128k-online")
 
     # CORS configuration - allow customization via env
-    cors_origins_str = os.getenv(
-        "CORS_ORIGINS", "http://localhost:3000,http://localhost:8000"
-    )
+    cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000")
     CORS_ORIGINS = [origin.strip() for origin in cors_origins_str.split(",")]
 
 
@@ -290,24 +283,16 @@ BaseModelBase = BaseModel
 class InvestigationCreate(BaseModelBase):
     """Model for creating new investigations with input validation"""
 
-    name: str = Field(
-        ..., min_length=1, max_length=200, description="Investigation name"
-    )
-    description: Optional[str] = Field(
-        None, max_length=2000, description="Investigation description"
-    )
-    targets: List[str] = Field(
-        ..., min_items=1, max_items=100, description="List of targets to investigate"
-    )
+    name: str = Field(..., min_length=1, max_length=200, description="Investigation name")
+    description: Optional[str] = Field(None, max_length=2000, description="Investigation description")
+    targets: List[str] = Field(..., min_items=1, max_items=100, description="List of targets to investigate")
     investigation_type: str = Field(
-        ...,
-        pattern="^(domain|ip|email|phone|company|person)$",
-        description="Type of investigation",
+        ..., pattern="^(domain|ip|email|phone|company|person)$",
+        description="Type of investigation"
     )
     priority: str = Field(
-        default="medium",
-        pattern="^(low|medium|high|critical)$",
-        description="Investigation priority level",
+        default="medium", pattern="^(low|medium|high|critical)$",
+        description="Investigation priority level"
     )
     tags: List[str] = Field(default_factory=list, max_items=20)  # type: ignore[assignment]
     scheduled_start: Optional[datetime] = None
@@ -317,11 +302,10 @@ class InvestigationCreate(BaseModelBase):
     def validate_name(cls, v):
         """Sanitize investigation name to prevent injection attacks"""
         import re
-
         if not v or not v.strip():
             raise ValueError("Investigation name cannot be empty")
         # Remove potentially dangerous characters
-        sanitized = re.sub(r'[<>"\';(){}]', "", v)
+        sanitized = re.sub(r'[<>"\';(){}]', '', v)
         if len(sanitized) != len(v):
             raise ValueError("Investigation name contains invalid characters")
         return sanitized.strip()
@@ -704,15 +688,12 @@ try:
     logging.info("✅ Rate limiting initialized")
 except ImportError:
     logging.warning("⚠️  slowapi not installed - rate limiting disabled")
-
     # Create a no-op limiter for compatibility
     class NoOpLimiter:
         def limit(self, *args, **kwargs):
             def decorator(func):
                 return func
-
             return decorator
-
     limiter = NoOpLimiter()  # type: ignore
     app.state.limiter = limiter
 except Exception as e:
@@ -736,12 +717,7 @@ try:
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             # Restrict allowed headers for security
-            allow_headers=[
-                "Content-Type",
-                "Authorization",
-                "X-Request-ID",
-                "X-Client-Info",
-            ],
+            allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Client-Info"],
         )
 
     if GZipMiddleware is not None:
@@ -934,17 +910,11 @@ async def detailed_health_check(request: Request):
     try:
         if app.state.redis:
             await asyncio.wait_for(app.state.redis.ping(), timeout=2.0)
-            health_status["services"]["redis"] = {
-                "status": "healthy",
-                "response_time_ms": "<2000",
-            }
+            health_status["services"]["redis"] = {"status": "healthy", "response_time_ms": "<2000"}
         else:
             health_status["services"]["redis"] = {"status": "not_configured"}
     except asyncio.TimeoutError:
-        health_status["services"]["redis"] = {
-            "status": "timeout",
-            "error": "Connection timeout",
-        }
+        health_status["services"]["redis"] = {"status": "timeout", "error": "Connection timeout"}
         health_status["degraded_services"].append("redis")
         health_status["status"] = "degraded"
     except Exception as e:
@@ -959,10 +929,7 @@ async def detailed_health_check(request: Request):
         else:
             health_status["services"]["elasticsearch"] = {"status": "not_configured"}
     except Exception as e:
-        health_status["services"]["elasticsearch"] = {
-            "status": "error",
-            "error": str(e),
-        }
+        health_status["services"]["elasticsearch"] = {"status": "error", "error": str(e)}
 
     # Check AI Engine
     health_status["services"]["ai_engine"] = {
@@ -1584,11 +1551,7 @@ async def dev_token(sub: str = "dev-user", expires_minutes: int = 60):
         "env": "development",  # Mark as dev token
     }
     token = jwt.encode(payload, AppConfig.SECRET_KEY, algorithm="HS256")
-    return {
-        "token": token,
-        "expires_in": expires_minutes * 60,
-        "warning": "Development token only",
-    }
+    return {"token": token, "expires_in": expires_minutes * 60, "warning": "Development token only"}
 
 
 @app.post("/api/ai/analyze")
