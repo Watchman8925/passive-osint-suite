@@ -7,9 +7,11 @@ import hashlib
 import json
 import logging
 import re
+import importlib
+import importlib.util
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Mapping
 
 ## import time  # Unused
 
@@ -20,14 +22,17 @@ try:
     TRANSPORT_AVAILABLE = True
 except ImportError:
     TRANSPORT_AVAILABLE = False
+    proxied_transport = None  # type: ignore
     logging.warning("Proxied transport not available")
 
-# Import DoH for secure DNS
-try:
-    from doh_client import doh_client
-
-    DOH_AVAILABLE = True
-except ImportError:
+# Import DoH for secure DNS (lazy, to avoid static import errors)
+_doh_spec = importlib.util.find_spec("doh_client")
+if _doh_spec is not None:
+    _doh_mod = importlib.import_module("doh_client")
+    doh_client = getattr(_doh_mod, "doh_client", None)
+    DOH_AVAILABLE = doh_client is not None
+else:
+    doh_client = None  # type: ignore
     DOH_AVAILABLE = False
     logging.warning("DoH client not available")
 
@@ -100,8 +105,8 @@ class BellingcatToolkit:
         logger.info("Bellingcat toolkit initialized")
 
     def generate_lead_id(self, content: str) -> str:
-        """Generate unique ID for a lead."""
-        return hashlib.md5(content.encode()).hexdigest()[:12]
+        """Generate unique ID for a lead using sha256."""
+        return hashlib.sha256(content.encode()).hexdigest()[:12]
 
     def extract_entities(
         self, text: str, source: str = "unknown"
@@ -199,7 +204,7 @@ class BellingcatToolkit:
             logger.error("Cannot perform web reconnaissance without transport")
             return {}
 
-        recon_data = {
+        recon_data: Dict[str, Any] = {
             "url": target_url,
             "timestamp": datetime.now().isoformat(),
             "status": "unknown",
@@ -217,7 +222,7 @@ class BellingcatToolkit:
 
         try:
             # Fetch the page
-            response = await proxied_transport.get(target_url, timeout=30)
+            response = proxied_transport.get(target_url, timeout=30)  # type: ignore[attr-defined]
             recon_data["status"] = response.status_code
             recon_data["headers"] = dict(response.headers)
 
@@ -302,7 +307,7 @@ class BellingcatToolkit:
         return metadata
 
     def _detect_technologies(
-        self, html_content: str, headers: Dict[str, str]
+        self, html_content: str, headers: Mapping[str, str]
     ) -> List[str]:
         """Detect technologies used by the website."""
         technologies = []
@@ -459,7 +464,7 @@ class BellingcatToolkit:
         Comprehensive domain investigation using passive techniques.
         Similar to what Bellingcat investigators do for domain analysis.
         """
-        investigation = {
+        investigation: Dict[str, Any] = {
             "domain": domain,
             "timestamp": datetime.now().isoformat(),
             "dns_records": {},
@@ -473,7 +478,7 @@ class BellingcatToolkit:
         }
 
         # DNS enumeration
-        if DOH_AVAILABLE:
+        if DOH_AVAILABLE and doh_client is not None:
             dns_types = ["A", "AAAA", "MX", "TXT", "CNAME", "NS"]
             for record_type in dns_types:
                 try:
@@ -507,7 +512,7 @@ class BellingcatToolkit:
         Enumerate subdomains using Certificate Transparency logs.
         This is a passive technique that doesn't alert the target.
         """
-        subdomains = set()
+        subdomains: Set[str] = set()
 
         if not TRANSPORT_AVAILABLE:
             return list(subdomains)
@@ -519,7 +524,7 @@ class BellingcatToolkit:
 
         for api_url in ct_apis:
             try:
-                response = await proxied_transport.get(api_url, timeout=30)
+                response = proxied_transport.get(api_url, timeout=30)  # type: ignore[attr-defined]
                 if response.status_code == 200:
                     try:
                         ct_data = response.json()
@@ -540,7 +545,7 @@ class BellingcatToolkit:
 
     def _analyze_security_headers(self, headers: Dict[str, str]) -> Dict[str, Any]:
         """Analyze security headers for potential vulnerabilities."""
-        security_analysis = {
+        security_analysis: Dict[str, Any] = {
             "score": 0,
             "missing_headers": [],
             "weak_headers": [],
@@ -574,7 +579,7 @@ class BellingcatToolkit:
         This is similar to how investigators connect dots between
         different pieces of evidence.
         """
-        correlation = {
+        correlation: Dict[str, Any] = {
             "lead_ids": lead_ids,
             "connections": [],
             "common_attributes": {},
@@ -688,7 +693,7 @@ class BellingcatToolkit:
         Generate a comprehensive investigation report.
         Similar to the reports Bellingcat publishes.
         """
-        report = {
+        report: Dict[str, Any] = {
             "title": title,
             "generated_at": datetime.now().isoformat(),
             "summary": {
@@ -754,7 +759,7 @@ class BellingcatToolkit:
         recommendations = []
 
         # Check lead distribution
-        lead_types = {}
+        lead_types: Dict[str, int] = {}
         for lead in self.leads.values():
             lead_types[lead.lead_type] = lead_types.get(lead.lead_type, 0) + 1
 
