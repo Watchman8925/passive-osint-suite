@@ -94,63 +94,63 @@ class OSINTAIEngine:
         return {
             "summary": """
             You are an expert OSINT analyst. Analyze the following investigation data and provide a comprehensive summary.
-            
+
             Investigation: {investigation_name}
             Type: {investigation_type}
             Targets: {targets}
-            
+
             Data collected:
             {investigation_data}
-            
+
             Provide a structured analysis including:
             1. Executive Summary
             2. Key Findings
             3. Risk Assessment
             4. Notable Patterns
             5. Data Quality Assessment
-            
+
             Format your response as structured JSON with clear sections.
             """,
             "threat_assessment": """
             You are a cybersecurity threat analyst specializing in OSINT. Assess the threat level based on the investigation data.
-            
+
             Investigation Data:
             {investigation_data}
-            
+
             Analyze for:
             1. Potential security threats
             2. Attack vectors
             3. Indicators of compromise (IOCs)
             4. Threat actor attribution
             5. Risk level (Low/Medium/High/Critical)
-            
+
             Provide specific threat indicators and recommended mitigations.
             """,
             "recommendations": """
             As an OSINT expert, provide actionable recommendations based on the investigation findings.
-            
+
             Investigation Results:
             {investigation_data}
-            
+
             Provide recommendations for:
             1. Further investigation areas
             2. Security improvements
             3. Monitoring strategies
             4. Risk mitigation
             5. Additional data sources to explore
-            
+
             Prioritize recommendations by impact and feasibility.
             """,
             "report": """
             Generate a professional OSINT investigation report based on the collected data.
-            
+
             Investigation: {investigation_name}
             Duration: {investigation_duration}
             Analyst: {analyst_name}
-            
+
             Data:
             {investigation_data}
-            
+
             Structure the report with:
             1. Executive Summary
             2. Investigation Scope and Methodology
@@ -159,7 +159,7 @@ class OSINTAIEngine:
             5. Recommendations
             6. Conclusion
             7. Appendices (technical details)
-            
+
             Write in professional, clear language suitable for both technical and non-technical audiences.
             """,
         }
@@ -742,12 +742,12 @@ class OSINTAIEngine:
 
             chat_prompt = f"""
             You are an OSINT analyst assistant. The user is asking about investigation {investigation_id}.
-            
+
             User question: {user_message}
-            
+
             Previous conversation:
             {json.dumps(conversation_history or [], indent=2)}
-            
+
             Provide helpful, accurate responses based on the investigation data.
             """
 
