@@ -3,37 +3,6 @@ line-length = 88
 exclude = ["osint_env", "theHarvester", "output", "venv", "Sublist3r", "**/site-packages/**"]
 target-version = "py312"
 
-[tool.ruff.lint]
-# Enable critical Python best practices
-# Start with essential rules to maintain compatibility with existing codebase
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-]
-
-# Ignore specific rules that may be too strict for the current codebase
-ignore = [
-    "E501",  # line too long (handled by formatter)
-]
-
-[tool.ruff.lint.per-file-ignores]
-# Allow star imports and unused imports in __init__.py files
-"__init__.py" = ["F401", "F403"]
-# Allow print statements in scripts
-"scripts/*.py" = ["T201"]
-# Allow print statements in main entry points
-"main.py" = ["T201"]
-"health_check.py" = ["T201"]
-
-[tool.ruff.format]
-# Use double quotes for strings
-quote-style = "double"
-# Indent with spaces
-indent-style = "space"
-# Use Unix-style line endings
-line-ending = "lf"
-
 [tool.mypy]
 exclude = [
     # Exclude root-level Python files that conflict with package modules

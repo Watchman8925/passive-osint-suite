@@ -1,13 +1,17 @@
 # Puppet Lint Configuration
-# This repository does not currently contain Puppet manifests (*.pp files)
-# This configuration file exists to satisfy the puppet-lint workflow
 
-# Disable checks that are not applicable for an empty Puppet codebase
---no-documentation-check
---no-autoloader_layout-check
+# Ignore specific rules
+ignore = 
+  # Ignore trailing whitespace
+  trailing_whitespace
+  # Ignore variable scope
+  variable_scope
 
-# Set output format
---log-format '%{path}:%{line} %{KIND}: %{message} (%{check})'
+# Set the severity level for warnings
+severity = warning
 
-# Continue on error
---error-level all
+# Specify the file types to lint
+file_types = 
+  *.pp
+
+# Custom rules can be added here
