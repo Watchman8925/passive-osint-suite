@@ -151,6 +151,32 @@ class ResultEncryption:
         encrypted_bytes = base64.urlsafe_b64decode(data.encode())
         decrypted_bytes = fernet.decrypt(encrypted_bytes)
         return decrypted_bytes.decode()
+            salt = salt or secrets.token_hex(16)
+            # Use PBKDF2 for password-based key derivation
+            # (encode password/master_key as bytes, ensure salt is bytes)
+            salt_bytes = salt.encode() if isinstance(salt, str) else salt
+            key_material = (password + self.master_key).encode()
+            key = hashlib.pbkdf2_hmac("sha256", key_material, salt_bytes, 100_000)
+            return key.hex()
+        else:
+            salt = salt or secrets.token_hex(16)
+            key_material = f"{self.master_key}{salt}"
+            return hashlib.sha256(key_material.encode()).hexdigest()
+
+    def _simple_encrypt(self, data: str, key: str) -> str:
+        """Simple XOR encryption (replace with proper encryption in production)"""
+        encrypted = []
+        key_bytes = key.encode()
+
+        for i, char in enumerate(data):
+            key_char = key_bytes[i % len(key_bytes)]
+            encrypted.append(chr(ord(char) ^ key_char))
+
+        return "".join(encrypted)
+
+    def _simple_decrypt(self, data: str, key: str) -> str:
+        """Simple XOR decryption"""
+        return self._simple_encrypt(data, key)
 
     def encrypt_result(
         self,
