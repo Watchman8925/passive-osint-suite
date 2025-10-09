@@ -217,7 +217,7 @@ class BellingcatToolkit:
 
         try:
             # Fetch the page
-            response = await proxied_transport.get(target_url, timeout=30)
+            response = proxied_transport.get(target_url, timeout=30)
             recon_data["status"] = response.status_code
             recon_data["headers"] = dict(response.headers)
 
