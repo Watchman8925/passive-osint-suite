@@ -101,7 +101,7 @@ class BellingcatToolkit:
 
     def generate_lead_id(self, content: str) -> str:
         """Generate unique ID for a lead."""
-        return hashlib.md5(content.encode()).hexdigest()[:12]
+        return hashlib.sha256(content.encode()).hexdigest()[:12]
 
     def extract_entities(
         self, text: str, source: str = "unknown"
