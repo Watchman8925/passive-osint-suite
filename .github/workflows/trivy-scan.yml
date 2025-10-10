@@ -29,8 +29,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          # Use the lighter Dockerfile for faster builds in CI
-          docker build -f Dockerfile.lite -t passive-osint-suite:scan .
+          # Build Docker image for scanning
+          docker build -t passive-osint-suite:scan .
         timeout-minutes: 15
 
       - name: Run Trivy vulnerability scanner

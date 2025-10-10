@@ -12,9 +12,6 @@
 
 # Builder stage - Compile dependencies
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS builder
-# Supply chain provenance build args
-ARG GIT_COMMIT
-ARG GIT_REPO
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -33,7 +30,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages with better caching and error handling
-RUN python -m pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
+RUN python -m pip install --no-cache-dir --user --upgrade "pip==25.2" setuptools wheel && \
     pip install --no-cache-dir --user -r requirements.txt
 
 # Create cache directory for models (they will be downloaded at runtime)
@@ -43,9 +40,6 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
 # Production stage
 # Use same pinned base image for consistency
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS production
-# Supply chain provenance build args
-ARG GIT_COMMIT
-ARG GIT_REPO
 
 # Upgrade base packages and install minimal runtime deps (remove tor; rely on tor-proxy container)
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
@@ -56,7 +50,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-reco
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure latest secure pip in production environment
-RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN python -m pip install --no-cache-dir --upgrade "pip==25.2" setuptools wheel
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash osint
@@ -84,14 +78,7 @@ ENV HF_HOME=/home/osint/.cache/huggingface
 # OCI labels
 LABEL org.opencontainers.image.source="https://github.com/Watchman8925/passive-osint-suite" \
     org.opencontainers.image.description="Passive OSINT Suite API server (hardened)" \
-    org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.title="Passive OSINT Suite" \
-    org.opencontainers.image.vendor="Watchman8925" \
-    org.opencontainers.image.documentation="https://github.com/Watchman8925/passive-osint-suite/blob/main/README.md" \
-    maintainer="Watchman8925" \
-    security.compliance="CIS Docker Benchmarks" \
-    org.opencontainers.image.revision=${GIT_COMMIT} \
-    org.opencontainers.image.source=${GIT_REPO}
+    org.opencontainers.image.licenses="MIT"
 
 # Ensure Hugging Face cache directory exists for the non-root user
 RUN mkdir -p "$HF_HOME"

@@ -557,69 +557,69 @@ class LocalLLMEngine:
         return {
             "pattern_analysis": """
             You are an expert OSINT analyst specializing in pattern recognition and intelligence analysis.
-
+            
             Analyze the following data for patterns, anomalies, and intelligence indicators:
-
+            
             Data: {data}
-
+            
             Provide analysis in this format:
             1. PATTERNS IDENTIFIED: List significant patterns
-            2. ANOMALIES: Note unusual or suspicious elements
+            2. ANOMALIES: Note unusual or suspicious elements  
             3. INTELLIGENCE INDICATORS: Highlight actionable intelligence
             4. SEARCH STRATEGIES: Suggest follow-up investigations
             5. RISK ASSESSMENT: Evaluate potential threats or opportunities
-
+            
             Focus on practical OSINT applications and maintain analytical objectivity.
             """,
             "web_search_optimization": """
             You are an expert in advanced web search techniques and OSINT methodologies.
-
+            
             Target: {target}
             Objective: {objective}
-
+            
             Generate optimized search strategies:
-
+            
             1. GOOGLE DORKS: Advanced search operators for maximum intelligence gathering
             2. ALTERNATIVE ENGINES: Specialized search engines and databases
             3. SOCIAL MEDIA: Platform-specific search techniques
             4. TECHNICAL SOURCES: Code repositories, documentation, forums
             5. DARKWEB/DEEPWEB: Specialized search approaches
             6. TEMPORAL ANALYSIS: Time-based search strategies
-
+            
             Prioritize passive techniques that maintain operational security.
             """,
             "threat_assessment": """
             As a cybersecurity and threat intelligence analyst, assess the following information:
-
+            
             Intelligence: {intelligence}
             Context: {context}
-
+            
             Provide threat assessment:
-
+            
             1. THREAT LEVEL: Scale 1-10 with justification
             2. THREAT ACTORS: Identify potential actors or groups
             3. ATTACK VECTORS: Analyze possible attack methods
             4. INDICATORS: Technical and behavioral indicators
             5. MITIGATION: Recommended defensive measures
             6. ATTRIBUTION: Analysis of threat attribution indicators
-
+            
             Base analysis on established threat intelligence frameworks.
             """,
             "data_correlation": """
             You are an intelligence analyst expert in data correlation and link analysis.
-
+            
             Dataset A: {dataset_a}
             Dataset B: {dataset_b}
-
+            
             Perform correlation analysis:
-
+            
             1. DIRECT CONNECTIONS: Explicit relationships between datasets
             2. INDIRECT ASSOCIATIONS: Hidden or implied connections
             3. TEMPORAL CORRELATIONS: Time-based relationships
             4. GEOGRAPHIC CORRELATIONS: Location-based connections
             5. BEHAVIORAL PATTERNS: Activity-based correlations
             6. INTELLIGENCE GAPS: Missing information for complete picture
-
+            
             Highlight high-confidence correlations and intelligence requirements.
             """,
         }

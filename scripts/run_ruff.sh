@@ -47,4 +47,4 @@ exec docker run --rm \
   -v "$(pwd)":"${WORKDIR}" \
   -w "${WORKDIR}" \
   "${IMAGE}" \
-  sh -c "pip install ruff==0.8.0 >/dev/null 2>&1 && ruff ${cmd[*]}"
+  sh -c "pip install ruff >/dev/null 2>&1 && ruff ${cmd[*]}"
