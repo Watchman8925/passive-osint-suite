@@ -426,9 +426,3 @@ Local tips (optional):
 - Run Dockle locally after a build:
    docker build -t local/osint-suite:dev .
    docker run --rm goodwithtech/dockle:v0.4.13 local/osint-suite:dev
-
-- Run Trivy security scan locally:
-   docker build -t local/osint-suite:dev .
-   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --severity HIGH,CRITICAL local/osint-suite:dev
-
-For complete security scanning documentation, see [DOCKER_SECURITY.md](DOCKER_SECURITY.md).

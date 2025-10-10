@@ -122,13 +122,13 @@ class ResultEncryption:
     ) -> str:
         """Generate encryption key from password and salt"""
         if password:
+            # Ensure salt is available, as hex string; then decode for pbkdf2
             salt = salt or secrets.token_hex(16)
-            # Use PBKDF2 for password-based key derivation
-            # (encode password/master_key as bytes, ensure salt is bytes)
-            salt_bytes = salt.encode() if isinstance(salt, str) else salt
-            key_material = (password + self.master_key).encode()
-            key = hashlib.pbkdf2_hmac("sha256", key_material, salt_bytes, 100_000)
-            return key.hex()
+            salt_bytes = bytes.fromhex(salt)
+            # Use PBKDF2-HMAC-SHA256 for key derivation, include master_key as part of password
+            kdf_password = (password + self.master_key).encode()
+            key_bytes = hashlib.pbkdf2_hmac("sha256", kdf_password, salt_bytes, 100_000)
+            return key_bytes.hex()
         else:
             salt = salt or secrets.token_hex(16)
             key_material = f"{self.master_key}{salt}"
