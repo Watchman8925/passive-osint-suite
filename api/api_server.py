@@ -1799,6 +1799,355 @@ async def remove_scheduled_report(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =========================================================================
+# Natural Language Command Processing
+# =========================================================================
+
+
+class NLPCommandRequest(BaseModel):
+    """Request for natural language command"""
+
+    command: str = Field(..., description="Natural language command to parse and execute")
+    investigation_id: Optional[str] = Field(
+        None, description="Optional investigation ID to link execution"
+    )
+    execute: bool = Field(
+        False, description="Whether to execute the command or just parse it"
+    )
+
+
+@app.post("/api/nlp/parse")
+async def parse_nlp_command(
+    request: NLPCommandRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=20, window_seconds=60)),
+):
+    """Parse natural language command and return execution plan"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        parsed = parser.parse(request.command)
+
+        return {
+            "intent": parsed.intent.value,
+            "target_type": parsed.target_type.value,
+            "target": parsed.target,
+            "modules": parsed.modules,
+            "parameters": parsed.parameters,
+            "confidence": parsed.confidence,
+            "raw_command": parsed.raw_command,
+        }
+
+    except Exception as e:
+        logging.error(f"NLP parsing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/nlp/execute")
+async def execute_nlp_command(
+    request: NLPCommandRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=300)),
+):
+    """Parse and execute natural language command"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        parsed = parser.parse(request.command)
+
+        if parsed.confidence < 0.5:
+            return {
+                "status": "low_confidence",
+                "message": f"Command confidence is low ({parsed.confidence:.2f}). Please rephrase.",
+                "parsed": {
+                    "intent": parsed.intent.value,
+                    "target_type": parsed.target_type.value,
+                    "target": parsed.target,
+                },
+            }
+
+        # Execute the modules
+        results = {}
+        for module_name in parsed.modules:
+            try:
+                module_instance = get_module(module_name)
+                if not module_instance:
+                    results[module_name] = {"error": "Module not found"}
+                    continue
+
+                # Execute based on module capabilities
+                if hasattr(module_instance, "search"):
+                    result = module_instance.search(target=parsed.target)
+                elif hasattr(module_instance, "analyze"):
+                    result = module_instance.analyze(target=parsed.target)
+                else:
+                    result = {"message": "Module executed but no standard method found"}
+
+                results[module_name] = result
+
+            except Exception as e:
+                logging.error(f"Module {module_name} execution failed: {e}")
+                results[module_name] = {"error": str(e)}
+
+        return {
+            "status": "executed",
+            "command": request.command,
+            "parsed": {
+                "intent": parsed.intent.value,
+                "target_type": parsed.target_type.value,
+                "target": parsed.target,
+                "modules": parsed.modules,
+                "confidence": parsed.confidence,
+            },
+            "results": results,
+            "investigation_id": request.investigation_id,
+        }
+
+    except Exception as e:
+        logging.error(f"NLP execution failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/nlp/examples")
+async def get_nlp_examples():
+    """Get example natural language commands"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        examples = parser.get_example_commands()
+
+        return {"examples": examples, "count": len(examples)}
+
+    except Exception as e:
+        logging.error(f"Failed to get NLP examples: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =========================================================================
+# Chat History Management
+# =========================================================================
+
+
+class ChatMessageRequest(BaseModel):
+    """Request to add chat message"""
+
+    conversation_id: str = Field(..., description="Conversation ID")
+    role: str = Field(..., description="Message role (user or assistant)")
+    content: str = Field(..., description="Message content")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata")
+
+
+class CreateConversationRequest(BaseModel):
+    """Request to create conversation"""
+
+    investigation_id: Optional[str] = Field(None, description="Optional investigation ID")
+    title: str = Field("New Conversation", description="Conversation title")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata")
+
+
+@app.post("/api/chat/conversations")
+async def create_chat_conversation(
+    request: CreateConversationRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=50, window_seconds=3600)),
+):
+    """Create a new chat conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversation_id = manager.create_conversation(
+            investigation_id=request.investigation_id,
+            title=request.title,
+            metadata=request.metadata or {},
+        )
+
+        return {
+            "conversation_id": conversation_id,
+            "investigation_id": request.investigation_id,
+            "title": request.title,
+            "created_at": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Failed to create conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/messages")
+async def add_chat_message(
+    request: ChatMessageRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=100, window_seconds=3600)),
+):
+    """Add a message to a conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        message_id = manager.add_message(
+            conversation_id=request.conversation_id,
+            role=request.role,
+            content=request.content,
+            metadata=request.metadata or {},
+        )
+
+        return {
+            "message_id": message_id,
+            "conversation_id": request.conversation_id,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Failed to add message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations/{conversation_id}")
+async def get_chat_conversation(
+    conversation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
+    """Get a conversation with all messages"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversation = manager.get_conversation(conversation_id)
+
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return {
+            "id": conversation.id,
+            "investigation_id": conversation.investigation_id,
+            "title": conversation.title,
+            "created_at": conversation.created_at,
+            "updated_at": conversation.updated_at,
+            "messages": [
+                {
+                    "id": msg.id,
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp,
+                    "metadata": msg.metadata,
+                }
+                for msg in conversation.messages
+            ],
+            "metadata": conversation.metadata,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to get conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations")
+async def list_chat_conversations(
+    investigation_id: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """List all conversations"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversations = manager.list_conversations(
+            investigation_id=investigation_id, limit=limit, offset=offset
+        )
+
+        return {"conversations": conversations, "count": len(conversations)}
+
+    except Exception as e:
+        logging.error(f"Failed to list conversations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/chat/conversations/{conversation_id}")
+async def delete_chat_conversation(
+    conversation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
+    """Delete a conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        deleted = manager.delete_conversation(conversation_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return {"status": "deleted", "conversation_id": conversation_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to delete conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/search")
+async def search_chat_messages(
+    query: str, limit: int = 50, user_id: Optional[str] = Depends(verify_token)
+):
+    """Search messages by content"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        results = manager.search_messages(query=query, limit=limit)
+
+        return {"results": results, "count": len(results), "query": query}
+
+    except Exception as e:
+        logging.error(f"Failed to search messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/stats")
+async def get_chat_stats(user_id: Optional[str] = Depends(verify_token)):
+    """Get chat history statistics"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        stats = manager.get_stats()
+
+        return stats
+
+    except Exception as e:
+        logging.error(f"Failed to get chat stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations/{conversation_id}/export")
+async def export_chat_conversation(
+    conversation_id: str,
+    format: str = "json",
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Export a conversation to file"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+        from fastapi.responses import FileResponse
+
+        manager = ChatHistoryManager()
+        filepath = manager.export_conversation(conversation_id, format=format)
+
+        if not filepath:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return FileResponse(path=filepath, filename=os.path.basename(filepath))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to export conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/reports/scheduled")
 async def get_scheduled_reports(user_id: Optional[str] = Depends(verify_token)):
     """Get list of scheduled reports"""
@@ -2444,6 +2793,89 @@ async def http_exception_handler(request, exc):
             "timestamp": datetime.now().isoformat(),
         },
     )
+
+
+# =========================================================================
+# Autopivoting and Autonomous Investigations
+# =========================================================================
+
+
+class AutopivotRequest(BaseModel):
+    """Request for autopivot suggestions"""
+
+    investigation_id: str = Field(..., description="Investigation ID to analyze")
+    max_pivots: int = Field(5, description="Maximum number of pivot suggestions")
+
+
+class AutonomousInvestigationRequest(BaseModel):
+    """Request for autonomous investigation"""
+
+    target: str = Field(..., description="Initial investigation target")
+    target_type: str = Field(..., description="Type of target (domain, email, ip, etc.)")
+    max_depth: int = Field(3, description="Maximum pivot depth")
+    max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
+
+
+@app.post("/api/autopivot/suggest")
+async def suggest_autopivots(
+    request: AutopivotRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=300)),
+):
+    """Get AI-powered pivot suggestions for an investigation"""
+    try:
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        # Get autopivot suggestions from AI engine
+        pivots = await app.state.ai_engine.suggest_autopivots(
+            investigation_data=investigation, max_pivots=request.max_pivots
+        )
+
+        return {
+            "investigation_id": request.investigation_id,
+            "pivot_suggestions": pivots,
+            "count": len(pivots),
+            "generated_at": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Autopivot suggestion failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/autopivot/autonomous")
+async def start_autonomous_investigation(
+    request: AutonomousInvestigationRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=3600)),
+):
+    """Start fully autonomous investigation with automatic pivoting"""
+    try:
+        # Execute autonomous investigation
+        result = await app.state.ai_engine.execute_autonomous_investigation(
+            initial_target=request.target,
+            target_type=request.target_type,
+            max_depth=request.max_depth,
+            max_pivots_per_level=request.max_pivots_per_level,
+        )
+
+        return {
+            "status": "completed",
+            "investigation_tree": result,
+            "total_targets": result["total_targets_investigated"],
+            "total_pivots": result["total_pivots"],
+            "depth_reached": len(result["levels"]),
+            "started_at": result["started_at"],
+            "completed_at": result["completed_at"],
+        }
+
+    except Exception as e:
+        logging.error(f"Autonomous investigation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(Exception)
