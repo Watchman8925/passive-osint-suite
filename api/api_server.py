@@ -2878,6 +2878,359 @@ async def start_autonomous_investigation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =========================================================================
+# Enhanced Offline LLM and Investigation Tracking
+# =========================================================================
+
+
+class EnhancedAnalysisRequest(BaseModel):
+    """Request for enhanced offline LLM analysis"""
+
+    investigation_id: str = Field(..., description="Investigation ID to analyze")
+    focus: str = Field("comprehensive", description="Analysis focus (comprehensive, threats, connections, timeline)")
+
+
+class InvestigationFindingRequest(BaseModel):
+    """Request to add finding to investigation"""
+
+    investigation_id: str = Field(..., description="Investigation ID")
+    finding_type: str = Field(..., description="Type of finding (email, domain, ip, etc.)")
+    value: str = Field(..., description="Finding value")
+    source_module: str = Field(..., description="Source module")
+    confidence: float = Field(0.8, description="Confidence score (0-1)")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+
+
+class DetailedReportRequest(BaseModel):
+    """Request for user-friendly detailed report"""
+
+    investigation_id: str = Field(..., description="Investigation ID")
+    include_analysis: bool = Field(True, description="Include AI analysis")
+    include_leads: bool = Field(True, description="Include investigation leads")
+
+
+@app.post("/api/enhanced/analyze")
+async def enhanced_offline_analysis(
+    request: EnhancedAnalysisRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300)),
+):
+    """
+    Get enhanced offline LLM analysis using local models (no API key required).
+    Provides detailed, user-friendly breakdown of findings.
+    """
+    try:
+        from core.offline_llm_engine import get_offline_llm_engine
+        from core.investigation_tracker import get_investigation_tracker
+        
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+        
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+        
+        # Get offline LLM engine
+        llm_engine = get_offline_llm_engine()
+        
+        # Perform analysis
+        analysis = llm_engine.analyze_investigation_data(
+            investigation_data=investigation,
+            focus=request.focus
+        )
+        
+        # Get investigation tracker for findings
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(request.investigation_id)
+        
+        return {
+            "investigation_id": request.investigation_id,
+            "analysis": {
+                "summary": analysis.summary,
+                "key_findings": analysis.key_findings,
+                "recommended_actions": analysis.recommended_actions,
+                "confidence": analysis.confidence,
+                "entities_found": analysis.entities_found,
+                "risk_assessment": analysis.risk_assessment,
+                "investigation_leads": analysis.investigation_leads
+            },
+            "total_tracked_findings": len(findings),
+            "generated_at": analysis.timestamp.isoformat(),
+            "model_used": "Offline LLM (Phi-3/TinyLlama)"
+        }
+    
+    except Exception as e:
+        logging.error(f"Enhanced analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigation/tracking/create")
+async def create_investigation_tracking(
+    investigation_id: str,
+    name: str,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Create investigation tracking for persistent findings storage"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        success = tracker.create_investigation(investigation_id, name)
+        
+        if success:
+            return {
+                "investigation_id": investigation_id,
+                "name": name,
+                "status": "created",
+                "message": "Investigation tracking created successfully"
+            }
+        else:
+            return {
+                "investigation_id": investigation_id,
+                "status": "exists",
+                "message": "Investigation tracking already exists"
+            }
+    
+    except Exception as e:
+        logging.error(f"Failed to create investigation tracking: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigation/tracking/finding")
+async def add_investigation_finding(
+    request: InvestigationFindingRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=100, window_seconds=3600)),
+):
+    """Add a finding to investigation tracking (builds progressively without data loss)"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        finding_id = tracker.add_finding(
+            investigation_id=request.investigation_id,
+            finding_type=request.finding_type,
+            value=request.value,
+            source_module=request.source_module,
+            confidence=request.confidence,
+            metadata=request.metadata
+        )
+        
+        if finding_id:
+            return {
+                "finding_id": finding_id,
+                "status": "added",
+                "message": "Finding added to investigation"
+            }
+        else:
+            return {
+                "status": "duplicate",
+                "message": "Finding already exists in investigation"
+            }
+    
+    except Exception as e:
+        logging.error(f"Failed to add finding: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/findings")
+async def get_investigation_findings(
+    investigation_id: str,
+    finding_type: Optional[str] = None,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get all findings for an investigation"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(investigation_id, finding_type=finding_type)
+        
+        return {
+            "investigation_id": investigation_id,
+            "total_findings": len(findings),
+            "findings": [
+                {
+                    "id": f.id,
+                    "type": f.finding_type,
+                    "value": f.value,
+                    "source": f.source_module,
+                    "discovered_at": f.discovered_at,
+                    "confidence": f.confidence,
+                    "status": f.follow_up_status,
+                    "notes": f.notes
+                }
+                for f in findings
+            ]
+        }
+    
+    except Exception as e:
+        logging.error(f"Failed to get findings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/leads")
+async def get_investigation_leads(
+    investigation_id: str,
+    status: Optional[str] = None,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get all investigation leads with explanations"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        leads = tracker.get_all_leads(investigation_id, status=status)
+        
+        return {
+            "investigation_id": investigation_id,
+            "total_leads": len(leads),
+            "leads": [
+                {
+                    "id": l.id,
+                    "target": l.target,
+                    "type": l.target_type,
+                    "reason": l.reason,
+                    "priority": l.priority,
+                    "suggested_modules": l.suggested_modules,
+                    "status": l.status,
+                    "findings_count": l.findings_count,
+                    "estimated_value": l.estimated_value
+                }
+                for l in leads
+            ]
+        }
+    
+    except Exception as e:
+        logging.error(f"Failed to get leads: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/summary")
+async def get_investigation_summary(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get comprehensive investigation summary"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        summary = tracker.get_investigation_summary(investigation_id)
+        
+        return summary
+    
+    except Exception as e:
+        logging.error(f"Failed to get summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reports/user-friendly")
+async def generate_user_friendly_report(
+    request: DetailedReportRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=3600)),
+):
+    """
+    Generate comprehensive user-friendly report with detailed breakdowns.
+    Includes: What We Know, What We Think, What We Can Find, Why It Matters
+    """
+    try:
+        from core.enhanced_reporting import EnhancedReportGenerator
+        from core.investigation_tracker import get_investigation_tracker
+        from core.offline_llm_engine import get_offline_llm_engine
+        
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+        
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+        
+        # Get tracked findings and leads
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(request.investigation_id)
+        leads = tracker.get_all_leads(request.investigation_id)
+        
+        # Convert to dict format
+        findings_dict = [
+            {
+                'finding_type': f.finding_type,
+                'value': f.value,
+                'source_module': f.source_module,
+                'confidence': f.confidence,
+                'discovered_at': f.discovered_at,
+                'metadata': f.metadata
+            }
+            for f in findings
+        ]
+        
+        leads_dict = [
+            {
+                'target': l.target,
+                'target_type': l.target_type,
+                'reason': l.reason,
+                'priority': l.priority,
+                'suggested_modules': l.suggested_modules,
+                'status': l.status,
+                'estimated_value': l.estimated_value
+            }
+            for l in leads
+        ]
+        
+        # Get AI analysis if requested
+        analysis = None
+        if request.include_analysis:
+            llm_engine = get_offline_llm_engine()
+            analysis_result = llm_engine.analyze_investigation_data(investigation)
+            analysis = {
+                'summary': analysis_result.summary,
+                'confidence': analysis_result.confidence
+            }
+        
+        # Generate report
+        report_generator = EnhancedReportGenerator()
+        report = report_generator.generate_user_friendly_report(
+            investigation_data=investigation,
+            findings=findings_dict,
+            leads=leads_dict if request.include_leads else [],
+            analysis=analysis
+        )
+        
+        return report
+    
+    except Exception as e:
+        logging.error(f"Failed to generate user-friendly report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/export")
+async def export_investigation_data(
+    investigation_id: str,
+    format: str = "json",
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Export complete investigation data (json or markdown)"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        from fastapi.responses import FileResponse
+        
+        tracker = get_investigation_tracker()
+        filepath = tracker.export_investigation(investigation_id, format=format)
+        
+        if filepath:
+            return FileResponse(
+                path=filepath,
+                filename=os.path.basename(filepath),
+                media_type="application/json" if format == "json" else "text/markdown"
+            )
+        else:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+    
+    except Exception as e:
+        logging.error(f"Failed to export investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     logging.error(f"Unhandled exception: {exc}")
