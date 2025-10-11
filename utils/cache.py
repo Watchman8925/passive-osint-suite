@@ -127,7 +127,8 @@ class OSINTCache:
         # Sort params for consistent key generation
         param_str = json.dumps(params, sort_keys=True)
         key_content = f"{service}:{operation}:{param_str}"
-        return hashlib.md5(key_content.encode()).hexdigest()
+        # Use SHA256 instead of MD5 for better security
+        return hashlib.sha256(key_content.encode()).hexdigest()
 
     def _cleanup_expired(self):
         """Remove expired entries"""
