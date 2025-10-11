@@ -5,8 +5,17 @@ This package contains all OSINT (Open Source Intelligence) modules for the Passi
 All modules inherit from OSINTUtils and provide specialized intelligence gathering capabilities.
 """
 
-import logging
+# ruff: noqa: E402
+# Note: Imports are not at top of file intentionally to allow graceful degradation
+# when optional modules are not available. This pattern enables dynamic loading
+# with proper error handling for each module.
 
+# Standard library imports
+import importlib
+import logging
+from typing import Any, Dict, List, Type, TypedDict
+
+# Initialize logger
 logger = logging.getLogger(__name__)
 
 # Import all module classes for easy access
@@ -53,8 +62,6 @@ from .academic_passive import AcademicPassive
 from .patent_passive import PatentPassive
 
 # Import conspiracy analyzer and comprehensive sweep (with error handling)
-import importlib
-
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
     module = importlib.import_module("analysis.conspiracy_analyzer")
@@ -167,7 +174,6 @@ except Exception as e:
     LocalNetworkAnalyzer = None
 
 from .comprehensive_sweep import ComprehensiveInvestigationSweep
-from typing import Any, Dict, List, Type, TypedDict
 
 
 class ModuleInfo(TypedDict):
