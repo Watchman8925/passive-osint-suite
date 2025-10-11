@@ -181,11 +181,12 @@ def cmd_status(args):
             total_entries = 0
             for log_file in log_files:
                 try:
-                    entries = sum(1 for _ in open(log_file))
+                    with open(log_file, 'r') as f:
+                        entries = sum(1 for _ in f)
                     total_entries += entries
                     print(f"  {log_file.name}: {entries} entries")
-                except Exception:
-                    print(f"  {log_file.name}: Error reading file")
+                except Exception as e:
+                    print(f"  {log_file.name}: Error reading file - {e}")
 
             print(f"Total entries: {total_entries}")
 

@@ -485,12 +485,14 @@ async def lifespan(app: FastAPI):
         app.state.redis = (
             redis.from_url(AppConfig.REDIS_URL) if redis is not None else None
         )
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Failed to connect to Redis: {e}")
         app.state.redis = None
 
     try:
         app.state.es = AsyncElasticsearch([AppConfig.ELASTICSEARCH_URL])
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Failed to connect to Elasticsearch: {e}")
         app.state.es = None
 
     # Initialize AI engine (only if API key is configured)
@@ -2147,11 +2149,13 @@ async def acknowledge_alert(
 @app.post("/api/feeds/subscribe")
 async def subscribe_to_alerts(
     alert_types: List[str],
-    notification_channels: List[str] = ["websocket"],
+    notification_channels: Optional[List[str]] = None,
     user_id: Optional[str] = Depends(verify_token),
 ):
     """Subscribe to specific types of intelligence alerts"""
     try:
+        if notification_channels is None:
+            notification_channels = ["websocket"]
         subscription_id = await app.state.intelligence_feeds.subscribe_to_alerts(
             user_id, alert_types, notification_channels
         )

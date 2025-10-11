@@ -5,6 +5,19 @@ This package contains all OSINT (Open Source Intelligence) modules for the Passi
 All modules inherit from OSINTUtils and provide specialized intelligence gathering capabilities.
 """
 
+# ruff: noqa: E402
+# Note: Imports are not at top of file intentionally to allow graceful degradation
+# when optional modules are not available. This pattern enables dynamic loading
+# with proper error handling for each module.
+
+# Standard library imports
+import importlib
+import logging
+from typing import Any, Dict, List, Type, TypedDict
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+
 # Import all module classes for easy access
 from .certificate_transparency import CertificateTransparency
 from .company_intel import CompanyIntelligence
@@ -49,8 +62,6 @@ from .academic_passive import AcademicPassive
 from .patent_passive import PatentPassive
 
 # Import conspiracy analyzer and comprehensive sweep (with error handling)
-import importlib
-
 try:
     # Use dynamic import to avoid static unresolved import errors from linters
     module = importlib.import_module("analysis.conspiracy_analyzer")
@@ -60,7 +71,7 @@ try:
             "ConspiracyTheoryAnalyzer not found in analysis.conspiracy_analyzer"
         )
 except Exception as e:
-    print(f"Warning: Could not import ConspiracyTheoryAnalyzer: {e}")
+    logger.warning(f"Could not import ConspiracyTheoryAnalyzer: {e}")
     ConspiracyTheoryAnalyzer = None
 
 # Import additional specialized modules from root directory
@@ -73,7 +84,7 @@ try:
             "HiddenPatternDetector not found in analysis.hidden_pattern_detector"
         )
 except Exception as e:
-    print(f"Warning: Could not import HiddenPatternDetector: {e}")
+    logger.warning(f"Could not import HiddenPatternDetector: {e}")
     HiddenPatternDetector = None
 
 try:
@@ -85,7 +96,7 @@ try:
             "EnhancedReportingEngine not found in reporting.reporting_engine"
         )
 except Exception as e:
-    print(f"Warning: Could not import EnhancedReportingEngine: {e}")
+    logger.warning(f"Could not import EnhancedReportingEngine: {e}")
     EnhancedReportingEngine = None
 
 try:
@@ -96,7 +107,7 @@ try:
             "RealTimeIntelligenceFeed not found in realtime.realtime_feeds"
         )
 except Exception as e:
-    print(f"Warning: Could not import RealTimeIntelligenceFeed: {e}")
+    logger.warning(f"Could not import RealTimeIntelligenceFeed: {e}")
     RealTimeIntelligenceFeed = None
 
 try:
@@ -108,7 +119,7 @@ try:
             "CrossReferenceEngine not found in analysis.cross_reference_engine"
         )
 except Exception as e:
-    print(f"Warning: Could not import CrossReferenceEngine: {e}")
+    logger.warning(f"Could not import CrossReferenceEngine: {e}")
     CrossReferenceEngine = None
 
 try:
@@ -120,7 +131,7 @@ try:
             "BlackboxPatternEngine not found in analysis.blackbox_patterns"
         )
 except Exception as e:
-    print(f"Warning: Could not import BlackboxPatternEngine: {e}")
+    logger.warning(f"Could not import BlackboxPatternEngine: {e}")
     BlackboxPatternEngine = None
 
 try:
@@ -130,7 +141,7 @@ try:
     if BellingcatToolkit is None:
         raise ImportError("BellingcatToolkit not found in bellingcat_toolkit")
 except Exception as e:
-    print(f"Warning: Could not import BellingcatToolkit: {e}")
+    logger.warning(f"Could not import BellingcatToolkit: {e}")
     BellingcatToolkit = None
 
 # Import local analysis tools (no API dependencies)
@@ -141,7 +152,7 @@ try:
     if MetadataExtractor is None:
         raise ImportError("MetadataExtractor not found in metadata_extractor")
 except Exception as e:
-    print(f"Warning: Could not import MetadataExtractor: {e}")
+    logger.warning(f"Could not import MetadataExtractor: {e}")
     MetadataExtractor = None
 
 try:
@@ -150,7 +161,7 @@ try:
     if LocalDNSEnumerator is None:
         raise ImportError("LocalDNSEnumerator not found in local_dns_enumerator")
 except Exception as e:
-    print(f"Warning: Could not import LocalDNSEnumerator: {e}")
+    logger.warning(f"Could not import LocalDNSEnumerator: {e}")
     LocalDNSEnumerator = None
 
 try:
@@ -159,11 +170,10 @@ try:
     if LocalNetworkAnalyzer is None:
         raise ImportError("LocalNetworkAnalyzer not found in local_network_analyzer")
 except Exception as e:
-    print(f"Warning: Could not import LocalNetworkAnalyzer: {e}")
+    logger.warning(f"Could not import LocalNetworkAnalyzer: {e}")
     LocalNetworkAnalyzer = None
 
 from .comprehensive_sweep import ComprehensiveInvestigationSweep
-from typing import Any, Dict, List, Type, TypedDict
 
 
 class ModuleInfo(TypedDict):

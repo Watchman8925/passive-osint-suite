@@ -242,7 +242,7 @@ def rate_limited(service_name: str, tokens: int = 1):
     def decorator(func):
         def wrapper(*args, **kwargs):
             if not service_rate_limiter.check_rate_limit(service_name, tokens):
-                raise Exception(f"Rate limit exceeded for {service_name}")
+                raise RuntimeError(f"Rate limit exceeded for {service_name}")
 
             # Add throttling
             request_throttler.throttle()

@@ -71,7 +71,7 @@ async def demo_basic_audit():
             session_id=session_id,
         )
         print(f"  ✓ Logged {operation} -> {entry_id}")
-        time.sleep(0.1)  # Small delay for demonstration
+        await asyncio.sleep(0.1)  # Small delay for demonstration
 
     return trail, session_id
 

@@ -140,8 +140,9 @@ class FreeToolsOSINT(OSINTUtils):
             with open(file_path, "rb") as f:
                 data = f.read()
 
-            hashes["md5"] = hashlib.md5(data).hexdigest()
-            hashes["sha1"] = hashlib.sha1(data).hexdigest()
+            # Note: MD5 and SHA1 used for file identification, not security
+            hashes["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
+            hashes["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
             hashes["sha256"] = hashlib.sha256(data).hexdigest()
             hashes["sha512"] = hashlib.sha512(data).hexdigest()
 

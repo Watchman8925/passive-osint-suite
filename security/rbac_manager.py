@@ -237,7 +237,7 @@ class RBACManager:
             self.logger.info(f"User created: {username} ({user_id})")
             return user
         else:
-            raise Exception("Failed to create user in database")
+            raise RuntimeError("Failed to create user in database")
 
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
         """Authenticate a user with username and password"""

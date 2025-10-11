@@ -1,3 +1,4 @@
+# MD5 used for ID generation, not cryptographic security  # noqa: S324
 """
 Cross-Reference Intelligence Engine
 ===================================

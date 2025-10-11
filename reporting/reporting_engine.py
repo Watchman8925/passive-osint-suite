@@ -889,11 +889,14 @@ class EnhancedReportingEngine:
     ) -> bool:
         """Send report via email"""
         try:
-            # Email configuration (would be loaded from config)
-            smtp_server = "smtp.gmail.com"
-            smtp_port = 587
-            sender_email = "reports@osint-suite.local"
-            sender_password = "configured_password"
+            # Email configuration from environment variables
+            smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+            smtp_port = int(os.getenv("SMTP_PORT", "587"))
+            sender_email = os.getenv("SMTP_SENDER_EMAIL", "reports@osint-suite.local")
+            sender_password = os.getenv("SMTP_SENDER_PASSWORD")
+            
+            if not sender_password:
+                raise ValueError("SMTP_SENDER_PASSWORD environment variable must be set")
 
             # Create message
             msg = MIMEMultipart()
