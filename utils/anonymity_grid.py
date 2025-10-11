@@ -370,7 +370,7 @@ class AnonymityGrid:
                         "content_length": len(response.content),
                     }
                 else:
-                    raise Exception("HTTP request failed")
+                    raise RuntimeError(f"HTTP request failed with status code: {response.status_code}")
 
             else:
                 # Generic execution

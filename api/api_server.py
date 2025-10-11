@@ -485,12 +485,14 @@ async def lifespan(app: FastAPI):
         app.state.redis = (
             redis.from_url(AppConfig.REDIS_URL) if redis is not None else None
         )
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Failed to connect to Redis: {e}")
         app.state.redis = None
 
     try:
         app.state.es = AsyncElasticsearch([AppConfig.ELASTICSEARCH_URL])
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Failed to connect to Elasticsearch: {e}")
         app.state.es = None
 
     # Initialize AI engine (only if API key is configured)
