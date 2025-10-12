@@ -52,6 +52,7 @@ A **comprehensive, production-ready** Open Source Intelligence (OSINT) gathering
 
 ## 📚 Documentation
 
+- **[DEPLOYMENT_FIX.md](DEPLOYMENT_FIX.md)** - 🆕 **Deployment fix and setup guide**
 - **[USER_MANUAL.md](USER_MANUAL.md)** - Complete user guide with examples
 - **[QUICK_START.md](QUICK_START.md)** - Get running in 5 minutes
 - **[ENHANCEMENTS_GUIDE.md](ENHANCEMENTS_GUIDE.md)** - 🆕 New features and capabilities
@@ -103,21 +104,25 @@ docker-compose up -d
 ### Option 2: Local Development
 
 ```bash
-# 1. Clone and setup
+# 1. Clone repository
 git clone https://github.com/Watchman8925/passive-osint-suite.git
 cd passive-osint-suite
-./setup.sh
 
-# 2. Configure environment
-cp .env.example .env
-nano .env  # Set your secrets
+# 2. Install dependencies
+pip3 install -r requirements.txt
+cd web && npm ci && cd ..
 
-# 3. Start API server
-python api/api_server.py
+# 3. Start full stack (backend + frontend)
+./start_full_stack.sh
 
-# 4. Start web interface (in another terminal)
-cd web
-npm install
+# Or start services separately:
+# Backend: python3 main.py --web
+# Frontend: cd web && npm run dev
+
+# 4. Access the suite
+# Web Interface: http://localhost:3000
+# API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 npm run dev
 
 # 5. Access at http://localhost:3000
