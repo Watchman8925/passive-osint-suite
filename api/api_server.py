@@ -11,6 +11,13 @@ import os
 import importlib
 import importlib.util
 from contextlib import asynccontextmanager
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv is optional
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Literal, TYPE_CHECKING, cast

@@ -2544,8 +2544,31 @@ def main():
         action="store_true",
         help="Enable network tests during troubleshooting/self-check",
     )
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help="Start the web API server",
+    )
 
     args = parser.parse_args()
+
+    # Handle web API server mode
+    if args.web:
+        import uvicorn
+        from api.api_server import app
+        
+        console.print("[bold green]🌐 Starting OSINT Suite Web API Server...[/bold green]")
+        console.print("Backend API: http://localhost:8000")
+        console.print("API Docs: http://localhost:8000/docs")
+        console.print("\nPress Ctrl+C to stop the server\n")
+        
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            log_level="info",
+        )
+        return 0
 
     # Tor preflight: ensure Tor proxy is reachable since transport enforces Tor by default
     try:
