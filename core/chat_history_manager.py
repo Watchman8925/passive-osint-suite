@@ -279,16 +279,22 @@ class ChatHistoryManager:
         """Search messages by content"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
+        def escape_like_pattern(s: str) -> str:
+            # Escape %, _, and \ for LIKE patterns
+            return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+        escaped_query = escape_like_pattern(query)
+
         cursor.execute('''
             SELECT m.id, m.conversation_id, m.role, m.content, m.timestamp, m.metadata,
                    c.title, c.investigation_id
             FROM messages m
             JOIN conversations c ON m.conversation_id = c.id
-            WHERE m.content LIKE ?
+            WHERE m.content LIKE ? ESCAPE '\\'
             ORDER BY m.timestamp DESC
             LIMIT ?
-        ''', (f'%{query}%', limit))
+        ''', (f'%{escaped_query}%', limit))
         
         results = []
         for row in cursor.fetchall():
