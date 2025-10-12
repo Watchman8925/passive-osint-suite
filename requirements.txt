@@ -10,6 +10,7 @@
 # Additional dependencies for privacy, logging, and Tor control
 
 # Core Dependencies
+dnspython>=2.2.0
 requests>=2.31.0
 beautifulsoup4>=4.11.0
 dnspython>=2.2.0

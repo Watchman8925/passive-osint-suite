@@ -13,10 +13,22 @@ A **comprehensive, production-ready** Open Source Intelligence (OSINT) gathering
 
 - **38+ OSINT Modules** - Comprehensive coverage from domains to dark web
 - **Modern Web UI** - React-based interface with real-time updates
+- **🆕 Natural Language Commands** - "investigate example.com" just works!
+- **🆕 AI Autopivoting** - Autonomous investigation with intelligent pivots
+- **🆕 Chat History** - All investigations automatically saved and searchable
 - **RESTful API** - Full programmatic access for automation
 - **Docker Ready** - One-command deployment with docker-compose
 - **100% Auditable** - Cryptographic audit trail for every operation
 - **Anonymous by Default** - All operations via Tor and DNS-over-HTTPS
+
+### 🆕 New AI-Powered Features (v2.1)
+
+✅ **Natural Language Commands** - Control the suite with plain English  
+✅ **Chat-Based Interface** - Interactive investigations with AI assistant  
+✅ **Autopivoting** - AI automatically discovers related targets  
+✅ **Autonomous Investigations** - Multi-level automated exploration  
+✅ **Chat History** - All conversations saved and searchable  
+✅ **Quick Install** - One-command deployment (2 minutes)  
 
 ### Enterprise Security
 
@@ -34,6 +46,7 @@ A **comprehensive, production-ready** Open Source Intelligence (OSINT) gathering
 ✅ **Security Hardened** - No SQL injection, XSS, or resource leak vulnerabilities  
 ✅ **Well Documented** - Comprehensive guides and API documentation  
 ✅ **Tested** - Integration and security tests included  
+✅ **🆕 Module Testing** - Automated testing for all 38+ modules  
 
 ---
 
@@ -41,13 +54,31 @@ A **comprehensive, production-ready** Open Source Intelligence (OSINT) gathering
 
 - **[USER_MANUAL.md](USER_MANUAL.md)** - Complete user guide with examples
 - **[QUICK_START.md](QUICK_START.md)** - Get running in 5 minutes
+- **[ENHANCEMENTS_GUIDE.md](ENHANCEMENTS_GUIDE.md)** - 🆕 New features and capabilities
+- **[FEATURE_SHOWCASE.md](FEATURE_SHOWCASE.md)** - 🆕 Visual overview of enhancements
 - **[SECURITY_GUIDE.md](SECURITY_GUIDE.md)** - Security best practices
 - **[CODE_REVIEW_IMPROVEMENTS.md](CODE_REVIEW_IMPROVEMENTS.md)** - Quality improvements made
 - **[API Documentation](http://localhost:8000/docs)** - Interactive API docs (when running)
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## 🚀 Quick Start (2 Minutes) 🆕
+
+### 🎉 New: One-Command Installation
+
+```bash
+# Clone repository
+git clone https://github.com/Watchman8925/passive-osint-suite.git
+cd passive-osint-suite
+
+# Run quick install (auto-detects Docker or local setup)
+./quick_install.sh
+
+# That's it! Suite is running at:
+# • API: http://localhost:8000
+# • Web Interface: http://localhost:3000
+# • Docs: http://localhost:8000/docs
+```
 
 ### Option 1: Docker (Recommended)
 

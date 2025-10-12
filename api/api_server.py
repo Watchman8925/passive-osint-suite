@@ -1799,6 +1799,355 @@ async def remove_scheduled_report(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =========================================================================
+# Natural Language Command Processing
+# =========================================================================
+
+
+class NLPCommandRequest(BaseModel):
+    """Request for natural language command"""
+
+    command: str = Field(..., description="Natural language command to parse and execute")
+    investigation_id: Optional[str] = Field(
+        None, description="Optional investigation ID to link execution"
+    )
+    execute: bool = Field(
+        False, description="Whether to execute the command or just parse it"
+    )
+
+
+@app.post("/api/nlp/parse")
+async def parse_nlp_command(
+    request: NLPCommandRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=20, window_seconds=60)),
+):
+    """Parse natural language command and return execution plan"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        parsed = parser.parse(request.command)
+
+        return {
+            "intent": parsed.intent.value,
+            "target_type": parsed.target_type.value,
+            "target": parsed.target,
+            "modules": parsed.modules,
+            "parameters": parsed.parameters,
+            "confidence": parsed.confidence,
+            "raw_command": parsed.raw_command,
+        }
+
+    except Exception as e:
+        logging.error(f"NLP parsing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/nlp/execute")
+async def execute_nlp_command(
+    request: NLPCommandRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=300)),
+):
+    """Parse and execute natural language command"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        parsed = parser.parse(request.command)
+
+        if parsed.confidence < 0.5:
+            return {
+                "status": "low_confidence",
+                "message": f"Command confidence is low ({parsed.confidence:.2f}). Please rephrase.",
+                "parsed": {
+                    "intent": parsed.intent.value,
+                    "target_type": parsed.target_type.value,
+                    "target": parsed.target,
+                },
+            }
+
+        # Execute the modules
+        results = {}
+        for module_name in parsed.modules:
+            try:
+                module_instance = get_module(module_name)
+                if not module_instance:
+                    results[module_name] = {"error": "Module not found"}
+                    continue
+
+                # Execute based on module capabilities
+                if hasattr(module_instance, "search"):
+                    result = module_instance.search(target=parsed.target)
+                elif hasattr(module_instance, "analyze"):
+                    result = module_instance.analyze(target=parsed.target)
+                else:
+                    result = {"message": "Module executed but no standard method found"}
+
+                results[module_name] = result
+
+            except Exception as e:
+                logging.error(f"Module {module_name} execution failed: {e}")
+                results[module_name] = {"error": str(e)}
+
+        return {
+            "status": "executed",
+            "command": request.command,
+            "parsed": {
+                "intent": parsed.intent.value,
+                "target_type": parsed.target_type.value,
+                "target": parsed.target,
+                "modules": parsed.modules,
+                "confidence": parsed.confidence,
+            },
+            "results": results,
+            "investigation_id": request.investigation_id,
+        }
+
+    except Exception as e:
+        logging.error(f"NLP execution failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/nlp/examples")
+async def get_nlp_examples():
+    """Get example natural language commands"""
+    try:
+        from core.nlp_command_parser import NLPCommandParser
+
+        parser = NLPCommandParser()
+        examples = parser.get_example_commands()
+
+        return {"examples": examples, "count": len(examples)}
+
+    except Exception as e:
+        logging.error(f"Failed to get NLP examples: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =========================================================================
+# Chat History Management
+# =========================================================================
+
+
+class ChatMessageRequest(BaseModel):
+    """Request to add chat message"""
+
+    conversation_id: str = Field(..., description="Conversation ID")
+    role: str = Field(..., description="Message role (user or assistant)")
+    content: str = Field(..., description="Message content")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata")
+
+
+class CreateConversationRequest(BaseModel):
+    """Request to create conversation"""
+
+    investigation_id: Optional[str] = Field(None, description="Optional investigation ID")
+    title: str = Field("New Conversation", description="Conversation title")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata")
+
+
+@app.post("/api/chat/conversations")
+async def create_chat_conversation(
+    request: CreateConversationRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=50, window_seconds=3600)),
+):
+    """Create a new chat conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversation_id = manager.create_conversation(
+            investigation_id=request.investigation_id,
+            title=request.title,
+            metadata=request.metadata or {},
+        )
+
+        return {
+            "conversation_id": conversation_id,
+            "investigation_id": request.investigation_id,
+            "title": request.title,
+            "created_at": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Failed to create conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/messages")
+async def add_chat_message(
+    request: ChatMessageRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=100, window_seconds=3600)),
+):
+    """Add a message to a conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        message_id = manager.add_message(
+            conversation_id=request.conversation_id,
+            role=request.role,
+            content=request.content,
+            metadata=request.metadata or {},
+        )
+
+        return {
+            "message_id": message_id,
+            "conversation_id": request.conversation_id,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Failed to add message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations/{conversation_id}")
+async def get_chat_conversation(
+    conversation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
+    """Get a conversation with all messages"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversation = manager.get_conversation(conversation_id)
+
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return {
+            "id": conversation.id,
+            "investigation_id": conversation.investigation_id,
+            "title": conversation.title,
+            "created_at": conversation.created_at,
+            "updated_at": conversation.updated_at,
+            "messages": [
+                {
+                    "id": msg.id,
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp,
+                    "metadata": msg.metadata,
+                }
+                for msg in conversation.messages
+            ],
+            "metadata": conversation.metadata,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to get conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations")
+async def list_chat_conversations(
+    investigation_id: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """List all conversations"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        conversations = manager.list_conversations(
+            investigation_id=investigation_id, limit=limit, offset=offset
+        )
+
+        return {"conversations": conversations, "count": len(conversations)}
+
+    except Exception as e:
+        logging.error(f"Failed to list conversations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/chat/conversations/{conversation_id}")
+async def delete_chat_conversation(
+    conversation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
+    """Delete a conversation"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        deleted = manager.delete_conversation(conversation_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return {"status": "deleted", "conversation_id": conversation_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to delete conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/search")
+async def search_chat_messages(
+    query: str, limit: int = 50, user_id: Optional[str] = Depends(verify_token)
+):
+    """Search messages by content"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        results = manager.search_messages(query=query, limit=limit)
+
+        return {"results": results, "count": len(results), "query": query}
+
+    except Exception as e:
+        logging.error(f"Failed to search messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/stats")
+async def get_chat_stats(user_id: Optional[str] = Depends(verify_token)):
+    """Get chat history statistics"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+
+        manager = ChatHistoryManager()
+        stats = manager.get_stats()
+
+        return stats
+
+    except Exception as e:
+        logging.error(f"Failed to get chat stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/conversations/{conversation_id}/export")
+async def export_chat_conversation(
+    conversation_id: str,
+    format: str = "json",
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Export a conversation to file"""
+    try:
+        from core.chat_history_manager import ChatHistoryManager
+        from fastapi.responses import FileResponse
+
+        manager = ChatHistoryManager()
+        filepath = manager.export_conversation(conversation_id, format=format)
+
+        if not filepath:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return FileResponse(path=filepath, filename=os.path.basename(filepath))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to export conversation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/reports/scheduled")
 async def get_scheduled_reports(user_id: Optional[str] = Depends(verify_token)):
     """Get list of scheduled reports"""
@@ -2444,6 +2793,442 @@ async def http_exception_handler(request, exc):
             "timestamp": datetime.now().isoformat(),
         },
     )
+
+
+# =========================================================================
+# Autopivoting and Autonomous Investigations
+# =========================================================================
+
+
+class AutopivotRequest(BaseModel):
+    """Request for autopivot suggestions"""
+
+    investigation_id: str = Field(..., description="Investigation ID to analyze")
+    max_pivots: int = Field(5, description="Maximum number of pivot suggestions")
+
+
+class AutonomousInvestigationRequest(BaseModel):
+    """Request for autonomous investigation"""
+
+    target: str = Field(..., description="Initial investigation target")
+    target_type: str = Field(..., description="Type of target (domain, email, ip, etc.)")
+    max_depth: int = Field(3, description="Maximum pivot depth")
+    max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
+
+
+@app.post("/api/autopivot/suggest")
+async def suggest_autopivots(
+    request: AutopivotRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=300)),
+):
+    """Get AI-powered pivot suggestions for an investigation"""
+    try:
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        # Get autopivot suggestions from AI engine
+        pivots = await app.state.ai_engine.suggest_autopivots(
+            investigation_data=investigation, max_pivots=request.max_pivots
+        )
+
+        return {
+            "investigation_id": request.investigation_id,
+            "pivot_suggestions": pivots,
+            "count": len(pivots),
+            "generated_at": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logging.error(f"Autopivot suggestion failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/autopivot/autonomous")
+async def start_autonomous_investigation(
+    request: AutonomousInvestigationRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=3600)),
+):
+    """Start fully autonomous investigation with automatic pivoting"""
+    try:
+        # Execute autonomous investigation
+        result = await app.state.ai_engine.execute_autonomous_investigation(
+            initial_target=request.target,
+            target_type=request.target_type,
+            max_depth=request.max_depth,
+            max_pivots_per_level=request.max_pivots_per_level,
+        )
+
+        return {
+            "status": "completed",
+            "investigation_tree": result,
+            "total_targets": result["total_targets_investigated"],
+            "total_pivots": result["total_pivots"],
+            "depth_reached": len(result["levels"]),
+            "started_at": result["started_at"],
+            "completed_at": result["completed_at"],
+        }
+
+    except Exception as e:
+        logging.error(f"Autonomous investigation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =========================================================================
+# Enhanced Offline LLM and Investigation Tracking
+# =========================================================================
+
+
+class EnhancedAnalysisRequest(BaseModel):
+    """Request for enhanced offline LLM analysis"""
+
+    investigation_id: str = Field(..., description="Investigation ID to analyze")
+    focus: str = Field("comprehensive", description="Analysis focus (comprehensive, threats, connections, timeline)")
+
+
+class InvestigationFindingRequest(BaseModel):
+    """Request to add finding to investigation"""
+
+    investigation_id: str = Field(..., description="Investigation ID")
+    finding_type: str = Field(..., description="Type of finding (email, domain, ip, etc.)")
+    value: str = Field(..., description="Finding value")
+    source_module: str = Field(..., description="Source module")
+    confidence: float = Field(0.8, description="Confidence score (0-1)")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+
+
+class DetailedReportRequest(BaseModel):
+    """Request for user-friendly detailed report"""
+
+    investigation_id: str = Field(..., description="Investigation ID")
+    include_analysis: bool = Field(True, description="Include AI analysis")
+    include_leads: bool = Field(True, description="Include investigation leads")
+
+
+@app.post("/api/enhanced/analyze")
+async def enhanced_offline_analysis(
+    request: EnhancedAnalysisRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=5, window_seconds=300)),
+):
+    """
+    Get enhanced offline LLM analysis using local models (no API key required).
+    Provides detailed, user-friendly breakdown of findings.
+    """
+    try:
+        from core.offline_llm_engine import get_offline_llm_engine
+        from core.investigation_tracker import get_investigation_tracker
+        
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+        
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+        
+        # Get offline LLM engine
+        llm_engine = get_offline_llm_engine()
+        
+        # Perform analysis
+        analysis = llm_engine.analyze_investigation_data(
+            investigation_data=investigation,
+            focus=request.focus
+        )
+        
+        # Get investigation tracker for findings
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(request.investigation_id)
+        
+        return {
+            "investigation_id": request.investigation_id,
+            "analysis": {
+                "summary": analysis.summary,
+                "key_findings": analysis.key_findings,
+                "recommended_actions": analysis.recommended_actions,
+                "confidence": analysis.confidence,
+                "entities_found": analysis.entities_found,
+                "risk_assessment": analysis.risk_assessment,
+                "investigation_leads": analysis.investigation_leads
+            },
+            "total_tracked_findings": len(findings),
+            "generated_at": analysis.timestamp.isoformat(),
+            "model_used": "Offline LLM (Phi-3/TinyLlama)"
+        }
+    
+    except Exception as e:
+        logging.error(f"Enhanced analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigation/tracking/create")
+async def create_investigation_tracking(
+    investigation_id: str,
+    name: str,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Create investigation tracking for persistent findings storage"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        success = tracker.create_investigation(investigation_id, name)
+        
+        if success:
+            return {
+                "investigation_id": investigation_id,
+                "name": name,
+                "status": "created",
+                "message": "Investigation tracking created successfully"
+            }
+        else:
+            return {
+                "investigation_id": investigation_id,
+                "status": "exists",
+                "message": "Investigation tracking already exists"
+            }
+    
+    except Exception as e:
+        logging.error(f"Failed to create investigation tracking: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigation/tracking/finding")
+async def add_investigation_finding(
+    request: InvestigationFindingRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=100, window_seconds=3600)),
+):
+    """Add a finding to investigation tracking (builds progressively without data loss)"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        finding_id = tracker.add_finding(
+            investigation_id=request.investigation_id,
+            finding_type=request.finding_type,
+            value=request.value,
+            source_module=request.source_module,
+            confidence=request.confidence,
+            metadata=request.metadata
+        )
+        
+        if finding_id:
+            return {
+                "finding_id": finding_id,
+                "status": "added",
+                "message": "Finding added to investigation"
+            }
+        else:
+            return {
+                "status": "duplicate",
+                "message": "Finding already exists in investigation"
+            }
+    
+    except Exception as e:
+        logging.error(f"Failed to add finding: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/findings")
+async def get_investigation_findings(
+    investigation_id: str,
+    finding_type: Optional[str] = None,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get all findings for an investigation"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(investigation_id, finding_type=finding_type)
+        
+        return {
+            "investigation_id": investigation_id,
+            "total_findings": len(findings),
+            "findings": [
+                {
+                    "id": f.id,
+                    "type": f.finding_type,
+                    "value": f.value,
+                    "source": f.source_module,
+                    "discovered_at": f.discovered_at,
+                    "confidence": f.confidence,
+                    "status": f.follow_up_status,
+                    "notes": f.notes
+                }
+                for f in findings
+            ]
+        }
+    
+    except Exception as e:
+        logging.error(f"Failed to get findings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/leads")
+async def get_investigation_leads(
+    investigation_id: str,
+    status: Optional[str] = None,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get all investigation leads with explanations"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        leads = tracker.get_all_leads(investigation_id, status=status)
+        
+        return {
+            "investigation_id": investigation_id,
+            "total_leads": len(leads),
+            "leads": [
+                {
+                    "id": l.id,
+                    "target": l.target,
+                    "type": l.target_type,
+                    "reason": l.reason,
+                    "priority": l.priority,
+                    "suggested_modules": l.suggested_modules,
+                    "status": l.status,
+                    "findings_count": l.findings_count,
+                    "estimated_value": l.estimated_value
+                }
+                for l in leads
+            ]
+        }
+    
+    except Exception as e:
+        logging.error(f"Failed to get leads: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/summary")
+async def get_investigation_summary(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Get comprehensive investigation summary"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        
+        tracker = get_investigation_tracker()
+        summary = tracker.get_investigation_summary(investigation_id)
+        
+        return summary
+    
+    except Exception as e:
+        logging.error(f"Failed to get summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reports/user-friendly")
+async def generate_user_friendly_report(
+    request: DetailedReportRequest,
+    user_id: Optional[str] = Depends(rate_limit(limit=10, window_seconds=3600)),
+):
+    """
+    Generate comprehensive user-friendly report with detailed breakdowns.
+    Includes: What We Know, What We Think, What We Can Find, Why It Matters
+    """
+    try:
+        from core.enhanced_reporting import EnhancedReportGenerator
+        from core.investigation_tracker import get_investigation_tracker
+        from core.offline_llm_engine import get_offline_llm_engine
+        
+        # Get investigation data
+        investigation = await app.state.investigation_manager.get_investigation(
+            investigation_id=request.investigation_id, owner_id=user_id
+        )
+        
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+        
+        # Get tracked findings and leads
+        tracker = get_investigation_tracker()
+        findings = tracker.get_all_findings(request.investigation_id)
+        leads = tracker.get_all_leads(request.investigation_id)
+        
+        # Convert to dict format
+        findings_dict = [
+            {
+                'finding_type': f.finding_type,
+                'value': f.value,
+                'source_module': f.source_module,
+                'confidence': f.confidence,
+                'discovered_at': f.discovered_at,
+                'metadata': f.metadata
+            }
+            for f in findings
+        ]
+        
+        leads_dict = [
+            {
+                'target': l.target,
+                'target_type': l.target_type,
+                'reason': l.reason,
+                'priority': l.priority,
+                'suggested_modules': l.suggested_modules,
+                'status': l.status,
+                'estimated_value': l.estimated_value
+            }
+            for l in leads
+        ]
+        
+        # Get AI analysis if requested
+        analysis = None
+        if request.include_analysis:
+            llm_engine = get_offline_llm_engine()
+            analysis_result = llm_engine.analyze_investigation_data(investigation)
+            analysis = {
+                'summary': analysis_result.summary,
+                'confidence': analysis_result.confidence
+            }
+        
+        # Generate report
+        report_generator = EnhancedReportGenerator()
+        report = report_generator.generate_user_friendly_report(
+            investigation_data=investigation,
+            findings=findings_dict,
+            leads=leads_dict if request.include_leads else [],
+            analysis=analysis
+        )
+        
+        return report
+    
+    except Exception as e:
+        logging.error(f"Failed to generate user-friendly report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/investigation/tracking/{investigation_id}/export")
+async def export_investigation_data(
+    investigation_id: str,
+    format: str = "json",
+    user_id: Optional[str] = Depends(verify_token),
+):
+    """Export complete investigation data (json or markdown)"""
+    try:
+        from core.investigation_tracker import get_investigation_tracker
+        from fastapi.responses import FileResponse
+        
+        tracker = get_investigation_tracker()
+        filepath = tracker.export_investigation(investigation_id, format=format)
+        
+        if filepath:
+            return FileResponse(
+                path=filepath,
+                filename=os.path.basename(filepath),
+                media_type="application/json" if format == "json" else "text/markdown"
+            )
+        else:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+    
+    except Exception as e:
+        logging.error(f"Failed to export investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(Exception)
