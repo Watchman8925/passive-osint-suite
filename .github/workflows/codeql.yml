@@ -14,8 +14,20 @@ name: "CodeQL Advanced"
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - '**.py'
+      - '**.js'
+      - '**.ts'
+      - '**.tsx'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**.py'
+      - '**.js'
+      - '**.ts'
+      - '**.tsx'
+      - '.github/workflows/**'
   schedule:
     - cron: '45 0 * * 3'
 

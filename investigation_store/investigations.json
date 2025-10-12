@@ -1111,5 +1111,27 @@
     "completed_at": null,
     "ai_analysis": {},
     "archived": false
+  },
+  {
+    "id": "298ed13d-1c12-475c-965b-da89a24a1d00",
+    "advanced_id": null,
+    "name": "Two Ocean Trust Investigation",
+    "description": "Comprehensive OSINT investigation of Two Ocean Trust company",
+    "targets": [
+      "Two Ocean Trust",
+      "twoocean.com"
+    ],
+    "investigation_type": "company",
+    "priority": "high",
+    "tags": [],
+    "owner_id": "test-user",
+    "scheduled_start": null,
+    "auto_reporting": true,
+    "status": "created",
+    "created_at": "2025-10-12T13:46:39.516334+00:00",
+    "started_at": null,
+    "completed_at": null,
+    "ai_analysis": {},
+    "archived": false
   }
 ]
