@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Dockerfile*'
+      - 'requirements*.txt'
+      - '**.py'
+      - '.github/workflows/trivy-scan.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Dockerfile*'
+      - 'requirements*.txt'
+      - '**.py'
+      - '.github/workflows/trivy-scan.yml'
   schedule:
     # Run daily at 2 AM UTC
     - cron: '0 2 * * *'
@@ -27,10 +37,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
-        run: |
-          # Build Docker image for scanning
-          docker build -t passive-osint-suite:scan .
+      - name: Build Docker image (with cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: passive-osint-suite:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
         timeout-minutes: 15
 
       - name: Run Trivy vulnerability scanner

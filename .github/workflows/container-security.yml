@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Dockerfile*'
+      - 'requirements*.txt'
+      - '.github/workflows/container-security.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Dockerfile*'
+      - 'requirements*.txt'
+      - '.github/workflows/container-security.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -35,9 +43,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
-        run: |
-          docker build -t passive-osint-suite:test .
+      - name: Build Docker image (with cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: passive-osint-suite:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
         timeout-minutes: 20
 
       - name: Run Dockle security scanner
