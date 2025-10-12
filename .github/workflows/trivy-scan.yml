@@ -7,7 +7,6 @@ on:
     paths:
       - 'Dockerfile*'
       - 'requirements*.txt'
-      - '**.py'
       - '.github/workflows/trivy-scan.yml'
   pull_request:
     branches:
@@ -15,7 +14,6 @@ on:
     paths:
       - 'Dockerfile*'
       - 'requirements*.txt'
-      - '**.py'
       - '.github/workflows/trivy-scan.yml'
   schedule:
     # Run daily at 2 AM UTC
@@ -33,11 +31,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if Docker build needed
+        id: check_docker
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^(Dockerfile|requirements.*\.txt)'; then
+            echo "docker_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker_changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Docker Buildx
+        if: steps.check_docker.outputs.docker_changed == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image (with cache)
+        if: steps.check_docker.outputs.docker_changed == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -50,6 +61,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Run Trivy vulnerability scanner
+        if: steps.check_docker.outputs.docker_changed == 'true'
         uses: aquasecurity/trivy-action@0.28.0
         continue-on-error: true
         with:
@@ -62,7 +74,7 @@ jobs:
           timeout: 15m
 
       - name: Check if SARIF file exists
-        if: always()
+        if: always() && steps.check_docker.outputs.docker_changed == 'true'
         run: |
           if [ -f trivy-results.sarif ]; then
             echo "SARIF file exists, will upload"
@@ -74,13 +86,13 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && env.SARIF_EXISTS == 'true'
+        if: always() && steps.check_docker.outputs.docker_changed == 'true' && env.SARIF_EXISTS == 'true'
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner (table format)
+        if: always() && steps.check_docker.outputs.docker_changed == 'true'
         uses: aquasecurity/trivy-action@0.28.0
-        if: always()
         continue-on-error: true
         with:
           image-ref: 'passive-osint-suite:scan'

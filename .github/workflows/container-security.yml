@@ -26,8 +26,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if Docker build needed
+        id: check_docker
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^(Dockerfile|requirements.*\.txt)'; then
+            echo "docker_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker_changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Free disk space
+        if: steps.check_docker.outputs.docker_changed == 'true'
         run: |
           echo "Disk space before cleanup:"
           df -h
@@ -41,9 +53,11 @@ jobs:
           df -h
 
       - name: Set up Docker Buildx
+        if: steps.check_docker.outputs.docker_changed == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image (with cache)
+        if: steps.check_docker.outputs.docker_changed == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -56,6 +70,7 @@ jobs:
         timeout-minutes: 20
 
       - name: Run Dockle security scanner
+        if: steps.check_docker.outputs.docker_changed == 'true'
         continue-on-error: true
         run: |
           # Install Dockle
@@ -63,7 +78,7 @@ jobs:
           curl -L -o dockle.tar.gz https://github.com/goodwithtech/dockle/releases/download/v${VERSION}/dockle_${VERSION}_Linux-64bit.tar.gz
           tar zxvf dockle.tar.gz
           sudo mv dockle /usr/local/bin
-          
+
           # Run Dockle with appropriate settings
           dockle \
             --exit-code 0 \
@@ -75,7 +90,7 @@ jobs:
             --ignore CIS-DI-0006 \
             --ignore DKL-DI-0006 \
             passive-osint-suite:test || true
-          
+
           # Display results
           echo "Dockle scan results:"
           dockle \
@@ -85,7 +100,7 @@ jobs:
 
       - name: Upload Dockle results
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.check_docker.outputs.docker_changed == 'true'
         with:
           name: dockle-results
           path: dockle-results.json
