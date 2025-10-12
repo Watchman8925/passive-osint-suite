@@ -180,7 +180,7 @@ class AuditTrail:
                 self._current_log_file = log_files[-1]
 
                 # Count existing entries
-                with open(self._current_log_file, 'r') as f:
+                with open(self._current_log_file, "r") as f:
                     self._current_entries_count = sum(1 for _ in f)
 
                 # Get last hash from last entry

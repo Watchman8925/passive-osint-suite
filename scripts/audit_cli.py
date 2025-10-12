@@ -181,7 +181,7 @@ def cmd_status(args):
             total_entries = 0
             for log_file in log_files:
                 try:
-                    with open(log_file, 'r') as f:
+                    with open(log_file, "r") as f:
                         entries = sum(1 for _ in f)
                     total_entries += entries
                     print(f"  {log_file.name}: {entries} entries")

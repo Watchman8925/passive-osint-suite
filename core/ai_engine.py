@@ -766,18 +766,18 @@ class OSINTAIEngine:
     ) -> List[Dict[str, Any]]:
         """
         Suggest intelligent pivot points for autonomous investigation expansion.
-        
+
         Args:
             investigation_data: Current investigation data
             max_pivots: Maximum number of pivot suggestions
-            
+
         Returns:
             List of pivot suggestions with confidence scores
         """
         if not self.enable_autopivot:
             logger.warning("Autopivoting is disabled")
             return []
-        
+
         try:
             # Analyze current investigation results for pivot opportunities
             pivot_prompt = f"""
@@ -811,157 +811,169 @@ class OSINTAIEngine:
             4. Related organizations or individuals
             5. Suspicious patterns or anomalies requiring deeper investigation
             """
-            
+
             response = await self._call_ai_model(pivot_prompt, "autopivot")
-            
+
             # Parse pivot suggestions
             try:
                 pivot_data = json.loads(response)
                 pivots = pivot_data.get("pivots", [])
-                
+
                 # Sort by confidence and priority
                 pivots.sort(
                     key=lambda x: (
-                        {"high": 3, "medium": 2, "low": 1}.get(x.get("priority", "low"), 1),
-                        x.get("confidence", 0)
+                        {"high": 3, "medium": 2, "low": 1}.get(
+                            x.get("priority", "low"), 1
+                        ),
+                        x.get("confidence", 0),
                     ),
-                    reverse=True
+                    reverse=True,
                 )
-                
+
                 return pivots[:max_pivots]
-                
+
             except json.JSONDecodeError:
                 logger.error("Failed to parse autopivot response as JSON")
                 return self._extract_pivots_from_text(response, max_pivots)
-        
+
         except Exception as e:
             logger.error(f"Autopivot suggestion failed: {e}")
             return []
-    
+
     def _extract_pivots_from_text(
         self, response: str, max_pivots: int
     ) -> List[Dict[str, Any]]:
         """Extract pivot suggestions from plain text response"""
         pivots = []
-        
+
         # Simple pattern matching for entities
         import re
-        
+
         # Find domains
-        domains = re.findall(r'\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b', response)
+        domains = re.findall(
+            r"\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b", response
+        )
         for domain in domains[:max_pivots]:
-            pivots.append({
-                "target": domain,
-                "target_type": "domain",
-                "reason": "Related domain identified in analysis",
-                "confidence": 0.7,
-                "priority": "medium",
-                "recommended_modules": ["domain_recon", "dns_intel"]
-            })
-        
+            pivots.append(
+                {
+                    "target": domain,
+                    "target_type": "domain",
+                    "reason": "Related domain identified in analysis",
+                    "confidence": 0.7,
+                    "priority": "medium",
+                    "recommended_modules": ["domain_recon", "dns_intel"],
+                }
+            )
+
         # Find email addresses
-        emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', response)
-        for email in emails[:max_pivots - len(pivots)]:
-            pivots.append({
-                "target": email,
-                "target_type": "email",
-                "reason": "Related email address identified",
-                "confidence": 0.7,
-                "priority": "medium",
-                "recommended_modules": ["email_intel", "breach_search"]
-            })
-        
+        emails = re.findall(
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", response
+        )
+        for email in emails[: max_pivots - len(pivots)]:
+            pivots.append(
+                {
+                    "target": email,
+                    "target_type": "email",
+                    "reason": "Related email address identified",
+                    "confidence": 0.7,
+                    "priority": "medium",
+                    "recommended_modules": ["email_intel", "breach_search"],
+                }
+            )
+
         return pivots[:max_pivots]
-    
+
     async def execute_autonomous_investigation(
         self,
         initial_target: str,
         target_type: str,
         max_depth: int = 3,
-        max_pivots_per_level: int = 3
+        max_pivots_per_level: int = 3,
     ) -> Dict[str, Any]:
         """
         Execute fully autonomous investigation with automatic pivoting.
-        
+
         Args:
             initial_target: Starting investigation target
             target_type: Type of initial target
             max_depth: Maximum pivot depth
             max_pivots_per_level: Maximum pivots to explore per level
-            
+
         Returns:
             Complete investigation results with all pivot paths
         """
         if not self.enable_autopivot:
-            raise ValueError("Autopivoting must be enabled for autonomous investigations")
-        
+            raise ValueError(
+                "Autopivoting must be enabled for autonomous investigations"
+            )
+
         logger.info(f"Starting autonomous investigation: {initial_target}")
-        
+
         investigation_tree = {
             "initial_target": initial_target,
             "target_type": target_type,
             "started_at": datetime.now().isoformat(),
             "levels": [],
             "total_targets_investigated": 0,
-            "total_pivots": 0
+            "total_pivots": 0,
         }
-        
+
         current_targets = [(initial_target, target_type, 0)]  # (target, type, depth)
         investigated = set()
-        
-        while current_targets and investigation_tree["total_targets_investigated"] < 100:
+
+        while (
+            current_targets and investigation_tree["total_targets_investigated"] < 100
+        ):
             target, ttype, depth = current_targets.pop(0)
-            
+
             if depth >= max_depth or target in investigated:
                 continue
-            
+
             investigated.add(target)
             investigation_tree["total_targets_investigated"] += 1
-            
+
             logger.info(f"Investigating: {target} (depth: {depth})")
-            
+
             # Create investigation for this target
             target_investigation = {
                 "target": target,
                 "target_type": ttype,
                 "depth": depth,
                 "results": {},
-                "pivots": []
+                "pivots": [],
             }
-            
+
             # Get pivot suggestions
             pivots = await self.suggest_autopivots(
                 investigation_data={
                     "name": f"Autonomous investigation of {target}",
                     "targets": [target],
-                    "results": target_investigation.get("results", {})
+                    "results": target_investigation.get("results", {}),
                 },
-                max_pivots=max_pivots_per_level
+                max_pivots=max_pivots_per_level,
             )
-            
+
             target_investigation["pivots"] = pivots
             investigation_tree["total_pivots"] += len(pivots)
-            
+
             # Add high-priority pivots to investigation queue
             for pivot in pivots:
                 if pivot.get("priority") in ["high", "medium"]:
-                    current_targets.append((
-                        pivot["target"],
-                        pivot["target_type"],
-                        depth + 1
-                    ))
-            
+                    current_targets.append(
+                        (pivot["target"], pivot["target_type"], depth + 1)
+                    )
+
             # Add to appropriate level
             while len(investigation_tree["levels"]) <= depth:
                 investigation_tree["levels"].append([])
-            
+
             investigation_tree["levels"][depth].append(target_investigation)
-        
+
         investigation_tree["completed_at"] = datetime.now().isoformat()
-        
+
         logger.info(
             f"Autonomous investigation complete: {investigation_tree['total_targets_investigated']} targets, "
             f"{investigation_tree['total_pivots']} pivots identified"
         )
-        
+
         return investigation_tree
