@@ -160,7 +160,7 @@ class InvestigationTracker:
         finding_type: str,
         value: str,
         source_module: str,
-        confidence: float = 0.8,
+        confidence: float,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
