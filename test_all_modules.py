@@ -80,8 +80,17 @@ class ModuleTester:
                 instance = cls()
             
             return instance
+        except ImportError as e:
+            self.print_error(f"Import failed for {module_name}: {e}")
+            return None
+        except AttributeError as e:
+            self.print_error(f"Class {class_name} not found in {module_name}: {e}")
+            return None
+        except TypeError as e:
+            self.print_error(f"Type error instantiating {class_name} in {module_name}: {e}")
+            return None
         except Exception as e:
-            self.print_error(f"Instantiation failed for {module_name}: {e}")
+            self.print_error(f"Unexpected error instantiating {class_name} in {module_name}: {e}")
             return None
     
     def test_module_methods(self, instance: Any, module_name: str) -> Dict[str, bool]:
