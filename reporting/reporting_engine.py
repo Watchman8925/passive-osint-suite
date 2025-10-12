@@ -423,7 +423,7 @@ class EnhancedReportingEngine:
 
         return story
 
-    def _generate_chart_image(self, chart_data: Dict[str, Any]) -> Optional[Image]:
+    def _generate_chart_image(self, chart_data: Dict[str, Any]) -> Optional[Any]:
         """Generate chart image for PDF inclusion"""
         try:
             fig, ax = plt.subplots(figsize=(8, 6))

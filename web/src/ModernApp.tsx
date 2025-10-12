@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Search, Brain, Globe, Mail, Server, Building, DollarSign, Plane, Image, Network, Eye, Zap, ShieldCheck, ChartBar as BarChart3, Activity, Users, Clock, TrendingUp, Play, Pause, Settings, Hop as Home, FileSearch, Cpu, Layers as Layers3, Sparkles, ChevronRight, ExternalLink, Menu, X, Database, Target, Radar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Loader as Loader2, Send, Download, Upload, ListFilter as Filter, Calendar, MapPin, User, Lock, Wifi, Smartphone, Monitor, HardDrive, Cloud, Code, BookOpen, Award, Briefcase, Camera, MessageSquare, Heart, Star, Zap as Lightning, RefreshCw, Plus, Minus, Maximize2, Minimize2 } from 'lucide-react';
+import { ChatInterface } from './components/chat/ChatInterface';
+import { useSelectedInvestigation } from './contexts/SelectedInvestigationContext';
 
 // Get API URL from environment variable with fallback
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const ModernApp = () => {
+  const { selectedId: selectedInvestigationId } = useSelectedInvestigation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [apiStatus, setApiStatus] = useState('checking');
@@ -44,6 +47,7 @@ const ModernApp = () => {
     { id: 'intelligence', name: 'Intelligence', icon: Target, color: 'text-green-600' },
     { id: 'analysis', name: 'Analysis', icon: Brain, color: 'text-yellow-600' },
     { id: 'investigations', name: 'Investigations', icon: FileSearch, color: 'text-red-600' },
+    { id: 'assistant', name: 'AI Assistant', icon: MessageSquare, color: 'text-cyan-600' },
     { id: 'reports', name: 'Reports', icon: BarChart3, color: 'text-indigo-600' },
     { id: 'settings', name: 'Settings', icon: Settings, color: 'text-gray-600' }
   ];
@@ -802,6 +806,21 @@ const ModernApp = () => {
                       </div>
                     </div>
                   </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'assistant' && (
+                <motion.div
+                  key="assistant"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-8"
+                >
+                  <ChatInterface
+                    investigationId={selectedInvestigationId ?? undefined}
+                    apiUrl={API_URL}
+                  />
                 </motion.div>
               )}
 
