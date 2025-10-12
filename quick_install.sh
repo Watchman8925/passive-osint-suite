@@ -45,8 +45,6 @@ if [ ! -f .env ]; then
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     
-    # Update .env with generated keys
-    if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s/OSINT_SECRET_KEY=.*/OSINT_SECRET_KEY=$SECRET_KEY/" .env
         sed -i '' "s/JWT_SECRET_KEY=.*/JWT_SECRET_KEY=$JWT_SECRET/" .env
     else
