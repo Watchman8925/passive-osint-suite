@@ -37,11 +37,33 @@ jobs:
       - name: Check if Docker build needed
         id: check_docker
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -qE '^(Dockerfile|requirements.*\.txt)'; then
+          # For PRs, compare against the base branch; for pushes, compare against previous commit
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            if git diff --name-only $BASE_SHA HEAD | grep -qE '^(Dockerfile|requirements.*\.txt)'; then
+              echo "docker_changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "docker_changed=false" >> $GITHUB_OUTPUT
+            fi
+          elif git diff --name-only HEAD~1 HEAD | grep -qE '^(Dockerfile|requirements.*\.txt)'; then
             echo "docker_changed=true" >> $GITHUB_OUTPUT
           else
             echo "docker_changed=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Free disk space
+        if: steps.check_docker.outputs.docker_changed == 'true'
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          # Remove unnecessary files to free up space
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker system prune -af
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: Set up Docker Buildx
         if: steps.check_docker.outputs.docker_changed == 'true'
@@ -58,7 +80,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           load: true
-        timeout-minutes: 15
+        timeout-minutes: 30
 
       - name: Run Trivy vulnerability scanner
         if: steps.check_docker.outputs.docker_changed == 'true'

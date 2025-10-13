@@ -13,13 +13,20 @@
 # Builder stage - Compile dependencies
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS builder
 
-# Install system dependencies for building
+# Install system dependencies for building native wheels (Pillow/wordcloud, lxml, etc.)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libffi-dev \
     libssl-dev \
     git \
     wget \
+    pkg-config \
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    libxslt1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -30,8 +37,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages with better caching and error handling
+# Prefer binary wheels to avoid source builds on arm64 when possible
 RUN python -m pip install --no-cache-dir --user --upgrade "pip==25.2" setuptools wheel && \
-    pip install --no-cache-dir --user -r requirements.txt
+    pip install --no-cache-dir --user --prefer-binary -r requirements.txt
 
 # Create cache directory for models (they will be downloaded at runtime)
 RUN mkdir -p /home/osint/.cache/huggingface && \
@@ -42,11 +50,18 @@ RUN mkdir -p /home/osint/.cache/huggingface && \
 FROM python:3.12-slim@sha256:47ae396f09c1303b8653019811a8498470603d7ffefc29cb07c88f1f8cb3d19f AS production
 
 # Upgrade base packages and install minimal runtime deps (remove tor; rely on tor-proxy container)
+# Include runtime libraries needed by Pillow/wordcloud and lxml
 RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
     curl \
     procps \
     ca-certificates \
     libexpat1 \
+    libjpeg62-turbo \
+    zlib1g \
+    libpng16-16 \
+    libfreetype6 \
+    libxml2 \
+    libxslt1.1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure latest secure pip in production environment
