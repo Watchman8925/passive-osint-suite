@@ -75,7 +75,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           load: true
-        timeout-minutes: 20
+        timeout-minutes: 30
 
       - name: Run Dockle security scanner
         if: steps.check_docker.outputs.docker_changed == 'true'
