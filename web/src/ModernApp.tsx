@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Search, Brain, Globe, Mail, Server, Building, DollarSign, Plane, Image, Network, Eye, Zap, ShieldCheck, ChartBar as BarChart3, Activity, Users, Clock, TrendingUp, Play, Pause, Settings, Hop as Home, FileSearch, Cpu, Layers as Layers3, Sparkles, ChevronRight, ExternalLink, Menu, X, Database, Target, Radar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Loader as Loader2, Send, Download, Upload, ListFilter as Filter, Calendar, MapPin, User, Lock, Wifi, Smartphone, Monitor, HardDrive, Cloud, Code, BookOpen, Award, Briefcase, Camera, MessageSquare, Heart, Star, Zap as Lightning, RefreshCw, Plus, Minus, Maximize2, Minimize2 } from 'lucide-react';
+import { Shield, Search, Brain, Globe, Mail, Server, Building, DollarSign, Plane, Image, Network, Eye, Zap, ShieldCheck, ChartBar as BarChart3, Activity, Users, Clock, TrendingUp, Play, Pause, Settings, Hop as Home, FileSearch, Cpu, Layers as Layers3, Sparkles, ChevronRight, ExternalLink, Menu, X, Database, Target, Radar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Loader as Loader2, Send, Download, Upload, ListFilter as Filter, Calendar, MapPin, User, Lock, Wifi, Smartphone, Monitor, HardDrive, Cloud, Code, BookOpen, Award, Briefcase, Camera, MessageSquare, Heart, Star, Zap as Lightning, RefreshCw, Plus, Minus, Maximize2, Minimize2, LogIn, LogOut } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { ChatInterface } from './components/chat/ChatInterface';
 import { useSelectedInvestigation } from './contexts/SelectedInvestigationContext';
+import { LoginModal } from './components/auth/LoginModal';
+import { SettingsModal } from './components/settings/SettingsModal';
+import { DomainInvestigationModal } from './components/modules/DomainInvestigationModal';
 
 // Get API URL from environment variable with fallback
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -16,8 +19,21 @@ const ModernApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for existing auth token
+    const token = localStorage.getItem('auth_token');
+    const userInfo = localStorage.getItem('user_info');
+    if (token && userInfo) {
+      setAuthToken(token);
+      setUser(JSON.parse(userInfo));
+    }
+
     // Check API status with proper error handling
     const checkHealth = async () => {
       try {
@@ -136,10 +152,16 @@ const ModernApp = () => {
   ];
 
   const handleModuleRun = async (moduleId) => {
+    // Open specific modal for domain module
+    if (moduleId === 'domain') {
+      setIsDomainModalOpen(true);
+      return;
+    }
+
     setIsLoading(true);
     setSelectedModule(moduleId);
 
-    // Simulate API call
+    // Simulate API call for other modules
     setTimeout(() => {
       setIsLoading(false);
       setSelectedModule(null);
@@ -151,6 +173,18 @@ const ModernApp = () => {
     setIsLoading(true);
     // Simulate search
     setTimeout(() => setIsLoading(false), 1500);
+  };
+
+  const handleLoginSuccess = (userData: any, token: string) => {
+    setUser(userData);
+    setAuthToken(token);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_info');
+    setUser(null);
+    setAuthToken(null);
   };
 
   return (
@@ -201,7 +235,35 @@ const ModernApp = () => {
                 <span className="font-medium">{apiStatus === 'online' ? 'API Online' : 'API Offline'}</span>
               </div>
 
-              <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              {user ? (
+                <>
+                  <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                    <User className="w-4 h-4" />
+                    <span className="font-medium">{user.username}</span>
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Login</span>
+                </button>
+              )}
+
+              <button 
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Settings"
+              >
                 <Settings className="w-5 h-5" />
               </button>
 
@@ -1051,6 +1113,23 @@ const ModernApp = () => {
           </div>
         </main>
       </div>
+
+      {/* Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        apiUrl={API_URL}
+      />
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+      <DomainInvestigationModal
+        isOpen={isDomainModalOpen}
+        onClose={() => setIsDomainModalOpen(false)}
+        apiUrl={API_URL}
+      />
     </div>
   );
 };

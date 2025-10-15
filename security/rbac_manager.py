@@ -441,6 +441,13 @@ class RBACManager:
 
         return log_entries[-limit:]
 
+    def _validate_password(self, password: str) -> bool:
+        """Validate password meets security requirements"""
+        # Basic password validation - at least 8 characters
+        if len(password) < 8:
+            return False
+        return True
+
     def _hash_password(self, password: str) -> str:
         """Hash password using bcrypt"""
         return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
