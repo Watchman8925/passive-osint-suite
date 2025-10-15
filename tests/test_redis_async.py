@@ -43,8 +43,10 @@ def test_api_server_redis_import():
         assert not has_sync_import, "Should not have synchronous redis import"
 
         # Also verify async close methods are used
-        assert "await app.state.redis.aclose()" in content or "await app.state.redis.close()" in content, \
-            "Should use async close method"
+        assert (
+            "await app.state.redis.aclose()" in content
+            or "await app.state.redis.close()" in content
+        ), "Should use async close method"
 
         print("✅ api_server.py correctly imports redis.asyncio")
         print("✅ api_server.py correctly uses async Redis close methods")
@@ -64,9 +66,7 @@ def test_redis_async_methods():
 
         # Verify async methods exist
         assert hasattr(redis_client, "ping"), "Redis client should have ping method"
-        assert hasattr(
-            redis_client, "close"
-        ) or hasattr(
+        assert hasattr(redis_client, "close") or hasattr(
             redis_client, "aclose"
         ), "Redis client should have close or aclose method"
 
@@ -77,7 +77,9 @@ def test_redis_async_methods():
         return True  # This is acceptable
     except Exception as e:
         # It's okay if we can't connect to Redis, we're just checking method existence
-        print(f"ℹ️  Note: Could not connect to Redis (expected in test environment): {e}")
+        print(
+            f"ℹ️  Note: Could not connect to Redis (expected in test environment): {e}"
+        )
         return True
 
 
