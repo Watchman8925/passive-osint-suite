@@ -39,8 +39,8 @@ body::before {
   width: 100%;
   height: 100%;
   background: 
-    radial-gradient(circle at 20% 20%, rgba(0, 255, 0, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255, 165, 0, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 20% 20%, rgba(255, 77, 0, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(0, 229, 255, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(0, 150, 255, 0.1) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
@@ -56,8 +56,8 @@ body::after {
   width: 100%;
   height: 100%;
   background-image: 
-    linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 77, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 77, 0, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
   pointer-events: none;
   z-index: -1;
@@ -87,15 +87,15 @@ body::after {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #00ff00, #0096ff);
+  background: linear-gradient(to bottom, #ff4d00, #0096ff);
   border-radius: 10px;
-  border: 1px solid rgba(0, 255, 0, 0.5);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  border: 1px solid rgba(255, 77, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 77, 0, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #00ff00, #ff9500);
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+  background: linear-gradient(to bottom, #ff4d00, #00e5ff);
+  box-shadow: 0 0 20px rgba(255, 77, 0, 0.8);
 }
 
 /* Modern focus styles with neon glow */
@@ -103,22 +103,22 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #00ff00;
+  outline: 2px solid #ff4d00;
   outline-offset: 2px;
   box-shadow: 
-    0 0 0 4px rgba(0, 255, 0, 0.2),
-    0 0 20px rgba(0, 255, 0, 0.4);
+    0 0 0 4px rgba(255, 77, 0, 0.2),
+    0 0 20px rgba(255, 77, 0, 0.4);
 }
 
 /* Glass morphism effect with holographic border */
 .glass {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(0, 255, 0, 0.2);
+  border: 1px solid rgba(255, 77, 0, 0.2);
   box-shadow: 
     0 8px 32px 0 rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 0 rgba(0, 255, 0, 0.1),
-    0 0 20px rgba(0, 255, 0, 0.1);
+    inset 0 1px 0 0 rgba(255, 77, 0, 0.1),
+    0 0 20px rgba(255, 77, 0, 0.1);
   position: relative;
 }
 
@@ -131,7 +131,7 @@ textarea:focus-visible {
   bottom: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(0, 255, 0, 0.3), rgba(0, 150, 255, 0.3));
+  background: linear-gradient(135deg, rgba(255, 77, 0, 0.3), rgba(0, 150, 255, 0.3));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -146,7 +146,7 @@ textarea:focus-visible {
 
 /* Gradient text effect with animation */
 .gradient-text {
-  background: linear-gradient(135deg, #00ff00 0%, #0096ff 50%, #ff9500 100%);
+  background: linear-gradient(135deg, #ff4d00 0%, #0096ff 50%, #00e5ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -196,17 +196,17 @@ textarea:focus-visible {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 
     0 10px 40px rgba(0, 0, 0, 0.8),
-    0 0 20px rgba(0, 255, 0, 0.1);
-  border: 1px solid rgba(0, 255, 0, 0.2);
+    0 0 20px rgba(255, 77, 0, 0.1);
+  border: 1px solid rgba(255, 77, 0, 0.2);
 }
 
 .card-3d:hover {
   transform: perspective(1000px) rotateX(2deg) rotateY(2deg) translateZ(20px);
   box-shadow: 
     0 20px 60px rgba(0, 0, 0, 0.9),
-    0 0 40px rgba(0, 255, 0, 0.3),
-    inset 0 1px 0 rgba(0, 255, 0, 0.2);
-  border-color: rgba(0, 255, 0, 0.5);
+    0 0 40px rgba(255, 77, 0, 0.3),
+    inset 0 1px 0 rgba(255, 77, 0, 0.2);
+  border-color: rgba(255, 77, 0, 0.5);
 }
 
 /* Loading animations */
@@ -229,39 +229,39 @@ textarea:focus-visible {
 input, select, textarea {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 255, 0, 0.3);
+  border: 1px solid rgba(255, 77, 0, 0.3);
   color: #ffffff;
   transition: all 0.3s ease;
   border-radius: 8px;
   padding: 0.75rem 1rem;
   box-shadow: 
     inset 0 2px 8px rgba(0, 0, 0, 0.5),
-    0 0 10px rgba(0, 255, 0, 0.1);
+    0 0 10px rgba(255, 77, 0, 0.1);
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: rgba(0, 255, 0, 0.8);
+  border-color: rgba(255, 77, 0, 0.8);
   box-shadow: 
-    0 0 0 1px rgba(0, 255, 0, 0.8),
-    0 0 30px rgba(0, 255, 0, 0.4),
+    0 0 0 1px rgba(255, 77, 0, 0.8),
+    0 0 30px rgba(255, 77, 0, 0.4),
     inset 0 2px 8px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(0, 255, 0, 0.2);
+    inset 0 1px 0 rgba(255, 77, 0, 0.2);
   background: rgba(0, 0, 0, 0.8);
 }
 
 input::placeholder, textarea::placeholder {
-  color: rgba(0, 255, 0, 0.4);
+  color: rgba(255, 77, 0, 0.45);
 }
 
 /* Status indicators with neon glow */
 .status-online {
-  color: #00ff00;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.4);
+  color: #ff4d00;
+  text-shadow: 0 0 10px rgba(255, 77, 0, 0.8), 0 0 20px rgba(255, 77, 0, 0.4);
 }
 
 .status-offline {
-  color: #ff0000;
-  text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 0, 0, 0.4);
+  color: #ff2e2e;
+  text-shadow: 0 0 10px rgba(255, 46, 46, 0.8), 0 0 20px rgba(255, 46, 46, 0.4);
 }
 
 .status-warning {
@@ -322,33 +322,33 @@ input::placeholder, textarea::placeholder {
 .dark-card {
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(0, 255, 0, 0.2);
+  border: 1px solid rgba(255, 77, 0, 0.2);
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(0, 255, 0, 0.1),
+    inset 0 1px 0 rgba(255, 77, 0, 0.1),
     0 0 20px rgba(0, 255, 0, 0.05);
   transition: all 0.3s ease;
 }
 
 .dark-card:hover {
   background: rgba(0, 0, 0, 0.85);
-  border-color: rgba(0, 255, 0, 0.5);
+  border-color: rgba(255, 77, 0, 0.5);
   box-shadow: 
     0 12px 48px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 rgba(0, 255, 0, 0.2),
+    inset 0 1px 0 rgba(255, 77, 0, 0.2),
     0 0 40px rgba(0, 255, 0, 0.2);
   transform: translateY(-2px);
 }
 
 /* Neon button styles */
 .btn-neon {
-  background: linear-gradient(135deg, rgba(0, 255, 0, 0.1), rgba(0, 150, 255, 0.1));
-  border: 2px solid #00ff00;
-  color: #00ff00;
+  background: linear-gradient(135deg, rgba(255, 77, 0, 0.1), rgba(0, 229, 255, 0.1));
+  border: 2px solid #ff4d00;
+  color: #ff4d00;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+  text-shadow: 0 0 10px rgba(255, 77, 0, 0.8);
   box-shadow: 
     0 0 20px rgba(0, 255, 0, 0.3),
     inset 0 0 20px rgba(0, 255, 0, 0.05);
@@ -359,19 +359,19 @@ input::placeholder, textarea::placeholder {
 }
 
 .btn-neon:hover {
-  background: linear-gradient(135deg, rgba(0, 255, 0, 0.2), rgba(0, 150, 255, 0.2));
+  background: linear-gradient(135deg, rgba(255, 77, 0, 0.2), rgba(0, 229, 255, 0.2));
   box-shadow: 
-    0 0 40px rgba(0, 255, 0, 0.6),
-    0 0 80px rgba(0, 255, 0, 0.3),
-    inset 0 0 40px rgba(0, 255, 0, 0.1);
+    0 0 40px rgba(255, 77, 0, 0.6),
+    0 0 80px rgba(255, 77, 0, 0.3),
+    inset 0 0 40px rgba(255, 77, 0, 0.1);
   transform: translateY(-2px);
 }
 
 .btn-neon:active {
   transform: translateY(0);
   box-shadow: 
-    0 0 20px rgba(0, 255, 0, 0.4),
-    inset 0 0 20px rgba(0, 255, 0, 0.1);
+    0 0 20px rgba(255, 77, 0, 0.4),
+    inset 0 0 20px rgba(255, 77, 0, 0.1);
 }
 
 /* Holographic effect */
@@ -379,10 +379,10 @@ input::placeholder, textarea::placeholder {
   position: relative;
   background: linear-gradient(
     135deg,
-    rgba(0, 255, 0, 0.1) 0%,
+    rgba(255, 77, 0, 0.1) 0%,
     rgba(0, 150, 255, 0.1) 25%,
-    rgba(255, 165, 0, 0.1) 50%,
-    rgba(0, 255, 0, 0.1) 75%,
+    rgba(0, 229, 255, 0.1) 50%,
+    rgba(255, 77, 0, 0.1) 75%,
     rgba(0, 150, 255, 0.1) 100%
   );
   background-size: 200% 200%;
@@ -428,7 +428,7 @@ input::placeholder, textarea::placeholder {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 255, 0, 0.05) 50%,
+    rgba(255, 77, 0, 0.05) 50%,
     transparent 100%
   );
   animation: scan 4s linear infinite;
@@ -508,24 +508,24 @@ input::placeholder, textarea::placeholder {
 
 /* Neon text */
 .neon-text {
-  color: #00ff00;
+  color: #ff4d00;
   text-shadow: 
-    0 0 7px #00ff00,
-    0 0 10px #00ff00,
-    0 0 21px #00ff00,
-    0 0 42px #00ff00,
-    0 0 82px #00ff00,
-    0 0 92px #00ff00,
-    0 0 102px #00ff00,
-    0 0 151px #00ff00;
+    0 0 7px #ff4d00,
+    0 0 10px #ff4d00,
+    0 0 21px #ff4d00,
+    0 0 42px #ff4d00,
+    0 0 82px #ff4d00,
+    0 0 92px #ff4d00,
+    0 0 102px #ff4d00,
+    0 0 151px #ff4d00;
 }
 
 /* Neon border */
 .neon-border {
-  border: 2px solid #00ff00;
+  border: 2px solid #ff4d00;
   box-shadow: 
-    0 0 10px #00ff00,
-    inset 0 0 10px #00ff00;
+    0 0 10px #ff4d00,
+    inset 0 0 10px #ff4d00;
 }
 
 /* Pulsing glow */
@@ -561,8 +561,8 @@ h3, h4 {
 
 /* Orange accent for special elements */
 .accent-orange {
-  color: #ff9500;
-  text-shadow: 0 0 10px rgba(255, 149, 0, 0.8);
+  color: #00e5ff; /* swapped to turquoise */
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
 }
 
 /* Blue accent */
@@ -573,8 +573,8 @@ h3, h4 {
 
 /* Green accent */
 .accent-green {
-  color: #00ff00;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+  color: #ff4d00; /* swapped to red-orange */
+  text-shadow: 0 0 10px rgba(255, 77, 0, 0.8);
 }
 
 /* Ensure buttons have visible text */
@@ -592,8 +592,41 @@ a {
 }
 
 a:hover {
-  color: #00ff00;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+  color: #ff4d00;
+  text-shadow: 0 0 10px rgba(255, 77, 0, 0.8);
+}
+
+/* Sidebar hover fix: prevent white highlight masking text */
+.theme-cyberpunk :is(.hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover) {
+  background-color: rgba(255, 77, 0, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 77, 0, 0.25);
+}
+
+/* Ensure hover text stays bright on hover backgrounds */
+.theme-cyberpunk :is(.hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover, .hover\:text-gray-900:hover) {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* API status badges for readability */
+.theme-cyberpunk .api-status-online {
+  background: rgba(255, 77, 0, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 77, 0, 0.4);
+  text-shadow: 0 0 6px rgba(255, 77, 0, 0.6);
+}
+
+.theme-cyberpunk .api-status-offline {
+  background: rgba(255, 46, 46, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 46, 46, 0.5);
+  text-shadow: 0 0 6px rgba(255, 46, 46, 0.6);
+}
+
+/* Turquoise accent utility */
+.accent-turquoise {
+  color: #00e5ff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
 }
 
 /* === Cyberpunk theme overrides for light Tailwind classes === */
