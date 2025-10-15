@@ -181,15 +181,21 @@ def check_environment_variables() -> List[str]:
     """Check for missing critical environment variables"""
     issues = []
 
-    critical_env_vars = [
-        "SECRET_KEY",
+    # Check that either OSINT_SECRET_KEY or SECRET_KEY is set
+    if not os.environ.get("OSINT_SECRET_KEY") and not os.environ.get("SECRET_KEY"):
+        issues.append(
+            "Missing critical environment variable: Either OSINT_SECRET_KEY or SECRET_KEY must be set"
+        )
+    
+    # Check other optional but recommended variables
+    optional_critical_vars = [
         "JWT_SECRET_KEY",
         "ENCRYPTION_KEY",
     ]
-
-    for var in critical_env_vars:
+    
+    for var in optional_critical_vars:
         if not os.environ.get(var):
-            issues.append(f"Missing critical environment variable: {var}")
+            issues.append(f"Missing recommended environment variable: {var}")
 
     return issues
 

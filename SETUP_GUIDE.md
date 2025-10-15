@@ -34,6 +34,7 @@ Edit `.env` and set **required** values:
 
 ```bash
 # CRITICAL: Set this to your generated secret key
+# Use either OSINT_SECRET_KEY (preferred) or SECRET_KEY
 OSINT_SECRET_KEY=<your-generated-secret-key>
 
 # Environment
@@ -529,14 +530,15 @@ locust -f tests/load_test.py --host=http://localhost:8000
 
 ### Common Issues
 
-#### 1. "OSINT_SECRET_KEY must be set" Error
+#### 1. "Either OSINT_SECRET_KEY or SECRET_KEY must be set" Error
 
 **Problem:** Secret key not configured
 
 **Solution:**
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Add to .env file
+# Add to .env file (use either OSINT_SECRET_KEY or SECRET_KEY)
+# OSINT_SECRET_KEY is preferred
 ```
 
 #### 2. "Connection refused" to Redis/PostgreSQL
