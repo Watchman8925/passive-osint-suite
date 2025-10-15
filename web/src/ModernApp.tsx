@@ -256,20 +256,20 @@ const ModernApp = () => {
 
             {/* Quick Stats */}
             <div className="px-4 pb-6">
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">System Status</h3>
+              <div className="rounded-lg p-4 border border-[rgba(255,77,0,0.25)] bg-[rgba(0,0,0,0.55)]">
+                <h3 className="text-sm font-semibold mb-3">System Status</h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Active Modules</span>
-                    <span className="font-medium text-gray-900">18</span>
+                    <span className="opacity-80">Active Modules</span>
+                    <span className="font-medium">18</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Data Sources</span>
-                    <span className="font-medium text-gray-900">50+</span>
+                    <span className="opacity-80">Data Sources</span>
+                    <span className="font-medium">50+</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Queries Today</span>
-                    <span className="font-medium text-gray-900">247</span>
+                    <span className="opacity-80">Queries Today</span>
+                    <span className="font-medium">247</span>
                   </div>
                 </div>
               </div>
@@ -298,20 +298,20 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   {/* Welcome Section */}
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white">
+                  <div className="bg-gradient-to-r from-[#ff4d00] to-[#00e5ff] rounded-xl p-8 text-white">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-3xl font-bold mb-2">Welcome to OSINT Suite</h2>
-                        <p className="text-blue-100 text-lg">Professional intelligence gathering and analysis platform</p>
+                        <p className="text-white/80 text-lg">Professional intelligence gathering and analysis platform</p>
                       </div>
                       <div className="hidden md:block">
-                        <Shield className="w-16 h-16 text-blue-200" />
+                        <Shield className="w-16 h-16 text-white/70" />
                       </div>
                     </div>
                   </div>
 
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade-in">
                     {stats.map((stat, index) => {
                       const Icon = stat.icon;
                       return (
