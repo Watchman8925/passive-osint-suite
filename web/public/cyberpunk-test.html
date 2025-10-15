@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk Style Test</title>
+    <style>
+        /* Test the cyberpunk styles directly */
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0f 25%, #050510 50%, #000000 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        /* Animated cyberpunk background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 255, 0, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        /* Cyberpunk grid */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+            animation: gridScroll 20s linear infinite;
+        }
+        
+        @keyframes gridScroll {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(50px) translateX(50px); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #00ffff;
+            text-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 30px #00ffff;
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 
+                0 12px 48px rgba(0, 0, 0, 0.9),
+                0 0 40px rgba(0, 255, 255, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #ffffff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 16px;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.5),
+                0 0 10px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: rgba(0, 255, 255, 0.8);
+            box-shadow: 
+                0 0 0 1px rgba(0, 255, 255, 0.8),
+                0 0 30px rgba(0, 255, 255, 0.4),
+                inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: rgba(0, 255, 255, 0.4);
+        }
+        
+        button {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 255, 0.2));
+            box-shadow: 
+                0 0 40px rgba(0, 255, 255, 0.6),
+                0 0 80px rgba(0, 255, 255, 0.3),
+                inset 0 0 40px rgba(0, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 10px 5px;
+            font-weight: 600;
+        }
+        
+        .status-online {
+            color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+        
+        .status-warning {
+            color: #ffff00;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid rgba(255, 255, 0, 0.3);
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔮 Cyberpunk Test 🔮</h1>
+        
+        <div class="card">
+            <h2 style="color: #00ffff; margin-top: 0;">Visual Checklist</h2>
+            <p>If you can see this page correctly, you should see:</p>
+            <ul style="line-height: 2;">
+                <li>✓ Black background with animated grid pattern</li>
+                <li>✓ Cyan/magenta/green glowing orbs floating</li>
+                <li>✓ Cyan neon glow on the title</li>
+                <li>✓ This card has a cyan border and dark glass effect</li>
+                <li>✓ Hover over this card - it should lift up</li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h3 style="color: #ff00ff;">Interactive Elements Test</h3>
+            <p>Test the cyberpunk form elements:</p>
+            
+            <input type="text" placeholder="Type here... watch it glow cyan on focus" />
+            <textarea rows="3" placeholder="Text area with cyberpunk styling..."></textarea>
+            
+            <button>Click Me - I Glow!</button>
+            
+            <div style="margin-top: 20px;">
+                <span class="status status-online">● ONLINE</span>
+                <span class="status status-warning">● WARNING</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 style="color: #00ff00;">Cache Clearing Instructions</h3>
+            <p>If the main app doesn't show these styles:</p>
+            <ol style="line-height: 2;">
+                <li><strong>Hard Refresh:</strong> Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)</li>
+                <li><strong>Clear Cache:</strong> F12 → Network tab → Check "Disable cache"</li>
+                <li><strong>Incognito Mode:</strong> Open in a new incognito/private window</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
