@@ -16,6 +16,7 @@ def create_admin_user():
     full_name = "Admin User"
     role = "super_admin"
 
+    
     try:
         # Check if user already exists
         existing_user = security_db.load_user_by_username(username)
@@ -25,6 +26,7 @@ def create_admin_user():
             print(f"Role: {existing_user.roles}")
             return existing_user
 
+        
         # Create the admin user
         user = rbac_manager.create_user(
             username=username,
@@ -35,6 +37,10 @@ def create_admin_user():
         )
 
         print("✓ Admin user created successfully!")
+            role=role
+        )
+        
+        print(f"✓ Admin user created successfully!")
         print(f"  Username: {username}")
         print(f"  Email: {email}")
         print(f"  Role: {role}")
@@ -48,6 +54,13 @@ def create_admin_user():
         traceback.print_exc()
         return None
 
+
+        
+    except Exception as e:
+        print(f"✗ Error creating admin user: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 if __name__ == "__main__":
     print("Creating admin user for OSINT Suite...")
