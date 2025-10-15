@@ -73,10 +73,16 @@ jobs:
         run: |
           mkdir -p config logs output output/encrypted output/audit policies
 
+      - name: Set test environment variables
+        run: |
+          echo "OSINT_SECRET_KEY=test-secret-key-for-ci-testing" >> $GITHUB_ENV
+          echo "OSINT_TEST_MODE=true" >> $GITHUB_ENV
+          echo "OSINT_USE_KEYRING=false" >> $GITHUB_ENV
+
       - name: Run Pytest
         run: |
-          python -m pytest tests/ -v --tb=short --maxfail=5
-        continue-on-error: true
+          python -m pytest tests/ -v --tb=short
+        continue-on-error: false
 
   health-check:
     name: API Health Check

@@ -27,6 +27,11 @@ def test_backend_starts():
 
 def test_api_server_import():
     """Test that api_server can be imported without errors"""
+    # Set required environment variable
+    os.environ["OSINT_SECRET_KEY"] = "test-secret-key-for-ci-testing"
+    os.environ["OSINT_TEST_MODE"] = "true"
+    os.environ["OSINT_USE_KEYRING"] = "false"
+    
     try:
         from api.api_server import app
 
@@ -39,6 +44,11 @@ def test_api_server_import():
 
 def test_health_endpoint_exists():
     """Test that health endpoint is defined in the app"""
+    # Set required environment variable
+    os.environ["OSINT_SECRET_KEY"] = "test-secret-key-for-ci-testing"
+    os.environ["OSINT_TEST_MODE"] = "true"
+    os.environ["OSINT_USE_KEYRING"] = "false"
+    
     from api.api_server import app
 
     # Check if health endpoints are registered
