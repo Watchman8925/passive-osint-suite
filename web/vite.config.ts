@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    strictPort: true,
+    hmr: {
+      clientPort: 3000,
+    },
     // Proxy API requests to the backend during development. This avoids CORS and
     // works with Codespaces and other remote dev environments where the browser
     // can't reach localhost:8000 directly.
