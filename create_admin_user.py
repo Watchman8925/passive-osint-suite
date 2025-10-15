@@ -33,7 +33,7 @@ def create_admin_user():
             role=role
         )
         
-        print(f"✓ Admin user created successfully!")
+        print("✓ Admin user created successfully!")
         print(f"  Username: {username}")
         print(f"  Email: {email}")
         print(f"  Role: {role}")
