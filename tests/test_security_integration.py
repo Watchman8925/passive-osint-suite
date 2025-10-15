@@ -107,7 +107,7 @@ class MockDatabase:
 def test_user_management():
     """Test user creation, authentication, and persistence"""
     print("\n👤 Testing user management...")
-    
+
     # Create mock database for this test
     db = MockDatabase()
 
@@ -157,7 +157,7 @@ def test_user_management():
 def test_session_management():
     """Test session creation and validation"""
     print("\n🔐 Testing session management...")
-    
+
     # Create mock database for this test
     db = MockDatabase()
 
@@ -198,7 +198,7 @@ def test_session_management():
 def test_data_classification():
     """Test data classification and access control"""
     print("\n📁 Testing data classification...")
-    
+
     # Create mock database for this test
     db = MockDatabase()
 
@@ -237,7 +237,7 @@ def test_data_classification():
 
 def test_security_monitoring():
     """Test security event logging and monitoring"""
-    
+
     # Create mock database for this test
     db = MockDatabase()
     print("\n📊 Testing security monitoring...")

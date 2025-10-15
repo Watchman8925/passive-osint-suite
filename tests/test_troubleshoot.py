@@ -21,19 +21,19 @@ def test_self_check_autofix(tmp_path):
 
         # Create logs directory before creating OSINTUtils to avoid FileNotFoundError
         os.makedirs("logs", exist_ok=True)
-        
+
         u = OSINTUtils()
-        
+
         # Check if self_check method exists
-        if hasattr(u, 'self_check'):
+        if hasattr(u, "self_check"):
             # Remove config to simulate missing
-            if hasattr(u, '_config_path') and os.path.exists(u._config_path):
+            if hasattr(u, "_config_path") and os.path.exists(u._config_path):
                 os.remove(u._config_path)
             report = u.self_check(auto_fix=True, test_network=False)
             assert "created_default_config" in report.get("fixes", []) or (
-                hasattr(u, '_config_path') and os.path.exists(u._config_path)
+                hasattr(u, "_config_path") and os.path.exists(u._config_path)
             )
-        
+
         # Verify directories exist
         assert os.path.isdir("logs")
         if not os.path.exists("output"):

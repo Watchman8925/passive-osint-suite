@@ -31,7 +31,7 @@ def test_api_server_import():
     os.environ["OSINT_SECRET_KEY"] = "test-secret-key-for-ci-testing"
     os.environ["OSINT_TEST_MODE"] = "true"
     os.environ["OSINT_USE_KEYRING"] = "false"
-    
+
     try:
         from api.api_server import app
 
@@ -48,14 +48,14 @@ def test_health_endpoint_exists():
     os.environ["OSINT_SECRET_KEY"] = "test-secret-key-for-ci-testing"
     os.environ["OSINT_TEST_MODE"] = "true"
     os.environ["OSINT_USE_KEYRING"] = "false"
-    
+
     from api.api_server import app
 
     # Check if health endpoints are registered
     routes = [route.path for route in app.routes]
-    assert "/api/health" in routes or any("/health" in r for r in routes), (
-        "Health endpoint should be registered"
-    )
+    assert "/api/health" in routes or any(
+        "/health" in r for r in routes
+    ), "Health endpoint should be registered"
     print(f"✅ Found {len([r for r in routes if 'health' in r])} health endpoints")
 
 

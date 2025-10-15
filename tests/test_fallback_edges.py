@@ -33,22 +33,17 @@ def test_fallback_vpn_success(tmp_path, monkeypatch):
     os.makedirs("logs", exist_ok=True)
     try:
         u = OSINTUtils()
-        
+
         # Mock enforce_policy to return proper structure
         def mock_enforce(*args, **kwargs):
-            return {
-                "allowed": True,
-                "actions": [],
-                "warnings": [],
-                "delays": []
-            }
-        
+            return {"allowed": True, "actions": [], "warnings": [], "delays": []}
+
         # Patch enforce_policy
         try:
             monkeypatch.setattr("security.opsec_policy.enforce_policy", mock_enforce)
-        except:
+        except Exception:
             pass
-            
+
         u.session = FailSess()
         u.vpn_session = VPNSuccessSess()
         u.direct_session = FailSess()
@@ -56,7 +51,7 @@ def test_fallback_vpn_success(tmp_path, monkeypatch):
         if not u.config.has_section("SETTINGS"):
             u.config.add_section("SETTINGS")
         u.config.set("SETTINGS", "FALLBACK_TO_VPN", "True")
-        
+
         # For this test, we'll just verify the sessions are configured correctly
         # Testing the actual request would require more complex mocking
         assert u.session is not None

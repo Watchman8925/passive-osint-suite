@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 
@@ -33,26 +32,21 @@ def test_fallback_order_and_logging(tmp_path, monkeypatch):
     os.chdir(tmp_path)
     try:
         u = OSINTUtils()
-        
+
         # Mock enforce_policy to return proper structure
         original_enforce = None
         try:
             from security.opsec_policy import enforce_policy as original_enforce
-        except:
+        except Exception:
             pass
-            
+
         def mock_enforce(*args, **kwargs):
-            return {
-                "allowed": True,
-                "actions": [],
-                "warnings": [],
-                "delays": []
-            }
-        
+            return {"allowed": True, "actions": [], "warnings": [], "delays": []}
+
         # Patch enforce_policy if it exists
         if original_enforce:
             monkeypatch.setattr("security.opsec_policy.enforce_policy", mock_enforce)
-        
+
         # Replace sessions: tor fails, vpn fails, direct succeeds
         u.session = FailSess()
         u.vpn_session = FailSess()
@@ -61,7 +55,7 @@ def test_fallback_order_and_logging(tmp_path, monkeypatch):
         if not u.config.has_section("SETTINGS"):
             u.config.add_section("SETTINGS")
         u.config.set("SETTINGS", "FALLBACK_TO_VPN", "True")
-        
+
         # For this test, we'll just verify that the object can make requests with fallback
         # without testing the full request flow which requires proper mocking
         # The important part is that the configuration and sessions are set up correctly
@@ -69,6 +63,6 @@ def test_fallback_order_and_logging(tmp_path, monkeypatch):
         assert u.vpn_session is not None
         assert u.direct_session is not None
         print("✅ Fallback order test passed (sessions configured correctly)")
-        
+
     finally:
         os.chdir(cwd)
