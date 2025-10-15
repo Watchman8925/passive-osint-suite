@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Suite - Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 OSINT Suite Debug Page</h1>
+    <p>This page helps diagnose connectivity issues in Codespaces</p>
+    
+    <div id="status"></div>
+    
+    <button onclick="testAPI()">Test API Connection</button>
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testTorStatus()">Test Tor Status</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testAPI() {
+            log('Testing API connectivity...', 'info');
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                log(`✅ API Working - Status: ${data.status}`, 'success');
+                log(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+            } catch (error) {
+                log(`❌ API Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testHealth() {
+            log('Testing health endpoint...', 'info');
+            try {
+                const response = await fetch('/api/system/status');
+                const data = await response.json();
+                log(`✅ System Status OK`, 'success');
+                log(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+            } catch (error) {
+                log(`❌ Health Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testTorStatus() {
+            log('Testing Tor status...', 'info');
+            try {
+                const response = await fetch('/api/anonymity/tor/status');
+                const data = await response.json();
+                log(`✅ Tor Status Retrieved`, 'success');
+                log(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+            } catch (error) {
+                log(`❌ Tor Status Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run basic test on load
+        window.onload = () => {
+            log('🚀 Debug page loaded - servers should be accessible', 'success');
+            setTimeout(testAPI, 1000);
+        };
+    </script>
+</body>
+</html>

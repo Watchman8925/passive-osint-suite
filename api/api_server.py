@@ -1001,6 +1001,18 @@ async def tor_status():
     return status
 
 
+@app.get("/api/system/status")
+async def system_status_alias(request: Request):
+    """Alias for /api/health to match frontend expectations."""
+    return await health_check(request)
+
+
+@app.get("/api/anonymity/tor/status")
+async def anonymity_tor_status():
+    """Alias for /tor/status under /api/anonymity path."""
+    return await tor_status()
+
+
 @app.get("/api/capabilities", response_model=List[CapabilityModel])
 async def list_capabilities():
     """List registered capabilities (static registry for now)."""

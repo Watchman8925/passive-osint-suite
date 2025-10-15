@@ -31,7 +31,7 @@ class OSINTAPIClient {
     };
 
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+      baseURL: import.meta.env.VITE_API_URL || '/',
       timeout: 60000, // Longer timeout for Tor
       headers: {
         'Content-Type': 'application/json',
@@ -61,14 +61,8 @@ class OSINTAPIClient {
         config.headers['X-Request-ID'] = this.generateRequestId();
         config.headers['X-Timestamp'] = Date.now().toString();
         
-        // Add Tor proxy if enabled
-        if (this.anonymityConfig.tor.enabled) {
-          config.proxy = {
-            host: this.anonymityConfig.tor.host,
-            port: this.anonymityConfig.tor.port,
-            protocol: 'socks5'
-          };
-        }
+        // Note: Tor routing must be handled server-side in a web app
+        // Browser cannot directly connect to SOCKS5 proxy
 
         return config;
       },
@@ -225,11 +219,11 @@ class OSINTAPIClient {
   async domainRecon(domain: string, options?: any): Promise<any> {
     try {
       toast.loading(`🔍 Analyzing domain: ${domain}`, { id: 'domain-recon' });
-      const response = await this.client.post('/api/osint/domain', { 
-        domain, 
-        options: { 
-          ...options, 
-          anonymity: this.anonymityConfig 
+      const response = await this.client.post('/api/modules/execute', { 
+        module_name: 'domain_analyzer',
+        parameters: { 
+          domain,
+          ...options
         } 
       });
       toast.success('Domain analysis completed', { id: 'domain-recon' });
@@ -243,11 +237,11 @@ class OSINTAPIClient {
   async emailIntel(email: string, options?: any): Promise<any> {
     try {
       toast.loading(`📧 Investigating email: ${email}`, { id: 'email-intel' });
-      const response = await this.client.post('/api/osint/email', { 
-        email, 
-        options: { 
-          ...options, 
-          anonymity: this.anonymityConfig 
+      const response = await this.client.post('/api/modules/execute', { 
+        module_name: 'email_analyzer',
+        parameters: { 
+          email,
+          ...options
         } 
       });
       toast.success('Email investigation completed', { id: 'email-intel' });
@@ -261,11 +255,11 @@ class OSINTAPIClient {
   async ipAnalysis(ip: string, options?: any): Promise<any> {
     try {
       toast.loading(`🌐 Analyzing IP: ${ip}`, { id: 'ip-analysis' });
-      const response = await this.client.post('/api/osint/ip', { 
-        ip, 
-        options: { 
-          ...options, 
-          anonymity: this.anonymityConfig 
+      const response = await this.client.post('/api/modules/execute', { 
+        module_name: 'ip_analyzer',
+        parameters: { 
+          ip,
+          ...options
         } 
       });
       toast.success('IP analysis completed', { id: 'ip-analysis' });
@@ -301,7 +295,7 @@ class OSINTAPIClient {
   // System Status
   async getSystemStatus(): Promise<any> {
     try {
-      const response = await this.client.get('/api/system/status');
+      const response = await this.client.get('/api/health');
       return response.data;
     } catch (error) {
       console.error('Failed to fetch system status:', error);
