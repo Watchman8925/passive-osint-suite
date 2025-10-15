@@ -260,13 +260,14 @@ class AppConfig:
     """Application configuration - all secrets must be provided via environment variables"""
 
     # Critical: Fail fast if SECRET_KEY is not set
-    SECRET_KEY = os.getenv("OSINT_SECRET_KEY")
+    # Accept both OSINT_SECRET_KEY (preferred) and SECRET_KEY (fallback) for compatibility
+    SECRET_KEY = os.getenv("OSINT_SECRET_KEY") or os.getenv("SECRET_KEY")
     if (
         not SECRET_KEY
         or SECRET_KEY == "change-this-secret-key-in-production-environment"
     ):
         raise ValueError(
-            "OSINT_SECRET_KEY environment variable must be set to a secure random value. "
+            "Either OSINT_SECRET_KEY or SECRET_KEY environment variable must be set to a secure random value. "
             "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
         )
 
