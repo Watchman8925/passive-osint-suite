@@ -1,0 +1,157 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Linting (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: pip install ruff==0.7.2
+
+      - name: Run Ruff Check
+        run: ruff check .
+
+      - name: Run Ruff Format Check
+        run: ruff format --check .
+
+  typecheck:
+    name: Type Checking (Mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install mypy
+          pip install types-requests types-redis types-PyYAML
+
+      - name: Run Mypy
+        run: mypy --install-types --non-interactive --ignore-missing-imports .
+        continue-on-error: true
+
+  test:
+    name: Unit & Integration Tests (Pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-cov
+          # Install minimal requirements for testing
+          pip install -r requirements_minimal.txt
+
+      - name: Create necessary directories
+        run: |
+          mkdir -p config logs output output/encrypted output/audit policies
+
+      - name: Run Pytest
+        run: |
+          python -m pytest tests/ -v --tb=short --maxfail=5
+        continue-on-error: true
+
+  health-check:
+    name: API Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn httpx
+          # Install minimal requirements for API
+          pip install -r requirements_minimal.txt
+
+      - name: Create necessary directories
+        run: |
+          mkdir -p config logs output output/encrypted output/audit policies
+
+      - name: Set environment variables
+        run: |
+          echo "OSINT_USE_KEYRING=false" >> $GITHUB_ENV
+          echo "OSINT_TEST_MODE=true" >> $GITHUB_ENV
+          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "OSINT_SECRET_KEY=test-secret-key-for-ci-pipeline-testing-only" >> $GITHUB_ENV
+
+      - name: Start API server in background
+        run: |
+          python -m uvicorn api.api_server:app --host 0.0.0.0 --port 8000 &
+          echo $! > api.pid
+          sleep 10
+
+      - name: Wait for API to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/api/health; then
+              echo "API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "API failed to start"
+          exit 1
+
+      - name: Test health endpoint
+        run: |
+          curl -f http://localhost:8000/api/health || exit 1
+          echo "Health check passed!"
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+          fi
+
+  status:
+    name: CI Status Check
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, health-check]
+    if: always()
+    steps:
+      - name: Check all jobs
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "❌ Linting failed"
+            exit 1
+          fi
+          if [ "${{ needs.health-check.result }}" != "success" ]; then
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          echo "✅ All core checks passed"

@@ -363,8 +363,8 @@ class EmailIntelligence(OSINTUtils):
         if not self.results:
             return "No analysis results available"
 
-        report = f"""# Email Intelligence Report: {self.results['email']}
-Generated: {self.results['timestamp']}
+        report = f"""# Email Intelligence Report: {self.results["email"]}
+Generated: {self.results["timestamp"]}
 
 ## Domain Analysis
 """

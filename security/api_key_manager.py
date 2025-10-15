@@ -952,7 +952,7 @@ class APIConfigurationManager:
                 f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 f"Total Services: {total_services}",
                 f"Active Services: {active_services}",
-                f"Success Rate: {(active_services/total_services)*100:.1f}%",
+                f"Success Rate: {(active_services / total_services) * 100:.1f}%",
                 "",
                 "Service Details:",
                 "-" * 20,
@@ -1011,7 +1011,7 @@ class APIConfigurationManager:
 
             # Also log summary to console
             logger.info(
-                f"API Validation Summary: {active_services}/{total_services} services active ({(active_services/total_services)*100:.1f}%)"
+                f"API Validation Summary: {active_services}/{total_services} services active ({(active_services / total_services) * 100:.1f}%)"
             )
 
         except Exception as e:

@@ -645,10 +645,10 @@ class OSINTSuite:
                     console.print(f"[white]{line}[/white]")
                 if len(lines) > 20:
                     console.print(
-                        f"[cyan]...and {len(lines)-20} more lines. Refine your keywords for more focus.[/cyan]"
+                        f"[cyan]...and {len(lines) - 20} more lines. Refine your keywords for more focus.[/cyan]"
                     )
         else:
-            console.print(f"[red]Error: {result.get('error','Unknown error')}[/red]")
+            console.print(f"[red]Error: {result.get('error', 'Unknown error')}[/red]")
 
     def handle_search_engine_dorking(self):
         console.print(

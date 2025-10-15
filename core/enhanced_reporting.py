@@ -89,13 +89,13 @@ class EnhancedReportGenerator:
             key_discovery = f"Found {most_common[1]} {most_common[0]} entries"
 
         summary_text = f"""
-Investigation of {', '.join(targets[:3])} {"and others" if len(targets) > 3 else ""}.
+Investigation of {", ".join(targets[:3])} {"and others" if len(targets) > 3 else ""}.
 
 We collected {len(findings)} total data points across {len(findings_by_type)} different categories.
 Key discovery: {key_discovery}.
 
-Status: {len([lead for lead in leads if lead.get('status') == 'pending'])} leads pending investigation, 
-{len([lead for lead in leads if lead.get('status') == 'completed'])} already explored.
+Status: {len([lead for lead in leads if lead.get("status") == "pending"])} leads pending investigation, 
+{len([lead for lead in leads if lead.get("status") == "completed"])} already explored.
         """.strip()
 
         return {
