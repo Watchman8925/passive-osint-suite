@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Search, Brain, Globe, Mail, Server, Building, DollarSign, Plane, Image, Network, Eye, Zap, ShieldCheck, ChartBar as BarChart3, Activity, Users, Clock, TrendingUp, Play, Pause, Settings, Hop as Home, FileSearch, Cpu, Layers as Layers3, Sparkles, ChevronRight, ExternalLink, Menu, X, Database, Target, Radar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Loader as Loader2, Send, Download, Upload, ListFilter as Filter, Calendar, MapPin, User, Lock, Wifi, Smartphone, Monitor, HardDrive, Cloud, Code, BookOpen, Award, Briefcase, Camera, MessageSquare, Heart, Star, Zap as Lightning, RefreshCw, Plus, Minus, Maximize2, Minimize2 } from 'lucide-react';
+import { Card } from './components/ui/Card';
 import { ChatInterface } from './components/chat/ChatInterface';
 import { useSelectedInvestigation } from './contexts/SelectedInvestigationContext';
 
@@ -314,24 +315,23 @@ const ModernApp = () => {
                     {stats.map((stat, index) => {
                       const Icon = stat.icon;
                       return (
-                        <motion.div
+                        <Card
                           key={stat.label}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.1 * index }}
-                          className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                          className="p-6 card-interactive"
+                          elevation="base"
+                          interactive
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                              <Icon className="w-6 h-6 text-blue-600" />
+                            <div className="p-3 rounded-lg bg-[rgba(255,77,0,0.12)] border border-[rgba(255,77,0,0.25)]">
+                              <Icon className="w-6 h-6 text-[#ff4d00]" />
                             </div>
                             <span className={`text-sm font-medium ${stat.color}`}>{stat.trend}</span>
                           </div>
                           <div>
-                            <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-                            <p className="text-gray-600 text-sm">{stat.label}</p>
+                            <p className="text-2xl font-bold mb-1">{stat.value}</p>
+                            <p className="text-sm opacity-90">{stat.label}</p>
                           </div>
-                        </motion.div>
+                        </Card>
                       );
                     })}
                   </div>
@@ -339,13 +339,13 @@ const ModernApp = () => {
                   {/* Recent Activity & Quick Actions */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Recent Activity */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <Card className="p-6" elevation="base">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <Activity className="w-5 h-5 mr-2 text-blue-600" />
+                        <h3 className="text-lg font-semibold flex items-center">
+                          <Activity className="w-5 h-5 mr-2 text-[#00e5ff]" />
                           Recent Activity
                         </h3>
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        <button className="text-[#00e5ff] hover:text-white text-sm font-medium btn-modern">
                           View All
                         </button>
                       </div>
@@ -356,20 +356,20 @@ const ModernApp = () => {
                           { action: 'Email verification', target: 'user@domain.com', time: '1 hour ago', status: 'warning' },
                           { action: 'Patent search', target: 'AI algorithms', time: '2 hours ago', status: 'success' }
                         ].map((activity, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                          <div key={index} className="flex items-center space-x-4 p-4 rounded-lg border border-[rgba(255,77,0,0.15)] bg-[rgba(0,0,0,0.5)]">
                             <div className={`w-3 h-3 rounded-full ${
-                              activity.status === 'success' ? 'bg-green-500' :
-                              activity.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                              activity.status === 'success' ? 'bg-[#00e5ff]' :
+                              activity.status === 'warning' ? 'bg-[#ff4d00]' : 'bg-[#ff2e2e]'
                             }`}></div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                              <p className="text-xs text-gray-600">{activity.target}</p>
+                              <p className="text-sm font-medium">{activity.action}</p>
+                              <p className="text-xs opacity-80">{activity.target}</p>
                             </div>
-                            <span className="text-xs text-gray-500">{activity.time}</span>
+                            <span className="text-xs opacity-70">{activity.time}</span>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </Card>
 
                     {/* Quick Actions */}
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
