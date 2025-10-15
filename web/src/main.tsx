@@ -11,7 +11,9 @@ createRoot(document.getElementById('root')!).render(
     <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
     <ErrorBoundary>
       <SelectedInvestigationProvider>
-        <ModernApp />
+        <div className="theme-cyberpunk cyberpunk-bg min-h-screen">
+          <ModernApp />
+        </div>
       </SelectedInvestigationProvider>
     </ErrorBoundary>
   </StrictMode>,

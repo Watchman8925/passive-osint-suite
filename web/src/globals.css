@@ -595,3 +595,71 @@ a:hover {
   color: #00ff00;
   text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
 }
+
+/* === Cyberpunk theme overrides for light Tailwind classes === */
+/* Apply these when wrapping the app with .theme-cyberpunk to avoid editing every component */
+.theme-cyberpunk {
+  /* Ensure the body background shines through */
+  background: transparent !important;
+}
+
+/* Light page backgrounds -> transparent to reveal neon grid */
+.theme-cyberpunk :is(.bg-gray-50, .bg-gray-100, .bg-gray-200) {
+  background-color: transparent !important;
+}
+
+/* Default white panels -> dark glass cards */
+.theme-cyberpunk :is(.bg-white, [class*="bg-white/"]) {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 255, 0, 0.2) !important;
+}
+
+/* Inputs that force white background -> match dark theme */
+.theme-cyberpunk :is(input, select, textarea).bg-white,
+.theme-cyberpunk :is(input, select, textarea)[class*="bg-white/"] {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #fff !important;
+}
+
+/* Header/aside bars using white */
+.theme-cyberpunk header.bg-white,
+.theme-cyberpunk aside.bg-white,
+.theme-cyberpunk .bg-white.border-b,
+.theme-cyberpunk .border-gray-200 {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(0, 255, 0, 0.25) !important;
+}
+
+/* Tables and dividers */
+.theme-cyberpunk :is(.divide-gray-200, .border-gray-100, .border-gray-200, .border-gray-300) {
+  border-color: rgba(0, 255, 0, 0.25) !important;
+}
+/* Hover rows that use gray */
+.theme-cyberpunk :is(.hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover) {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Ensure text stays readable even if components force gray text */
+.theme-cyberpunk :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-gray-500) {
+  color: #ffffff !important;
+}
+
+/* Badge/pill light backgrounds -> subtle dark */
+.theme-cyberpunk :is(.bg-gray-50, .bg-gray-100, .bg-gray-200).rounded,
+.theme-cyberpunk :is(.bg-gray-50, .bg-gray-100, .bg-gray-200).rounded-lg,
+.theme-cyberpunk :is(.bg-gray-50, .bg-gray-100, .bg-gray-200).rounded-xl {
+  background-color: rgba(0, 0, 0, 0.55) !important;
+}
+
+/* Generic card helper: if something looks like a card, give it neon edges */
+.theme-cyberpunk :is(.shadow, .shadow-sm, .shadow-md, .shadow-lg) {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 18px rgba(0, 255, 0, 0.08) !important;
+}
+
+/* Subtle glass for elements already using white opacity utilities */
+.theme-cyberpunk [class*="bg-white/"] {
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
