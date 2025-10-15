@@ -29,33 +29,33 @@ except ImportError:
 
 def generate_key_pair(output_dir: str = None):
     """Generate a new Ed25519 key pair."""
-    
+
     # Generate new Ed25519 key pair
     private_key = ed25519.Ed25519PrivateKey.generate()
-    
+
     # Export private key as PEM
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
-    
+
     # Export private key as base64-encoded PEM for environment variable
     encoded_private = base64.b64encode(private_pem).decode()
-    
+
     # Export public key as PEM
     public_key = private_key.public_key()
     public_pem = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
-    
+
     # Display results
     print("=" * 80)
     print("🔐 New Audit Signing Key Generated Successfully")
     print("=" * 80)
     print()
-    
+
     print("⚠️  CRITICAL SECURITY NOTICE")
     print("-" * 80)
     print("The private key below must be kept SECRET and SECURE.")
@@ -66,7 +66,7 @@ def generate_key_pair(output_dir: str = None):
     print("- DO add to .env file for development (ensure .env is in .gitignore)")
     print("-" * 80)
     print()
-    
+
     print("📋 PRIVATE KEY (Base64-encoded PEM)")
     print("=" * 80)
     print("Add this to your .env file or secret manager:")
@@ -75,25 +75,25 @@ def generate_key_pair(output_dir: str = None):
     print()
     print("=" * 80)
     print()
-    
+
     print("✅ PUBLIC KEY (Can be shared)")
     print("=" * 80)
     print(public_pem.decode())
     print("=" * 80)
     print()
-    
+
     # Optionally save public key to file
     if output_dir:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
+
         public_key_file = output_path / "audit_public_key.pem"
         with open(public_key_file, "wb") as f:
             f.write(public_pem)
-        
+
         print(f"✅ Public key saved to: {public_key_file}")
         print()
-    
+
     print("📖 Next Steps:")
     print("-" * 80)
     print("1. Copy the AUDIT_SIGNING_KEY value above")
@@ -107,7 +107,7 @@ def generate_key_pair(output_dir: str = None):
     print("5. Document this key generation event")
     print("-" * 80)
     print()
-    
+
     print("🔄 Key Rotation Reminder:")
     print("-" * 80)
     print("- Rotate keys every 90 days (or per your security policy)")
@@ -115,7 +115,7 @@ def generate_key_pair(output_dir: str = None):
     print("- Document all key rotation events")
     print("-" * 80)
     print()
-    
+
     return encoded_private, public_pem.decode()
 
 
@@ -137,17 +137,17 @@ Security Notes:
   - Use environment variables or secret managers for storage
   - Rotate keys regularly (every 90 days recommended)
   - Keep old public keys for signature verification
-        """
+        """,
     )
-    
+
     parser.add_argument(
         "--output-dir",
         type=str,
-        help="Directory to save public key (default: logs/audit)"
+        help="Directory to save public key (default: logs/audit)",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Generate the key pair
     output_dir = args.output_dir or "logs/audit"
     generate_key_pair(output_dir)

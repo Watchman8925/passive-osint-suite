@@ -105,7 +105,7 @@ class AuditTrail:
 
     def _load_or_generate_keys(self):
         """Load existing signing keys or generate new ones.
-        
+
         Priority order:
         1. AUDIT_SIGNING_KEY environment variable (base64-encoded PEM)
         2. Key file on disk
@@ -124,13 +124,19 @@ class AuditTrail:
                     if isinstance(loaded_key, ed25519.Ed25519PrivateKey):
                         self.private_key = loaded_key  # type: ignore
                         self.public_key = self.private_key.public_key()
-                        logger.info("Loaded audit signing key from environment variable")
+                        logger.info(
+                            "Loaded audit signing key from environment variable"
+                        )
                         return
                     else:
-                        logger.warning("Key from environment is not Ed25519, falling back to file or generation")
+                        logger.warning(
+                            "Key from environment is not Ed25519, falling back to file or generation"
+                        )
                 except Exception as e:
-                    logger.warning(f"Failed to load key from environment: {e}, falling back to file or generation")
-            
+                    logger.warning(
+                        f"Failed to load key from environment: {e}, falling back to file or generation"
+                    )
+
             # Fall back to file-based key
             if Path(self.key_file).exists():
                 # Load existing private key
