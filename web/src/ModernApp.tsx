@@ -197,7 +197,7 @@ const ModernApp = () => {
                   ? 'api-status-online'
                   : 'api-status-offline'
               }`}>
-                <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-[#ff4d00]' : 'bg-[#ff2e2e]'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-[#2E8B57]' : 'bg-[#C0C0C0]'}`}></div>
                 <span className="font-medium">{apiStatus === 'online' ? 'API Online' : 'API Offline'}</span>
               </div>
 
@@ -236,17 +236,17 @@ const ModernApp = () => {
                       }}
                       className={`relative w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                         activeTab === item.id
-                          ? 'bg-[rgba(255,77,0,0.12)] text-white shadow-sm'
-                          : 'text-gray-300 hover:bg-[rgba(255,77,0,0.08)] hover:text-white'
+                          ? 'bg-[rgba(46,139,87,0.15)] text-white shadow-sm'
+                          : 'text-gray-300 hover:bg-[rgba(0,150,255,0.12)] hover:text-white'
                       }`}
                     >
                       {activeTab === item.id && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#ff4d00] to-[#00e5ff] rounded-r-full shadow-[0_0_8px_rgba(255,77,0,0.8)]" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#0096ff] to-[#2E8B57] rounded-r-full shadow-[0_0_8px_rgba(0,150,255,0.7)]" />
                       )}
-                      <Icon className={`w-5 h-5 transition-colors ${activeTab === item.id ? 'text-[#ff4d00]' : 'text-gray-400'}`} />
+                      <Icon className={`w-5 h-5 transition-colors ${activeTab === item.id ? 'text-[#2E8B57]' : 'text-gray-400'}`} />
                       <span className="font-medium">{item.name}</span>
                       {activeTab === item.id && (
-                        <ChevronRight className="w-4 h-4 ml-auto text-[#00e5ff]" />
+                        <ChevronRight className="w-4 h-4 ml-auto text-[#0096ff]" />
                       )}
                     </button>
                   );
@@ -256,7 +256,7 @@ const ModernApp = () => {
 
             {/* Quick Stats */}
             <div className="px-4 pb-6">
-              <div className="rounded-lg p-4 border border-[rgba(255,77,0,0.25)] bg-[rgba(0,0,0,0.55)]">
+              <div className="rounded-lg p-4 border border-[rgba(192,192,192,0.25)] bg-[rgba(0,0,0,0.55)]">
                 <h3 className="text-sm font-semibold mb-3">System Status</h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
@@ -298,7 +298,7 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   {/* Welcome Section */}
-                  <div className="bg-gradient-to-r from-[#ff4d00] to-[#00e5ff] rounded-xl p-8 text-white">
+                  <div className="bg-gradient-to-r from-[#0096ff] to-[#2E8B57] rounded-xl p-8 text-white">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-3xl font-bold mb-2">Welcome to OSINT Suite</h2>
@@ -322,8 +322,8 @@ const ModernApp = () => {
                           interactive
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 rounded-lg bg-[rgba(255,77,0,0.12)] border border-[rgba(255,77,0,0.25)]">
-                              <Icon className="w-6 h-6 text-[#ff4d00]" />
+                            <div className="p-3 rounded-lg bg-[rgba(0,150,255,0.12)] border border-[rgba(192,192,192,0.25)]">
+                              <Icon className="w-6 h-6 text-[#0096ff]" />
                             </div>
                             <span className={`text-sm font-medium ${stat.color}`}>{stat.trend}</span>
                           </div>
@@ -342,10 +342,10 @@ const ModernApp = () => {
                     <Card className="p-6" elevation="base">
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-semibold flex items-center">
-                          <Activity className="w-5 h-5 mr-2 text-[#00e5ff]" />
+                          <Activity className="w-5 h-5 mr-2 text-[#0096ff]" />
                           Recent Activity
                         </h3>
-                        <button className="text-[#00e5ff] hover:text-white text-sm font-medium btn-modern">
+                        <button className="text-[#0096ff] hover:text-white text-sm font-medium btn-modern">
                           View All
                         </button>
                       </div>
@@ -356,10 +356,10 @@ const ModernApp = () => {
                           { action: 'Email verification', target: 'user@domain.com', time: '1 hour ago', status: 'warning' },
                           { action: 'Patent search', target: 'AI algorithms', time: '2 hours ago', status: 'success' }
                         ].map((activity, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 rounded-lg border border-[rgba(255,77,0,0.15)] bg-[rgba(0,0,0,0.5)]">
+                          <div key={index} className="flex items-center space-x-4 p-4 rounded-lg border border-[rgba(192,192,192,0.2)] bg-[rgba(0,0,0,0.5)]">
                             <div className={`w-3 h-3 rounded-full ${
-                              activity.status === 'success' ? 'bg-[#00e5ff]' :
-                              activity.status === 'warning' ? 'bg-[#ff4d00]' : 'bg-[#ff2e2e]'
+                              activity.status === 'success' ? 'bg-[#2E8B57]' :
+                              activity.status === 'warning' ? 'bg-[#0096ff]' : 'bg-[#C0C0C0]'
                             }`}></div>
                             <div className="flex-1">
                               <p className="text-sm font-medium">{activity.action}</p>
