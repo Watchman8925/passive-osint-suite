@@ -38,6 +38,21 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunk: React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react/jsx-runtime'],
+          // Animation and UI libraries
+          'vendor-animation': ['framer-motion'],
+          // Icons
+          'vendor-icons': ['lucide-react'],
+          // Utilities
+          'vendor-utils': ['axios', 'clsx', 'react-hot-toast', 'nprogress'],
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600
   }
 })

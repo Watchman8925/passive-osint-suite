@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import toast from 'react-hot-toast';
+import { startProgress, finishProgress } from '../utils/progress';
 
 interface TorProxyConfig {
   enabled: boolean;
@@ -51,6 +52,9 @@ class OSINTAPIClient {
     // Request interceptor for authentication and anonymity
     this.client.interceptors.request.use(
       (config) => {
+        // Start progress bar
+        startProgress();
+
         // Add auth token if available
         const token = localStorage.getItem('osint_auth_token');
         if (token) {
@@ -67,6 +71,7 @@ class OSINTAPIClient {
         return config;
       },
       (error) => {
+        finishProgress();
         toast.error('Request configuration error');
         return Promise.reject(error);
       }
@@ -75,6 +80,9 @@ class OSINTAPIClient {
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => {
+        // Finish progress bar
+        finishProgress();
+
         // Log successful anonymized requests
         if (response.headers['x-tor-exit-node']) {
           console.log('✅ Request routed through Tor exit node:', response.headers['x-tor-exit-node']);
@@ -82,6 +90,9 @@ class OSINTAPIClient {
         return response;
       },
       (error) => {
+        // Finish progress bar
+        finishProgress();
+
         if (error.response?.status === 401) {
           toast.error('Authentication required');
           localStorage.removeItem('osint_auth_token');

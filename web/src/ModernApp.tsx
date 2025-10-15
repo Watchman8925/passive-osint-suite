@@ -233,16 +233,19 @@ const ModernApp = () => {
                         setActiveTab(item.id);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                      className={`relative w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                         activeTab === item.id
-                          ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600 shadow-sm'
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-[rgba(255,77,0,0.12)] text-white shadow-sm'
+                          : 'text-gray-300 hover:bg-[rgba(255,77,0,0.08)] hover:text-white'
                       }`}
                     >
-                      <Icon className={`w-5 h-5 ${activeTab === item.id ? item.color : 'text-gray-500'}`} />
+                      {activeTab === item.id && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#ff4d00] to-[#00e5ff] rounded-r-full shadow-[0_0_8px_rgba(255,77,0,0.8)]" />
+                      )}
+                      <Icon className={`w-5 h-5 transition-colors ${activeTab === item.id ? 'text-[#ff4d00]' : 'text-gray-400'}`} />
                       <span className="font-medium">{item.name}</span>
                       {activeTab === item.id && (
-                        <ChevronRight className="w-4 h-4 ml-auto text-blue-600" />
+                        <ChevronRight className="w-4 h-4 ml-auto text-[#00e5ff]" />
                       )}
                     </button>
                   );
