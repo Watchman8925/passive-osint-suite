@@ -1,6 +1,6 @@
 [tool.ruff]
 line-length = 88
-exclude = ["osint_env", "theHarvester", "output", "venv", "Sublist3r", "**/site-packages/**"]
+exclude = ["osint_env", "theHarvester", "output", "venv", "Sublist3r", "**/site-packages/**", "*.md"]
 target-version = "py312"
 
 [tool.mypy]
