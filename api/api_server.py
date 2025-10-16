@@ -92,7 +92,7 @@ except Exception:  # pragma: no cover - fallback for static analysis / dev
     jwt = _JWTStub  # type: ignore
 
 try:
-    import redis  # type: ignore
+    import redis.asyncio as redis  # type: ignore
 except Exception:  # pragma: no cover - dev fallback
     redis = None  # type: ignore
 
@@ -676,17 +676,13 @@ async def lifespan(app: FastAPI):
 
         try:
             if getattr(app.state, "redis", None):
-                # redis may provide close or connection_pool.close; attempt close gracefully
-                close_fn = getattr(app.state.redis, "close", None) or getattr(
-                    app.state.redis, "connection_pool", None
-                )
+                # Close async redis connection
                 try:
-                    if callable(close_fn):
-                        close_fn()
-                    elif hasattr(app.state.redis, "connection_pool") and hasattr(
-                        app.state.redis.connection_pool, "disconnect"
-                    ):
-                        app.state.redis.connection_pool.disconnect()
+                    # redis.asyncio provides aclose() or close() methods
+                    if hasattr(app.state.redis, "aclose"):
+                        await app.state.redis.aclose()
+                    elif hasattr(app.state.redis, "close"):
+                        await app.state.redis.close()
                 except Exception:
                     logging.exception("Error closing redis connection")
         except Exception:
