@@ -92,7 +92,7 @@ except Exception:  # pragma: no cover - fallback for static analysis / dev
     jwt = _JWTStub  # type: ignore
 
 try:
-    import redis  # type: ignore
+    import redis.asyncio as redis  # type: ignore
 except Exception:  # pragma: no cover - dev fallback
     redis = None  # type: ignore
 
@@ -260,13 +260,22 @@ class AppConfig:
     """Application configuration - all secrets must be provided via environment variables"""
 
     # Critical: Fail fast if SECRET_KEY is not set
-    SECRET_KEY = os.getenv("OSINT_SECRET_KEY")
+    # Accept OSINT_SECRET_KEY, SECRET_KEY, or JWT_SECRET_KEY for compatibility
+    SECRET_KEY = (
+        os.getenv("OSINT_SECRET_KEY")
+        or os.getenv("SECRET_KEY")
+        or os.getenv("JWT_SECRET_KEY")
+    )
     if (
         not SECRET_KEY
         or SECRET_KEY == "change-this-secret-key-in-production-environment"
+        or SECRET_KEY == "changeme-secure-secret-key-minimum-32-chars"
+        or SECRET_KEY == "your_very_long_random_secret_key_here_minimum_32_characters"
+        or SECRET_KEY == "your_jwt_secret_key_here_minimum_32_characters"
     ):
         raise ValueError(
-            "OSINT_SECRET_KEY environment variable must be set to a secure random value. "
+            "A secure SECRET_KEY environment variable must be set. "
+            "Accepted variables: OSINT_SECRET_KEY, SECRET_KEY, or JWT_SECRET_KEY. "
             "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
         )
 
@@ -305,7 +314,7 @@ class InvestigationCreate(BaseModelBase):
         None, max_length=2000, description="Investigation description"
     )
     targets: List[str] = Field(
-        ..., min_items=1, max_items=100, description="List of targets to investigate"
+        ..., min_length=1, max_length=100, description="List of targets to investigate"
     )
     investigation_type: str = Field(
         ...,
@@ -317,7 +326,7 @@ class InvestigationCreate(BaseModelBase):
         pattern="^(low|medium|high|critical)$",
         description="Investigation priority level",
     )
-    tags: List[str] = Field(default_factory=list, max_items=20)  # type: ignore[assignment]
+    tags: List[str] = Field(default_factory=list, max_length=20)  # type: ignore[assignment]
     scheduled_start: Optional[datetime] = None
     auto_reporting: bool = True
 
@@ -676,17 +685,16 @@ async def lifespan(app: FastAPI):
 
         try:
             if getattr(app.state, "redis", None):
-                # redis may provide close or connection_pool.close; attempt close gracefully
-                close_fn = getattr(app.state.redis, "close", None) or getattr(
-                    app.state.redis, "connection_pool", None
-                )
+                # Close async redis connection gracefully
                 try:
-                    if callable(close_fn):
-                        close_fn()
-                    elif hasattr(app.state.redis, "connection_pool") and hasattr(
-                        app.state.redis.connection_pool, "disconnect"
-                    ):
-                        app.state.redis.connection_pool.disconnect()
+                    if hasattr(app.state.redis, "aclose"):
+                        await app.state.redis.aclose()
+                    elif hasattr(app.state.redis, "close"):
+                        close_fn = app.state.redis.close
+                        if asyncio.iscoroutinefunction(close_fn):
+                            await close_fn()
+                        else:
+                            close_fn()
                 except Exception:
                     logging.exception("Error closing redis connection")
         except Exception:
@@ -1501,27 +1509,64 @@ async def execute_module(
         # Execute the module based on its type
         result = None
 
-        # Handle different module types and their methods
-        if hasattr(module_instance, "search"):
-            result = module_instance.search(**request.parameters)
-        elif hasattr(module_instance, "analyze_company"):
-            result = module_instance.analyze_company(**request.parameters)
-        elif hasattr(module_instance, "enumerate"):
-            result = module_instance.enumerate(**request.parameters)
-        elif hasattr(module_instance, "scrape"):
-            result = module_instance.scrape(**request.parameters)
-        elif hasattr(module_instance, "fetch_snapshots"):
-            result = module_instance.fetch_snapshots(**request.parameters)
-        elif hasattr(module_instance, "get_history"):
-            result = module_instance.get_history(**request.parameters)
-        elif hasattr(module_instance, "scrape_profiles"):
-            result = module_instance.scrape_profiles(**request.parameters)
-        elif hasattr(module_instance, "dork"):
-            result = module_instance.dork(**request.parameters)
-        else:
+        # Priority list of execution methods to check
+        execution_methods = [
+            "search",
+            "analyze_company",
+            "analyze_domain",
+            "analyze_email",
+            "analyze_crypto_address",
+            "enumerate",
+            "scrape",
+            "fetch_snapshots",
+            "get_history",
+            "scrape_profiles",
+            "dork",
+        ]
+
+        # Try specific execution methods first
+        method_found = False
+        for method_name in execution_methods:
+            if hasattr(module_instance, method_name):
+                method = getattr(module_instance, method_name)
+                result = method(**request.parameters)
+                method_found = True
+                break
+
+        # If no specific method found, try pattern-based methods
+        if not method_found:
+            # Get all callable methods that match execution patterns
+            method_patterns = [
+                "analyze_",
+                "search_",
+                "scan_",
+                "track_",
+                "monitor_",
+                "comprehensive_",
+            ]
+            module_methods = [
+                m
+                for m in dir(module_instance)
+                if callable(getattr(module_instance, m)) and not m.startswith("_")
+            ]
+
+            # Find the first method that matches our patterns
+            execution_method = None
+            for method_name in module_methods:
+                if any(method_name.startswith(pattern) for pattern in method_patterns):
+                    execution_method = method_name
+                    break
+
+            if execution_method:
+                method = getattr(module_instance, execution_method)
+                result = method(**request.parameters)
+                method_found = True
+
+        if not method_found:
             raise HTTPException(
                 status_code=400,
-                detail=f"Module '{request.module_name}' does not have a supported execution method",
+                detail=f"Module '{request.module_name}' does not have a supported execution method. "
+                f"Expected one of: {', '.join(execution_methods)}",
             )
 
         execution_time = time.time() - start_time
