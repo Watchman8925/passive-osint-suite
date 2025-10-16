@@ -79,7 +79,7 @@ def test_error_message_format():
     assert "SECRET_KEY" in error_message
     assert "Either" in error_message
     assert "must be set" in error_message
-    print(f"✅ Error message is clear and mentions both accepted keys")
+    print("✅ Error message is clear and mentions both accepted keys")
 
 
 if __name__ == "__main__":
