@@ -21,6 +21,14 @@ web/tsconfig.tsbuildinfo
 .DS_Store
 security/master.key
 security/encryption.key
+# Private keys and certificates - NEVER commit these
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+config/*key*.pem
+config/*key*.key
 .idea/
 .vscode/
 *.log
