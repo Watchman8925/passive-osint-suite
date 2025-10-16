@@ -5,8 +5,6 @@ This module provides adapter methods that wrap existing module functionality
 to conform to the MODULE_CAPABILITY_CONTRACT standard interface.
 """
 
-from typing import Dict, Any
-
 
 def add_search_wrapper(module_class, primary_method_name):
     """
@@ -80,7 +78,6 @@ ADAPTER_MAPPINGS = {
     
     # Academic and patents
     'academic_passive': (add_search_wrapper, 'search_academic_sources'),
-    'patent_passive': (add_search_wrapper, 'search_all_databases'),
     
     # Intelligence gathering
     'crypto_intel': (add_search_wrapper, 'analyze_crypto_address'),
