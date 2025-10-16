@@ -9,7 +9,7 @@ This test suite verifies that all modules in MODULE_REGISTRY:
 """
 
 import pytest
-from typing import Dict, Any
+from typing import Any
 
 # Standard methods that modules should implement
 STANDARD_METHODS = [
@@ -232,7 +232,7 @@ class TestModuleResponses:
                                     errors.append(
                                         f"{module_name}.{method_name}: Unexpected TypeError: {e}"
                                     )
-                            except Exception as e:
+                            except Exception:
                                 # Some methods might fail due to missing dependencies, that's ok
                                 # We're mainly checking the interface exists
                                 pass
