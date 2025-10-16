@@ -86,7 +86,7 @@ class CryptoPatternDetector:
 
         # Unique counterparties
         transactions = address_data.get("transactions", [])
-        unique_parties = len(set())
+        unique_parties = set()
         for tx in transactions:
             if isinstance(tx, dict):
                 if "from" in tx:
@@ -100,9 +100,12 @@ class CryptoPatternDetector:
         if first_seen:
             try:
                 first_date = datetime.fromisoformat(first_seen.replace("Z", "+00:00"))
+                # Remove timezone info to avoid comparison issues
+                if first_date.tzinfo is not None:
+                    first_date = first_date.replace(tzinfo=None)
                 time_since_first = (now - first_date).days
                 features.append(time_since_first)
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError, TypeError):
                 features.append(0)
         else:
             features.append(0)
@@ -110,9 +113,12 @@ class CryptoPatternDetector:
         if last_seen:
             try:
                 last_date = datetime.fromisoformat(last_seen.replace("Z", "+00:00"))
+                # Remove timezone info to avoid comparison issues
+                if last_date.tzinfo is not None:
+                    last_date = last_date.replace(tzinfo=None)
                 time_since_last = (now - last_date).days
                 features.append(time_since_last)
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError, TypeError):
                 features.append(0)
         else:
             features.append(0)
