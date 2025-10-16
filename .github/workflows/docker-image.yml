@@ -42,6 +42,22 @@ jobs:
           echo "docker_changed=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Free disk space
+      if: steps.check_docker.outputs.docker_changed == 'true'
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        # Remove unnecessary files to free up space
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo docker system prune -af
+        rm -rf ~/.cache/pip
+        echo "Disk space after cleanup:"
+        df -h
+
     - name: Set up Docker Buildx
       if: steps.check_docker.outputs.docker_changed == 'true'
       uses: docker/setup-buildx-action@v3
