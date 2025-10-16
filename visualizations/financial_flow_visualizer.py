@@ -254,7 +254,7 @@ class FinancialFlowVisualizer:
 
         # Create risk categories
         risk_categories = ["Low", "Medium", "High", "Critical"]
-        wallet_names = [f"Wallet {i+1}" for i in range(len(df))]
+        wallet_names = [f"Wallet {i + 1}" for i in range(len(df))]
 
         # Create risk matrix
         risk_matrix = []

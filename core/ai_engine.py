@@ -784,11 +784,11 @@ class OSINTAIEngine:
             Analyze the following OSINT investigation results and suggest {max_pivots} high-value 
             pivot points for further investigation.
             
-            Investigation: {investigation_data.get('name', 'Unknown')}
-            Current targets: {', '.join(investigation_data.get('targets', []))}
+            Investigation: {investigation_data.get("name", "Unknown")}
+            Current targets: {", ".join(investigation_data.get("targets", []))}
             
             Results summary:
-            {json.dumps(investigation_data.get('results', {}), indent=2)[:2000]}
+            {json.dumps(investigation_data.get("results", {}), indent=2)[:2000]}
             
             Provide pivot suggestions in the following JSON format:
             {{
