@@ -1536,19 +1536,27 @@ async def execute_module(
         # If no specific method found, try pattern-based methods
         if not method_found:
             # Get all callable methods that match execution patterns
-            method_patterns = ["analyze_", "search_", "scan_", "track_", "monitor_", "comprehensive_"]
+            method_patterns = [
+                "analyze_",
+                "search_",
+                "scan_",
+                "track_",
+                "monitor_",
+                "comprehensive_",
+            ]
             module_methods = [
-                m for m in dir(module_instance)
+                m
+                for m in dir(module_instance)
                 if callable(getattr(module_instance, m)) and not m.startswith("_")
             ]
-            
+
             # Find the first method that matches our patterns
             execution_method = None
             for method_name in module_methods:
                 if any(method_name.startswith(pattern) for pattern in method_patterns):
                     execution_method = method_name
                     break
-            
+
             if execution_method:
                 method = getattr(module_instance, execution_method)
                 result = method(**request.parameters)
@@ -1558,7 +1566,7 @@ async def execute_module(
             raise HTTPException(
                 status_code=400,
                 detail=f"Module '{request.module_name}' does not have a supported execution method. "
-                       f"Expected one of: {', '.join(execution_methods)}",
+                f"Expected one of: {', '.join(execution_methods)}",
             )
 
         execution_time = time.time() - start_time
