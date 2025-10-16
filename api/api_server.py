@@ -1509,27 +1509,56 @@ async def execute_module(
         # Execute the module based on its type
         result = None
 
-        # Handle different module types and their methods
-        if hasattr(module_instance, "search"):
-            result = module_instance.search(**request.parameters)
-        elif hasattr(module_instance, "analyze_company"):
-            result = module_instance.analyze_company(**request.parameters)
-        elif hasattr(module_instance, "enumerate"):
-            result = module_instance.enumerate(**request.parameters)
-        elif hasattr(module_instance, "scrape"):
-            result = module_instance.scrape(**request.parameters)
-        elif hasattr(module_instance, "fetch_snapshots"):
-            result = module_instance.fetch_snapshots(**request.parameters)
-        elif hasattr(module_instance, "get_history"):
-            result = module_instance.get_history(**request.parameters)
-        elif hasattr(module_instance, "scrape_profiles"):
-            result = module_instance.scrape_profiles(**request.parameters)
-        elif hasattr(module_instance, "dork"):
-            result = module_instance.dork(**request.parameters)
-        else:
+        # Priority list of execution methods to check
+        execution_methods = [
+            "search",
+            "analyze_company",
+            "analyze_domain",
+            "analyze_email",
+            "analyze_crypto_address",
+            "enumerate",
+            "scrape",
+            "fetch_snapshots",
+            "get_history",
+            "scrape_profiles",
+            "dork",
+        ]
+
+        # Try specific execution methods first
+        method_found = False
+        for method_name in execution_methods:
+            if hasattr(module_instance, method_name):
+                method = getattr(module_instance, method_name)
+                result = method(**request.parameters)
+                method_found = True
+                break
+
+        # If no specific method found, try pattern-based methods
+        if not method_found:
+            # Get all callable methods that match execution patterns
+            method_patterns = ["analyze_", "search_", "scan_", "track_", "monitor_", "comprehensive_"]
+            module_methods = [
+                m for m in dir(module_instance)
+                if callable(getattr(module_instance, m)) and not m.startswith("_")
+            ]
+            
+            # Find the first method that matches our patterns
+            execution_method = None
+            for method_name in module_methods:
+                if any(method_name.startswith(pattern) for pattern in method_patterns):
+                    execution_method = method_name
+                    break
+            
+            if execution_method:
+                method = getattr(module_instance, execution_method)
+                result = method(**request.parameters)
+                method_found = True
+
+        if not method_found:
             raise HTTPException(
                 status_code=400,
-                detail=f"Module '{request.module_name}' does not have a supported execution method",
+                detail=f"Module '{request.module_name}' does not have a supported execution method. "
+                       f"Expected one of: {', '.join(execution_methods)}",
             )
 
         execution_time = time.time() - start_time
