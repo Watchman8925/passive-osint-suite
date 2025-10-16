@@ -160,7 +160,7 @@ class OfflineLLMEngine:
         prompt = f"""You are an expert OSINT analyst. Analyze the following investigation:
 
 Investigation Type: {investigation_type}
-Targets: {', '.join(targets)}
+Targets: {", ".join(targets)}
 
 Results Summary:
 {results_text}
@@ -218,12 +218,12 @@ Analysis:"""
         # Generate structured analysis
         analysis = f"""
 **Executive Summary:**
-Investigation of {', '.join(targets)} has yielded {total_findings} findings across {len(results)} modules.
+Investigation of {", ".join(targets)} has yielded {total_findings} findings across {len(results)} modules.
 
 **Key Findings:**
 - Total data points collected: {total_findings}
 - Unique entities identified: {len(entities)}
-- Modules executed: {', '.join(results.keys())}
+- Modules executed: {", ".join(results.keys())}
 
 **Recommended Next Steps:**
 1. Deep-dive analysis on identified entities

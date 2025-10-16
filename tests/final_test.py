@@ -203,7 +203,7 @@ def generate_final_report(results):
 
     print(f"Total Modules Tested: {total_modules}")
     print(f"Working Modules: {working_modules}")
-    print(f"Success Rate: {(working_modules/total_modules)*100:.1f}%")
+    print(f"Success Rate: {(working_modules / total_modules) * 100:.1f}%")
 
     print("\n✅ WORKING MODULES:")
     for module, status in results.items():

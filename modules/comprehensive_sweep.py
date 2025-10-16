@@ -401,7 +401,7 @@ class ComprehensiveInvestigationSweep(OSINTUtils):
                         ),
                         "source": module_name,
                         "confidence": "medium",
-                        "description": f'Found social profile: {profile.get("platform", "unknown")}',
+                        "description": f"Found social profile: {profile.get('platform', 'unknown')}",
                     }
                 )
 

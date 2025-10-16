@@ -412,8 +412,7 @@ def demonstrate_integrated_workflow():
 
         print("   ✓ Investigation completed successfully")
         print(
-            f"   ✓ Operations performed:"
-            f" {investigation_report['operations_performed']}"
+            f"   ✓ Operations performed: {investigation_report['operations_performed']}"
         )
         print(
             f"   ✓ Security features:"

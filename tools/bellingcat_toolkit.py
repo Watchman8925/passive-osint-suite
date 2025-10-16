@@ -608,7 +608,7 @@ class BellingcatToolkit:
             correlation["connections"].append(
                 {
                     "type": "temporal_correlation",
-                    "details": f"Leads discovered within {max(time_diffs)/60:.1f} minutes",
+                    "details": f"Leads discovered within {max(time_diffs) / 60:.1f} minutes",
                 }
             )
 

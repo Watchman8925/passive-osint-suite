@@ -617,9 +617,9 @@ class CryptocurrencyIntelligence(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# Cryptocurrency Intelligence Report: {self.results['address']}
-Currency: {self.results['currency_type'].title()}
-Generated: {self.results['timestamp']}
+# Cryptocurrency Intelligence Report: {self.results["address"]}
+Currency: {self.results["currency_type"].title()}
+Generated: {self.results["timestamp"]}
 
 ## Address Information
 """

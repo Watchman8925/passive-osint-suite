@@ -468,8 +468,8 @@ class PassiveSearchIntelligence(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# Passive Search Intelligence Report: {self.results['target']}
-Generated: {self.results['timestamp']}
+# Passive Search Intelligence Report: {self.results["target"]}
+Generated: {self.results["timestamp"]}
 
 ## Google Dorking Results
 """
