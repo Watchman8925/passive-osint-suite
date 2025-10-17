@@ -101,9 +101,10 @@ The OSINT Suite is now running with:
 
 ## 🐛 Troubleshooting
 
-### "OSINT_SECRET_KEY must be set" error
-- Make sure you've set the secret key in `.env` file
+### "OSINT_SECRET_KEY or SECRET_KEY must be set" error
+- Make sure you've set either `OSINT_SECRET_KEY` or `SECRET_KEY` in your `.env` file
 - Ensure it's not the default placeholder value
+- Both variable names are accepted (OSINT_SECRET_KEY is preferred)
 
 ### Can't connect to Redis/PostgreSQL
 ```bash

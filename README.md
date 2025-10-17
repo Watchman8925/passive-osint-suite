@@ -266,8 +266,9 @@ Key environment variables (see `.env.example` for complete list):
 
 ```bash
 # Security (REQUIRED)
-SECRET_KEY=your_secret_key_32_chars_minimum
-JWT_SECRET_KEY=your_jwt_secret_32_chars_minimum
+# Use either OSINT_SECRET_KEY (preferred) or SECRET_KEY - both are accepted
+OSINT_SECRET_KEY=your_secret_key_32_chars_minimum
+# SECRET_KEY=your_secret_key_32_chars_minimum  # Alternative to OSINT_SECRET_KEY
 POSTGRES_PASSWORD=your_secure_database_password
 
 # Database
@@ -752,8 +753,8 @@ python -m api.api_server
 
 2. **Configure essential settings:**
    ```bash
-   # Security settings
-   SECRET_KEY=your-secret-key-here
+   # Security settings (use OSINT_SECRET_KEY or SECRET_KEY)
+   OSINT_SECRET_KEY=your-secret-key-here
    MASTER_ENCRYPTION_KEY=your-encryption-key-here
    
    # API configurations

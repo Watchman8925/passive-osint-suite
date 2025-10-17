@@ -68,9 +68,11 @@ def test_dotenv_loading():
         test_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         if os.path.exists(test_env):
             load_dotenv(test_env)
-            # Check if OSINT_SECRET_KEY is set
-            secret_key = os.getenv("OSINT_SECRET_KEY")
-            assert secret_key is not None, "OSINT_SECRET_KEY should be set in .env"
+            # Check if either OSINT_SECRET_KEY or SECRET_KEY is set
+            secret_key = os.getenv("OSINT_SECRET_KEY") or os.getenv("SECRET_KEY")
+            assert (
+                secret_key is not None
+            ), "Either OSINT_SECRET_KEY or SECRET_KEY should be set in .env"
             print("✅ Environment variables loaded successfully")
     except ImportError:
         pytest.skip("python-dotenv not installed")
