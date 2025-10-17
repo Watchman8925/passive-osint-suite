@@ -357,7 +357,8 @@ MODULE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Complete passive investigation sweep across all modules for comprehensive intelligence gathering",
         "category": "orchestration",
     },
-    # Advanced Intelligence Analysis Modules
+    # Advanced Intelligence Analysis Modules (conditionally included if imports succeed)
+    # Note: These entries are filtered out below if the class is None
     "hidden_pattern_detector": {
         "class": HiddenPatternDetector,
         "description": "Advanced pattern detection and anomaly identification in intelligence data",
@@ -435,6 +436,25 @@ MODULE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "category": "patent",
     },
 }
+
+# Filter out modules with None as class (failed imports)
+# This ensures MODULE_REGISTRY only contains valid, usable modules
+MODULE_REGISTRY = {
+    name: info
+    for name, info in MODULE_REGISTRY.items()
+    if info.get("class") is not None
+}
+
+# Apply adapter methods to modules without standard interfaces
+# This adds wrapper methods like search(), scrape_profiles(), etc. to existing modules
+try:
+    from .module_adapters import apply_adapters
+
+    adapted_count = apply_adapters(MODULE_REGISTRY)
+    if adapted_count > 0:
+        logger.info(f"Applied standard interface adapters to {adapted_count} modules")
+except Exception as e:
+    logger.warning(f"Could not apply module adapters: {e}")
 
 # Category groupings for easier module discovery
 CATEGORIES = {
