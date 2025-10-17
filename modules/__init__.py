@@ -440,14 +440,16 @@ MODULE_REGISTRY: Dict[str, Dict[str, Any]] = {
 # Filter out modules with None as class (failed imports)
 # This ensures MODULE_REGISTRY only contains valid, usable modules
 MODULE_REGISTRY = {
-    name: info for name, info in MODULE_REGISTRY.items() 
-    if info.get('class') is not None
+    name: info
+    for name, info in MODULE_REGISTRY.items()
+    if info.get("class") is not None
 }
 
 # Apply adapter methods to modules without standard interfaces
 # This adds wrapper methods like search(), scrape_profiles(), etc. to existing modules
 try:
     from .module_adapters import apply_adapters
+
     adapted_count = apply_adapters(MODULE_REGISTRY)
     if adapted_count > 0:
         logger.info(f"Applied standard interface adapters to {adapted_count} modules")
