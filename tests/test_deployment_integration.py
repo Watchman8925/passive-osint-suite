@@ -53,9 +53,9 @@ def test_health_endpoint_exists():
 
     # Check if health endpoints are registered
     routes = [route.path for route in app.routes]
-    assert "/api/health" in routes or any("/health" in r for r in routes), (
-        "Health endpoint should be registered"
-    )
+    assert "/api/health" in routes or any(
+        "/health" in r for r in routes
+    ), "Health endpoint should be registered"
     print(f"✅ Found {len([r for r in routes if 'health' in r])} health endpoints")
 
 
@@ -70,9 +70,9 @@ def test_dotenv_loading():
             load_dotenv(test_env)
             # Check if either OSINT_SECRET_KEY or SECRET_KEY is set
             secret_key = os.getenv("OSINT_SECRET_KEY") or os.getenv("SECRET_KEY")
-            assert secret_key is not None, (
-                "Either OSINT_SECRET_KEY or SECRET_KEY should be set in .env"
-            )
+            assert (
+                secret_key is not None
+            ), "Either OSINT_SECRET_KEY or SECRET_KEY should be set in .env"
             print("✅ Environment variables loaded successfully")
     except ImportError:
         pytest.skip("python-dotenv not installed")
