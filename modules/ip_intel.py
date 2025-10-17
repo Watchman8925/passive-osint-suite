@@ -427,8 +427,8 @@ class IPIntelligence(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# IP Intelligence Report: {self.results['ip']}
-Generated: {self.results['timestamp']}
+# IP Intelligence Report: {self.results["ip"]}
+Generated: {self.results["timestamp"]}
 
 ## Geolocation Information
 """

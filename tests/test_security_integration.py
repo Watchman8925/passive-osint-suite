@@ -104,9 +104,12 @@ class MockDatabase:
         return []
 
 
-def test_user_management(db):
+def test_user_management():
     """Test user creation, authentication, and persistence"""
     print("\n👤 Testing user management...")
+
+    # Create mock database for this test
+    db = MockDatabase()
 
     try:
         # Create test user
@@ -151,9 +154,12 @@ def test_user_management(db):
         return False
 
 
-def test_session_management(db):
+def test_session_management():
     """Test session creation and validation"""
     print("\n🔐 Testing session management...")
+
+    # Create mock database for this test
+    db = MockDatabase()
 
     try:
         # Create test session
@@ -189,9 +195,12 @@ def test_session_management(db):
         return False
 
 
-def test_data_classification(db):
+def test_data_classification():
     """Test data classification and access control"""
     print("\n📁 Testing data classification...")
+
+    # Create mock database for this test
+    db = MockDatabase()
 
     try:
         # Set database connection for data access control
@@ -226,8 +235,11 @@ def test_data_classification(db):
         return False
 
 
-def test_security_monitoring(db):
+def test_security_monitoring():
     """Test security event logging and monitoring"""
+
+    # Create mock database for this test
+    db = MockDatabase()
     print("\n📊 Testing security monitoring...")
 
     try:

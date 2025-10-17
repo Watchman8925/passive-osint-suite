@@ -21,6 +21,12 @@ web/tsconfig.tsbuildinfo
 .DS_Store
 security/master.key
 security/encryption.key
+# Audit trail signing keys (should be generated at runtime, not committed)
+**/audit_signing_key.pem
+**/audit_public_key.pem
+**/audit_ed25519_key.pem
+config/*.pem
+config/*.key
 .idea/
 .vscode/
 *.log

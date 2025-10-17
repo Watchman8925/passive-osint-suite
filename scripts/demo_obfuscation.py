@@ -134,7 +134,7 @@ async def demonstrate_obfuscation():
     for i in range(10):  # Monitor for 10 seconds
         stats = get_obfuscation_stats()
         print(
-            f"📊 [{i+1:2d}s] Queries: {stats['queries_submitted']:3d} submitted, "
+            f"📊 [{i + 1:2d}s] Queries: {stats['queries_submitted']:3d} submitted, "
             f"{stats['queries_executed']:3d} executed, "
             f"{stats['decoy_queries_generated']:3d} decoys generated"
         )

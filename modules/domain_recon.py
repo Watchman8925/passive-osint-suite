@@ -366,8 +366,8 @@ class DomainRecon(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# Domain Analysis Report: {self.results['domain']}
-Generated: {self.results['timestamp']}
+# Domain Analysis Report: {self.results["domain"]}
+Generated: {self.results["timestamp"]}
 
 ## WHOIS Information
 """
