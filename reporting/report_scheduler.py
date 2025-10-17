@@ -169,8 +169,8 @@ class ReportScheduler:
                 <h3>Report Details:</h3>
                 <ul>
                     <li><strong>Report:</strong> {schedule.name}</li>
-                    <li><strong>Template:</strong> {schedule.template.replace('_', ' ').title()}</li>
-                    <li><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</li>
+                    <li><strong>Template:</strong> {schedule.template.replace("_", " ").title()}</li>
+                    <li><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</li>
                     <li><strong>Frequency:</strong> {schedule.frequency.capitalize()}</li>
                 </ul>
 

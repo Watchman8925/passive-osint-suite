@@ -487,7 +487,7 @@ class OSINTSuite:
             files = [f for f in os.listdir(results_dir) if f.endswith(".json")]
             if files:
                 for i, file in enumerate(sorted(files, reverse=True)[:10]):
-                    console.print(f"{i+1}. {file}")
+                    console.print(f"{i + 1}. {file}")
             else:
                 console.print("[yellow]No result files found.[/yellow]")
         else:

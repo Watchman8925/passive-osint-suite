@@ -971,7 +971,7 @@ class EnhancedReportingEngine:
                         <h2>Scheduled OSINT Report</h2>
                         <p>A new {schedule.frequency} intelligence report has been generated.</p>
                         <p>Report: {schedule.name}</p>
-                        <p>Generated: {now.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        <p>Generated: {now.strftime("%Y-%m-%d %H:%M:%S")}</p>
                         <p>Please find the detailed report attached.</p>
                         """
 
