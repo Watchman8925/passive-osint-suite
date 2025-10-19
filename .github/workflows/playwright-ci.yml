@@ -20,6 +20,10 @@ on:
 env:
   ENABLE_PLAYWRIGHT_TESTS: false
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   playwright-tests:
     name: Run Playwright E2E Tests

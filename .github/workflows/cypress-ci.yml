@@ -19,6 +19,10 @@ on:
 env:
   ENABLE_CYPRESS_TESTS: false
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   cypress-tests:
     name: Run Cypress E2E Tests
