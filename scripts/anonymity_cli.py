@@ -137,9 +137,9 @@ def cmd_batch_query(args):
                 anonymous=query_spec.get("anonymous", True),
             )
             submitted_queries.append((query_id, query_spec))
-            print(f"  [{i+1}/{len(queries)}] Submitted: {query_id}")
+            print(f"  [{i + 1}/{len(queries)}] Submitted: {query_id}")
         except Exception as e:
-            print(f"  [{i+1}/{len(queries)}] Failed: {e}")
+            print(f"  [{i + 1}/{len(queries)}] Failed: {e}")
 
     # Wait for results
     print(f"\nWaiting for {len(submitted_queries)} results...")

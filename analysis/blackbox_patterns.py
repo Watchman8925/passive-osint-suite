@@ -812,7 +812,7 @@ class BlackboxPatternEngine:
                             {
                                 "anomaly_type": "temporal_gap",
                                 "fragment_id": f"gap_{i}",
-                                "details": f"Large time gap of {gap/3600:.1f} hours",
+                                "details": f"Large time gap of {gap / 3600:.1f} hours",
                                 "severity": "low",
                             }
                         )
@@ -969,6 +969,6 @@ if __name__ == "__main__":
         strategies = engine.generate_search_strategies("john.doe@example.com", "person")
         print(f"\nGenerated {len(strategies)} search strategies:")
         for i, strategy in enumerate(strategies[:5]):  # Show top 5
-            print(f"{i+1}. {strategy}")
+            print(f"{i + 1}. {strategy}")
 
     asyncio.run(demo())

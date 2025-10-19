@@ -477,8 +477,7 @@ class AnonymityGrid:
         self._process_bundle(bundle)
 
         logger.debug(
-            f"Mixed and processed {len(queries)} real queries "
-            f"with {len(decoys)} decoys"
+            f"Mixed and processed {len(queries)} real queries with {len(decoys)} decoys"
         )
 
     def _generate_decoy_queries(

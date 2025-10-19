@@ -77,6 +77,7 @@ class FlightAnomalyDetector:
         features.append(distance)
 
         # Flight duration
+        duration = 0
         dep_time = flight_data.get("departure_time")
         arr_time = flight_data.get("arrival_time")
         if dep_time and arr_time:

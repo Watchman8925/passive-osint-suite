@@ -6,12 +6,14 @@ Test script for real-time intelligence feeds integration
 import asyncio
 import sys
 import os
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from realtime.realtime_feeds import RealTimeIntelligenceFeed
 
 
+@pytest.mark.asyncio
 async def test_realtime_feeds():
     """Test the real-time intelligence feeds functionality"""
     print("🧪 Testing Real-Time Intelligence Feeds...")

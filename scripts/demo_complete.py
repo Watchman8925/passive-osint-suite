@@ -414,6 +414,7 @@ def demonstrate_integrated_workflow():
         print(
             "   ✓ Operations performed:"
             f" {investigation_report['operations_performed']}"
+            f"   ✓ Operations performed: {investigation_report['operations_performed']}"
         )
         print(
             "   ✓ Security features:"

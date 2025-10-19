@@ -29,6 +29,12 @@ security/encryption.key
 *.jks
 config/*key*.pem
 config/*key*.key
+# Audit trail signing keys (should be generated at runtime, not committed)
+**/audit_signing_key.pem
+**/audit_public_key.pem
+**/audit_ed25519_key.pem
+config/*.pem
+config/*.key
 .idea/
 .vscode/
 *.log
