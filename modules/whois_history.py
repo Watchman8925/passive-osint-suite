@@ -30,13 +30,13 @@ class WhoisHistory(OSINTUtils):
     def get_history(self, domain: str):
         """
         Scrape public WHOIS history from viewdns.info (no login, OPSEC safe).
-        
+
         Args:
             domain: Valid domain name to lookup
-        
+
         Returns:
             Dictionary with status and history list
-            
+
         Example:
             >>> wh = WhoisHistory()
             >>> result = wh.get_history("example.com")
@@ -44,43 +44,45 @@ class WhoisHistory(OSINTUtils):
             success
         """
         logger.info(f"Retrieving WHOIS history for: {domain}")
-        
+
         url = f"https://viewdns.info/iphistory/?domain={domain}"
-        
+
         # Use safe_request with timeout and retries
         resp = safe_request(
             url,
             timeout=30,  # Increased from 20 for reliability
             max_retries=3,
-            rate_limit_delay=0.5  # Be respectful to viewdns.info
+            rate_limit_delay=0.5,  # Be respectful to viewdns.info
         )
-        
+
         if not resp or not resp.ok:
             logger.error(f"Failed to retrieve WHOIS history for {domain}")
             return {
                 "status": "error",
                 "error": f"HTTP {resp.status_code if resp else 'No response'}",
-                "history": []
+                "history": [],
             }
-        
+
         # Parse HTML response
         soup = BeautifulSoup(resp.text, "html.parser")
         history = []
         table = soup.find("table", {"border": "1"})
-        
+
         if table:
             rows = table.find_all("tr")[1:]  # Skip header row
             logger.debug(f"Found {len(rows)} history entries")
-            
+
             for row in rows:
                 cols = row.find_all("td")
                 if len(cols) >= 2:
-                    history.append({
-                        "ip": cols[0].text.strip(),
-                        "date": cols[1].text.strip(),
-                    })
+                    history.append(
+                        {
+                            "ip": cols[0].text.strip(),
+                            "date": cols[1].text.strip(),
+                        }
+                    )
         else:
             logger.warning(f"No history table found for {domain}")
-        
+
         logger.info(f"Retrieved {len(history)} WHOIS history entries for {domain}")
         return {"status": "success", "history": history, "count": len(history)}
