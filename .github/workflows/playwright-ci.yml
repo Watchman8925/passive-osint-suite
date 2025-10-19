@@ -1,0 +1,190 @@
+name: Playwright E2E Tests (Placeholder)
+
+# This workflow is a placeholder for Playwright end-to-end tests.
+# To enable: Remove the 'if: false' condition or set repository variable ENABLE_PLAYWRIGHT_TESTS=true
+
+on:
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "web/**"
+      - ".github/workflows/playwright-ci.yml"
+  pull_request:
+    branches: ["main", "develop"]
+    paths:
+      - "web/**"
+  workflow_dispatch:
+
+# Disable by default - enable when tests are ready
+# To enable: Remove the job-level 'if: false' or set ENABLE_PLAYWRIGHT_TESTS=true in repository variables
+env:
+  ENABLE_PLAYWRIGHT_TESTS: false
+
+jobs:
+  playwright-tests:
+    name: Run Playwright E2E Tests
+    runs-on: ubuntu-latest
+    # Disabled by default - remove this line when ready to enable
+    if: false
+    # Alternative: Enable via repository variable
+    # if: vars.ENABLE_PLAYWRIGHT_TESTS == 'true'
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2]  # Run tests in parallel shards
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps ${{ matrix.browser }}
+      
+      - name: Start application
+        working-directory: web
+        run: |
+          npm run dev &
+          # Wait for application to be ready
+          npx wait-on http://localhost:3000 --timeout 60000
+        env:
+          NODE_ENV: test
+      
+      - name: Run Playwright tests
+        working-directory: web
+        run: |
+          npx playwright test \
+            --project=${{ matrix.browser }} \
+            --shard=${{ matrix.shard }}/2 \
+            --reporter=html,json,github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.browser }}-${{ matrix.shard }}
+          path: |
+            web/playwright-report/
+            web/test-results/
+          retention-days: 30
+      
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report-${{ matrix.browser }}-${{ matrix.shard }}
+          path: web/playwright-report/
+          retention-days: 30
+  
+  merge-reports:
+    name: Merge Test Reports
+    runs-on: ubuntu-latest
+    needs: playwright-tests
+    if: always() && false  # Disabled by default
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-reports
+          pattern: playwright-results-*
+      
+      - name: Merge reports
+        run: |
+          npx playwright merge-reports --reporter=html,json ./all-reports
+      
+      - name: Upload merged report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-merged-report
+          path: merged-report/
+          retention-days: 30
+  
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: playwright-tests
+    if: always() && false  # Disabled by default
+    
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## 🎭 Playwright E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Browser | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Chromium | ${{ needs.playwright-tests.outputs.chromium-status || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Firefox | ${{ needs.playwright-tests.outputs.firefox-status || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| WebKit | ${{ needs.playwright-tests.outputs.webkit-status || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed reports in the artifacts." >> $GITHUB_STEP_SUMMARY
+
+# HOW TO ENABLE THIS WORKFLOW:
+#
+# 1. Option A: Remove job-level 'if: false' conditions
+#    - Edit this file and remove lines with 'if: false'
+#
+# 2. Option B: Use repository variable
+#    - Go to repository Settings > Secrets and variables > Actions > Variables
+#    - Create variable ENABLE_PLAYWRIGHT_TESTS with value 'true'
+#    - Update job conditions to check this variable
+#
+# 3. Set up Playwright tests:
+#    - cd web
+#    - npm install -D @playwright/test
+#    - npx playwright install
+#    - Create playwright.config.ts
+#    - Add test files in web/tests/e2e/
+#
+# 4. Example playwright.config.ts:
+#    ```typescript
+#    import { defineConfig, devices } from '@playwright/test';
+#    
+#    export default defineConfig({
+#      testDir: './tests/e2e',
+#      fullyParallel: true,
+#      forbidOnly: !!process.env.CI,
+#      retries: process.env.CI ? 2 : 0,
+#      workers: process.env.CI ? 1 : undefined,
+#      reporter: 'html',
+#      use: {
+#        baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+#        trace: 'on-first-retry',
+#      },
+#      projects: [
+#        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+#        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+#        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+#      ],
+#    });
+#    ```
+#
+# 5. Example test file (web/tests/e2e/home.spec.ts):
+#    ```typescript
+#    import { test, expect } from '@playwright/test';
+#    
+#    test('homepage loads', async ({ page }) => {
+#      await page.goto('/');
+#      await expect(page).toHaveTitle(/Passive OSINT Suite/);
+#    });
+#    ```

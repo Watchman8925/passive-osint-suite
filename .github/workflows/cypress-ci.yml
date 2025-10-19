@@ -1,0 +1,239 @@
+name: Cypress E2E Tests (Placeholder)
+
+# This workflow is a placeholder for Cypress end-to-end tests.
+# To enable: Remove the 'if: false' condition or set repository variable ENABLE_CYPRESS_TESTS=true
+
+on:
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "web/**"
+      - ".github/workflows/cypress-ci.yml"
+  pull_request:
+    branches: ["main", "develop"]
+    paths:
+      - "web/**"
+  workflow_dispatch:
+
+# Disable by default - enable when tests are ready
+env:
+  ENABLE_CYPRESS_TESTS: false
+
+jobs:
+  cypress-tests:
+    name: Run Cypress E2E Tests
+    runs-on: ubuntu-latest
+    # Disabled by default - remove this line when ready to enable
+    if: false
+    # Alternative: Enable via repository variable
+    # if: vars.ENABLE_CYPRESS_TESTS == 'true'
+    
+    strategy:
+      matrix:
+        browser: [chrome, firefox, edge]
+        containers: [1, 2, 3]  # Run tests in parallel containers
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      
+      - name: Start application
+        working-directory: web
+        run: |
+          npm run dev &
+          # Wait for application to be ready
+          npx wait-on http://localhost:3000 --timeout 60000
+        env:
+          NODE_ENV: test
+      
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: web
+          browser: ${{ matrix.browser }}
+          record: true
+          parallel: true
+          group: "E2E Tests - ${{ matrix.browser }}"
+          config: baseUrl=http://localhost:3000
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-${{ matrix.browser }}-${{ matrix.containers }}
+          path: web/cypress/screenshots
+          retention-days: 30
+      
+      - name: Upload videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos-${{ matrix.browser }}-${{ matrix.containers }}
+          path: web/cypress/videos
+          retention-days: 30
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-results-${{ matrix.browser }}-${{ matrix.containers }}
+          path: |
+            web/cypress/results
+            web/cypress/reports
+          retention-days: 30
+  
+  cypress-component:
+    name: Run Cypress Component Tests
+    runs-on: ubuntu-latest
+    if: false  # Disabled by default
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      
+      - name: Run Cypress component tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: web
+          component: true
+          browser: chrome
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload component test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-component-results
+          path: web/cypress/results
+          retention-days: 30
+  
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [cypress-tests, cypress-component]
+    if: always() && false  # Disabled by default
+    
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## 🌲 Cypress Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### E2E Tests" >> $GITHUB_STEP_SUMMARY
+          echo "| Browser | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Chrome | ${{ needs.cypress-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Firefox | ${{ needs.cypress-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Edge | ${{ needs.cypress-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Component Tests" >> $GITHUB_STEP_SUMMARY
+          echo "| Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ needs.cypress-component.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed reports and videos in the artifacts." >> $GITHUB_STEP_SUMMARY
+
+# HOW TO ENABLE THIS WORKFLOW:
+#
+# 1. Option A: Remove job-level 'if: false' conditions
+#    - Edit this file and remove lines with 'if: false'
+#
+# 2. Option B: Use repository variable
+#    - Go to repository Settings > Secrets and variables > Actions > Variables
+#    - Create variable ENABLE_CYPRESS_TESTS with value 'true'
+#    - Update job conditions to check this variable
+#
+# 3. Set up Cypress tests:
+#    - cd web
+#    - npm install -D cypress
+#    - npx cypress open  # Opens Cypress UI to create tests
+#
+# 4. Example cypress.config.ts:
+#    ```typescript
+#    import { defineConfig } from 'cypress';
+#    
+#    export default defineConfig({
+#      e2e: {
+#        baseUrl: 'http://localhost:3000',
+#        specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
+#        supportFile: 'cypress/support/e2e.ts',
+#        video: true,
+#        screenshotOnRunFailure: true,
+#      },
+#      component: {
+#        devServer: {
+#          framework: 'react',
+#          bundler: 'vite',
+#        },
+#        specPattern: 'src/**/*.cy.{js,jsx,ts,tsx}',
+#      },
+#    });
+#    ```
+#
+# 5. Example E2E test file (web/cypress/e2e/home.cy.ts):
+#    ```typescript
+#    describe('Home Page', () => {
+#      beforeEach(() => {
+#        cy.visit('/');
+#      });
+#      
+#      it('displays the title', () => {
+#        cy.contains('Passive OSINT Suite').should('be.visible');
+#      });
+#      
+#      it('can navigate to modules', () => {
+#        cy.get('[data-testid="modules-link"]').click();
+#        cy.url().should('include', '/modules');
+#      });
+#    });
+#    ```
+#
+# 6. Example Component test file (web/src/components/Button.cy.tsx):
+#    ```typescript
+#    import Button from './Button';
+#    
+#    describe('Button Component', () => {
+#      it('renders with text', () => {
+#        cy.mount(<Button>Click me</Button>);
+#        cy.contains('Click me').should('be.visible');
+#      });
+#      
+#      it('calls onClick handler', () => {
+#        const onClickSpy = cy.spy().as('onClickSpy');
+#        cy.mount(<Button onClick={onClickSpy}>Click me</Button>);
+#        cy.contains('Click me').click();
+#        cy.get('@onClickSpy').should('have.been.called');
+#      });
+#    });
+#    ```
+#
+# 7. Optional: Set up Cypress Dashboard for test recording
+#    - Sign up at https://dashboard.cypress.io
+#    - Get your record key
+#    - Add CYPRESS_RECORD_KEY to repository secrets
+#    - Update workflow to use record: true
