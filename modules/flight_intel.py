@@ -179,8 +179,8 @@ class FlightIntelligence(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# Flight Intelligence Report: {self.results['identifier']}
-Generated: {self.results['timestamp']}
+# Flight Intelligence Report: {self.results["identifier"]}
+Generated: {self.results["timestamp"]}
 
 ## Aircraft Information
 """

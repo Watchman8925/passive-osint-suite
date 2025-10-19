@@ -383,8 +383,8 @@ class CompanyIntelligence(OSINTUtils):
             return "No analysis results available"
 
         report = f"""
-# Company Intelligence Report: {self.results['company_name']}
-Generated: {self.results['timestamp']}
+# Company Intelligence Report: {self.results["company_name"]}
+Generated: {self.results["timestamp"]}
 
 ## Company Information
 """

@@ -1190,7 +1190,7 @@ class LocalLLMEngine:
             data_summary = f"""
 Investigation: {investigation_name}
 Type: {investigation_type}
-Targets: {', '.join(targets) if targets else 'None specified'}
+Targets: {", ".join(targets) if targets else "None specified"}
 """
 
             if context:
