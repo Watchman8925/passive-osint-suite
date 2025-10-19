@@ -21,6 +21,14 @@ web/tsconfig.tsbuildinfo
 .DS_Store
 security/master.key
 security/encryption.key
+# Private keys and certificates - NEVER commit these
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+config/*key*.pem
+config/*key*.key
 # Audit trail signing keys (should be generated at runtime, not committed)
 **/audit_signing_key.pem
 **/audit_public_key.pem

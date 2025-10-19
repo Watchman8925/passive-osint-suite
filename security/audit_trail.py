@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import logging
+import os
 import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -103,8 +104,40 @@ class AuditTrail:
         logger.info(f"Audit trail initialized at {self.audit_dir}")
 
     def _load_or_generate_keys(self):
-        """Load existing signing keys or generate new ones."""
+        """Load existing signing keys or generate new ones.
+
+        Priority order:
+        1. AUDIT_SIGNING_KEY environment variable (base64-encoded PEM)
+        2. Key file on disk
+        3. Generate new key
+        """
         try:
+            # First check for environment variable (most secure for production)
+            env_key = os.environ.get("AUDIT_SIGNING_KEY")
+            if env_key:
+                try:
+                    # Decode base64-encoded key from environment
+                    key_bytes = base64.b64decode(env_key)
+                    loaded_key = serialization.load_pem_private_key(
+                        key_bytes, password=None
+                    )
+                    if isinstance(loaded_key, ed25519.Ed25519PrivateKey):
+                        self.private_key = loaded_key  # type: ignore
+                        self.public_key = self.private_key.public_key()
+                        logger.info(
+                            "Loaded audit signing key from environment variable"
+                        )
+                        return
+                    else:
+                        logger.warning(
+                            "Key from environment is not Ed25519, falling back to file or generation"
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to load key from environment: {e}, falling back to file or generation"
+                    )
+
+            # Fall back to file-based key
             if Path(self.key_file).exists():
                 # Load existing private key
                 with open(self.key_file, "rb") as f:
@@ -136,32 +169,33 @@ class AuditTrail:
                     logger.info("Regenerated audit signing key pair")
                 else:
                     self.private_key = loaded_key  # type: ignore
-                    logger.info("Loaded existing audit signing key")
+                    logger.info("Loaded existing audit signing key from file")
             else:
                 # Generate new ED25519 key pair
                 self.private_key = ed25519.Ed25519PrivateKey.generate()
 
-                # Save private key
-                with open(self.key_file, "wb") as f:
-                    f.write(
-                        self.private_key.private_bytes(
-                            encoding=Encoding.PEM,
-                            format=PrivateFormat.PKCS8,
-                            encryption_algorithm=NoEncryption(),
+                # Save private key (only if not in production with env var)
+                if not env_key:
+                    with open(self.key_file, "wb") as f:
+                        f.write(
+                            self.private_key.private_bytes(
+                                encoding=Encoding.PEM,
+                                format=PrivateFormat.PKCS8,
+                                encryption_algorithm=NoEncryption(),
+                            )
                         )
-                    )
 
-                # Save public key for verification
-                public_key_file = self.audit_dir / "audit_public_key.pem"
-                with open(public_key_file, "wb") as f:
-                    f.write(
-                        self.private_key.public_key().public_bytes(
-                            encoding=Encoding.PEM,
-                            format=PublicFormat.SubjectPublicKeyInfo,
+                    # Save public key for verification
+                    public_key_file = self.audit_dir / "audit_public_key.pem"
+                    with open(public_key_file, "wb") as f:
+                        f.write(
+                            self.private_key.public_key().public_bytes(
+                                encoding=Encoding.PEM,
+                                format=PublicFormat.SubjectPublicKeyInfo,
+                            )
                         )
-                    )
 
-                logger.info("Generated new audit signing key pair")
+                    logger.info("Generated new audit signing key pair")
 
             self.public_key = self.private_key.public_key()
 
