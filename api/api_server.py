@@ -685,16 +685,13 @@ async def lifespan(app: FastAPI):
 
         try:
             if getattr(app.state, "redis", None):
-                # Close async redis connection gracefully
+                # Close async redis connection
                 try:
+                    # redis.asyncio provides aclose() or close() methods
                     if hasattr(app.state.redis, "aclose"):
                         await app.state.redis.aclose()
                     elif hasattr(app.state.redis, "close"):
-                        close_fn = app.state.redis.close
-                        if asyncio.iscoroutinefunction(close_fn):
-                            await close_fn()
-                        else:
-                            close_fn()
+                        await app.state.redis.close()
                 except Exception:
                     logging.exception("Error closing redis connection")
         except Exception:
