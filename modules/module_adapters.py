@@ -107,6 +107,11 @@ ADAPTER_MAPPINGS = {
     "bellingcat_toolkit": (add_search_wrapper, "investigate_social_media"),
     "blackbox_patterns": (add_search_wrapper, "analyze_patterns"),
     "cross_reference_engine": (add_search_wrapper, "cross_reference_search"),
+    # Analysis modules
+    "conspiracy_analyzer": (add_search_wrapper, "analyze_conspiracy_theory"),
+    "hidden_pattern_detector": (add_search_wrapper, "detect_hidden_patterns"),
+    # Monitoring modules
+    "realtime_feeds": (add_search_wrapper, "get_recent_alerts"),
     # Reporting (not typical OSINT but needs interface for API compatibility)
     "reporting_engine": (add_search_wrapper, "generate_executive_summary"),
     # Local tools
