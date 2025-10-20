@@ -1007,6 +1007,13 @@ async def system_status_alias(request: Request):
     return await health_check(request)
 
 
+@app.get("/health")
+@limiter.limit("300/minute")  # Higher limit for health checks
+async def health_fallback(request: Request):
+    """Fallback health endpoint without /api prefix for compatibility."""
+    return await health_check(request)
+
+
 @app.get("/api/anonymity/tor/status")
 async def anonymity_tor_status():
     """Alias for /tor/status under /api/anonymity path."""
