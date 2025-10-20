@@ -260,12 +260,8 @@ class AppConfig:
     """Application configuration - all secrets must be provided via environment variables"""
 
     # Critical: Fail fast if SECRET_KEY is not set
-    # Accept OSINT_SECRET_KEY, SECRET_KEY, or JWT_SECRET_KEY for compatibility
-    SECRET_KEY = (
-        os.getenv("OSINT_SECRET_KEY")
-        or os.getenv("SECRET_KEY")
-        or os.getenv("JWT_SECRET_KEY")
-    )
+    # Accept both OSINT_SECRET_KEY (preferred) and SECRET_KEY (fallback) for compatibility
+    SECRET_KEY = os.getenv("OSINT_SECRET_KEY") or os.getenv("SECRET_KEY")
     if (
         not SECRET_KEY
         or SECRET_KEY == "change-this-secret-key-in-production-environment"
@@ -274,8 +270,7 @@ class AppConfig:
         or SECRET_KEY == "your_jwt_secret_key_here_minimum_32_characters"
     ):
         raise ValueError(
-            "A secure SECRET_KEY environment variable must be set. "
-            "Accepted variables: OSINT_SECRET_KEY, SECRET_KEY, or JWT_SECRET_KEY. "
+            "Either OSINT_SECRET_KEY or SECRET_KEY environment variable must be set to a secure random value. "
             "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
         )
 
