@@ -1,295 +1,298 @@
 {
-  "timestamp": 1759094485.2274144,
+  "timestamp": 1760929442.3372874,
   "overall_status": "critical",
   "checks": {
     "python_version": {
       "status": "pass",
-      "message": "Python 3.12.1",
-      "timestamp": 1759094485.227455
+      "message": "Python 3.12.3",
+      "timestamp": 1760929442.337297
     },
     "virtual_environment": {
-      "status": "pass",
-      "message": "Running in virtual environment",
-      "timestamp": 1759094485.2274587
+      "status": "warning",
+      "message": "Not running in virtual environment",
+      "timestamp": 1760929442.3372998
     },
     "module_requests": {
       "status": "pass",
       "message": "requests available",
-      "timestamp": 1759094485.3072004
+      "timestamp": 1760929442.4063845
     },
     "module_beautifulsoup4": {
       "status": "fail",
       "message": "beautifulsoup4 not available",
-      "timestamp": 1759094485.3073459
+      "timestamp": 1760929442.40647
     },
     "module_cryptography": {
       "status": "pass",
       "message": "cryptography available",
-      "timestamp": 1759094485.3078313
+      "timestamp": 1760929442.4080648
     },
     "module_pathlib": {
       "status": "pass",
       "message": "pathlib available",
-      "timestamp": 1759094485.3078368
+      "timestamp": 1760929442.4080684
     },
     "module_json": {
       "status": "pass",
       "message": "json available",
-      "timestamp": 1759094485.30784
+      "timestamp": 1760929442.4080708
     },
     "core_dns_resolver": {
       "status": "pass",
       "message": "DNS resolution",
-      "timestamp": 1759094485.3453894
+      "timestamp": 1760929442.463426
     },
     "core_urllib_parse": {
       "status": "pass",
       "message": "URL parsing",
-      "timestamp": 1759094485.3453972
+      "timestamp": 1760929442.4634316
     },
     "core_ssl": {
       "status": "pass",
       "message": "SSL/TLS support",
-      "timestamp": 1759094485.3454006
+      "timestamp": 1760929442.4634342
     },
     "core_socket": {
       "status": "pass",
       "message": "Network sockets",
-      "timestamp": 1759094485.345403
+      "timestamp": 1760929442.463436
     },
     "core_json": {
       "status": "pass",
       "message": "JSON processing",
-      "timestamp": 1759094485.3454065
+      "timestamp": 1760929442.4634383
     },
     "core_csv": {
       "status": "pass",
       "message": "CSV processing",
-      "timestamp": 1759094485.3454087
+      "timestamp": 1760929442.4634402
     },
     "core_datetime": {
       "status": "pass",
       "message": "Date/time handling",
-      "timestamp": 1759094485.3454115
+      "timestamp": 1760929442.463442
     },
     "core_re": {
       "status": "pass",
       "message": "Regular expressions",
-      "timestamp": 1759094485.3454137
+      "timestamp": 1760929442.4634435
     },
     "core_hashlib": {
       "status": "pass",
       "message": "Hashing functions",
-      "timestamp": 1759094485.3454156
+      "timestamp": 1760929442.4634445
     },
     "core_base64": {
       "status": "pass",
       "message": "Base64 encoding",
-      "timestamp": 1759094485.3454223
+      "timestamp": 1760929442.4634457
     },
     "security_ed25519": {
       "status": "pass",
       "message": "ED25519 signatures",
-      "timestamp": 1759094485.3525727
+      "timestamp": 1760929442.4719386
     },
     "security_aead": {
       "status": "pass",
       "message": "AES-GCM encryption",
-      "timestamp": 1759094485.3553584
+      "timestamp": 1760929442.5321403
     },
     "security_secrets": {
       "status": "pass",
       "message": "Cryptographically secure random",
-      "timestamp": 1759094485.3555536
+      "timestamp": 1760929442.5323002
     },
     "security_bcrypt": {
       "status": "pass",
       "message": "Password hashing",
-      "timestamp": 1759094485.3560438
+      "timestamp": 1760929442.532304
     },
     "security_keyring": {
       "status": "pass",
       "message": "Secure credential storage",
-      "timestamp": 1759094485.3670092
+      "timestamp": 1760929442.5404913
     },
     "local_security_secrets_manager": {
       "status": "pass",
       "message": "API key management",
-      "timestamp": 1759094485.3693264
+      "timestamp": 1760929442.5415816
     },
     "local_security_result_encryption": {
       "status": "pass",
       "message": "Result encryption",
-      "timestamp": 1759094485.3711088
+      "timestamp": 1760929442.5432405
     },
     "local_security_audit_trail": {
       "status": "pass",
       "message": "Audit logging",
-      "timestamp": 1759094485.3769085
+      "timestamp": 1760929442.545895
     },
     "local_security_opsec_policy": {
       "status": "pass",
       "message": "OPSEC policy enforcement",
-      "timestamp": 1759094485.3770747
+      "timestamp": 1760929442.5462925
     },
     "network_transport": {
       "status": "pass",
       "message": "Network transport layer",
-      "timestamp": 1759094485.3774576
+      "timestamp": 1760929442.5465946
     },
     "network_doh_client": {
       "status": "pass",
       "message": "DNS over HTTPS",
-      "timestamp": 1759094485.3922107
+      "timestamp": 1760929442.5585673
     },
     "network_anonymity_grid": {
       "status": "pass",
       "message": "Anonymity grid system",
-      "timestamp": 1759094485.3960686
+      "timestamp": 1760929442.566424
     },
     "tor_available": {
-      "status": "pass",
-      "message": "Tor is installed",
-      "timestamp": 1759094485.3981204
+      "status": "warning",
+      "message": "Tor not found",
+      "timestamp": 1760929442.5695896
     },
     "ai_local_llm_engine": {
       "status": "warning",
       "message": "Local LLM processing unavailable",
-      "timestamp": 1759094486.3262985
+      "timestamp": 1760929449.0701942
     },
     "ai_blackbox_patterns": {
       "status": "warning",
       "message": "Pattern analysis unavailable",
-      "timestamp": 1759094486.326353
+      "timestamp": 1760929449.0702376
     },
     "ai_cross_reference_engine": {
       "status": "warning",
       "message": "Cross-reference engine unavailable",
-      "timestamp": 1759094486.326387
+      "timestamp": 1760929449.070269
     },
     "ai_conspiracy_analyzer": {
       "status": "warning",
       "message": "Conspiracy analysis unavailable",
-      "timestamp": 1759094486.326417
+      "timestamp": 1760929449.0702977
     },
     "ai_hidden_pattern_detector": {
       "status": "warning",
       "message": "Pattern detection unavailable",
-      "timestamp": 1759094486.3264463
+      "timestamp": 1760929449.0703232
     },
     "ml_torch": {
       "status": "pass",
       "message": "PyTorch available",
-      "timestamp": 1759094487.3306708
+      "timestamp": 1760929449.0703292
     },
     "ml_transformers": {
       "status": "pass",
       "message": "Hugging Face Transformers available",
-      "timestamp": 1759094487.5541022
+      "timestamp": 1760929449.0703344
     },
     "ml_sklearn": {
       "status": "pass",
       "message": "Scikit-learn available",
-      "timestamp": 1759094488.1070774
+      "timestamp": 1760929449.0703375
     },
     "web_directory": {
       "status": "pass",
       "message": "Web directory exists",
-      "timestamp": 1759094488.1071725
+      "timestamp": 1760929449.0704188
     },
     "web_package_json": {
       "status": "pass",
       "message": "package.json found",
-      "timestamp": 1759094488.1071966
+      "timestamp": 1760929449.070451
     },
     "web_dependencies": {
-      "status": "pass",
-      "message": "Node.js dependencies installed",
-      "timestamp": 1759094488.1072128
+      "status": "warning",
+      "message": "Node.js dependencies not installed",
+      "timestamp": 1760929449.0704763
     },
     "config_config_ini": {
-      "status": "pass",
-      "message": "Main configuration exists",
-      "timestamp": 1759094488.1072633
+      "status": "warning",
+      "message": "Main configuration not found",
+      "timestamp": 1760929449.070538
     },
     "config_config_ini_template": {
       "status": "warning",
       "message": "Configuration template not found",
-      "timestamp": 1759094488.1072838
+      "timestamp": 1760929449.0705588
     },
     "config_pyproject_toml": {
       "status": "pass",
       "message": "Python project configuration exists",
-      "timestamp": 1759094488.1072989
+      "timestamp": 1760929449.0705826
     },
     "config_requirements_txt": {
       "status": "pass",
       "message": "Python dependencies exists",
-      "timestamp": 1759094488.107309
+      "timestamp": 1760929449.0706017
     },
     "config_requirements_minimal_txt": {
       "status": "pass",
       "message": "Minimal dependencies exists",
-      "timestamp": 1759094488.1073186
+      "timestamp": 1760929449.0706189
     },
     "dir_logs": {
       "status": "pass",
       "message": "logs writable",
-      "timestamp": 1759094488.107529
+      "timestamp": 1760929449.0707831
     },
     "dir_output": {
       "status": "pass",
       "message": "output writable",
-      "timestamp": 1759094488.1076894
+      "timestamp": 1760929449.0708876
     },
     "dir_output_encrypted": {
-      "status": "pass",
-      "message": "output/encrypted writable",
-      "timestamp": 1759094488.1078887
+      "status": "warning",
+      "message": "output/encrypted does not exist",
+      "timestamp": 1760929449.0709114
     },
     "dir_output_audit": {
-      "status": "pass",
-      "message": "output/audit writable",
-      "timestamp": 1759094488.108066
+      "status": "warning",
+      "message": "output/audit does not exist",
+      "timestamp": 1760929449.0709267
     },
     "dir_investigations": {
       "status": "pass",
       "message": "investigations writable",
-      "timestamp": 1759094488.1082377
+      "timestamp": 1760929449.0710573
     },
     "dir_templates": {
-      "status": "pass",
-      "message": "templates writable",
-      "timestamp": 1759094488.1084046
+      "status": "warning",
+      "message": "templates does not exist",
+      "timestamp": 1760929449.071086
     },
     "dir_security": {
       "status": "pass",
       "message": "security writable",
-      "timestamp": 1759094488.1085706
+      "timestamp": 1760929449.071182
     },
     "internet_connectivity": {
-      "status": "pass",
-      "message": "Internet connectivity OK",
-      "timestamp": 1759094488.2125285
+      "status": "fail",
+      "message": "No internet connectivity",
+      "timestamp": 1760929449.0751271
     },
     "dns_resolution": {
-      "status": "pass",
-      "message": "DNS resolution working",
-      "timestamp": 1759094488.2131567
+      "status": "fail",
+      "message": "DNS resolution failed",
+      "timestamp": 1760929449.078109
     },
     "system_memory": {
       "status": "pass",
       "message": "15.6GB RAM available",
-      "timestamp": 1759094488.2133312
+      "timestamp": 1760929449.0782704
     },
     "disk_space": {
-      "status": "warning",
-      "message": "0.4GB free - recommend 5GB+",
-      "timestamp": 1759094488.2133524
+      "status": "pass",
+      "message": "9.6GB free disk space",
+      "timestamp": 1760929449.0782912
     }
   },
   "recommendations": [
+    "Consider running in a Python virtual environment",
+    "Install Tor for full anonymity features: sudo apt install tor",
+    "Install web dependencies: cd web && npm install",
     "Run the installer to create missing configuration files",
-    "Free up disk space for optimal operation"
+    "Run the installer to create required directories"
   ]
 }
