@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:openapi": "openapi-typescript ../openapi.yaml --output src/types/openapi-types.ts"
+    "gen:openapi": "openapi-typescript http://localhost:8000/openapi.json --output src/types/openapi-types.ts",
+    "gen:openapi:file": "openapi-typescript ../openapi.yaml --output src/types/openapi-types.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",

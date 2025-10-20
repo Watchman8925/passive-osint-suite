@@ -13,7 +13,6 @@
 dnspython>=2.2.0
 requests>=2.31.0
 beautifulsoup4>=4.11.0
-dnspython>=2.2.0
 python-whois>=0.7.3
 ipwhois>=1.2.0
 colorama>=0.4.4
@@ -89,7 +88,6 @@ ruff>=0.1.0
 psycopg2-binary>=2.9.9
 dash>=2.14.0
 dash-bootstrap-components>=1.5.0
-structlog>=23.1.0
 stem>=1.8.0
 httpx>=0.24.0
 httpx-socks>=0.6.0
