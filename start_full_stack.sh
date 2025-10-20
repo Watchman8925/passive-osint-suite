@@ -42,12 +42,17 @@ OSINT_USE_KEYRING=false
 OSINT_TEST_MODE=false
 DEBUG=true
 PRODUCTION=false
+ENVIRONMENT=development
 ENABLE_DEV_AUTH=1
 
 # Application Settings
 LOG_LEVEL=INFO
 MAX_CONCURRENT_REQUESTS=10
 REQUEST_TIMEOUT=30
+
+# Optional AI/ML API Keys (leave unset for passive/API-free operation)
+# AI_MODEL_API_KEY=your_api_key_here
+# OPENAI_API_KEY=your_openai_key_here
 
 # Optional External Services (not required for basic operation)
 # DATABASE_URL=postgresql://user:pass@localhost:5432/osint_db
@@ -59,6 +64,7 @@ TOR_CONTROL_PORT=9051
 TOR_SOCKS_PORT=9050
 EOF
         echo -e "${GREEN}✅ Created .env file with secure random secret${NC}"
+        echo -e "${BLUE}ℹ️  Note: AI features disabled by default (no AI_MODEL_API_KEY set)${NC}"
     else
         echo -e "${RED}❌ .env.example not found, cannot create .env${NC}"
         exit 1
@@ -105,12 +111,17 @@ echo -e "${GREEN}   Backend PID: $BACKEND_PID${NC}"
 # Wait a few seconds for backend to start
 sleep 5
 
-# Check if backend is running
-if curl -s http://localhost:8000/api/health > /dev/null 2>&1; then
+# Check if backend is running - try both /api/health and /health
+if curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Backend is running on http://localhost:8000${NC}"
+    echo -e "${BLUE}   API Docs: http://localhost:8000/docs${NC}"
+elif curl -sf http://localhost:8000/health > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Backend is running on http://localhost:8000${NC}"
     echo -e "${BLUE}   API Docs: http://localhost:8000/docs${NC}"
 else
     echo -e "${YELLOW}⚠️  Backend might still be starting...${NC}"
+    echo -e "${BLUE}   Waiting additional time for initialization...${NC}"
+    sleep 3
 fi
 
 # Start frontend

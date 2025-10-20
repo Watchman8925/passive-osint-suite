@@ -223,10 +223,21 @@ class HealthChecker:
         ]
 
         for module, description in ai_modules:
-            try:
-                importlib.import_module(f"modules.{module}")
-                self._add_check_result(f"ai_{module}", "pass", description)
-            except ImportError:
+            found = False
+            # Try multiple import paths for resilience
+            for prefix in ["modules", "core", ""]:
+                try:
+                    if prefix:
+                        importlib.import_module(f"{prefix}.{module}")
+                    else:
+                        importlib.import_module(module)
+                    self._add_check_result(f"ai_{module}", "pass", description)
+                    found = True
+                    break
+                except ImportError:
+                    continue
+
+            if not found:
                 self._add_check_result(
                     f"ai_{module}", "warning", f"{description} unavailable"
                 )

@@ -156,7 +156,7 @@ class ModuleTester:
             ("certificate_transparency", "CertificateTransparency"),
             ("wayback_machine", "WaybackMachine"),
             ("search_engine_dorking", "SearchEngineDorking"),
-            ("whois_history", "WHOISHistory"),
+            ("whois_history", "WhoisHistory"),
             ("paste_site_monitor", "PasteSiteMonitor"),
             ("threat_intel", "ThreatIntel"),
             ("malware_intel", "MalwareIntel"),
