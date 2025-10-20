@@ -53,9 +53,9 @@ def test_health_endpoint_exists():
 
     # Check if health endpoints are registered
     routes = [route.path for route in app.routes]
-    assert "/api/health" in routes or any("/health" in r for r in routes), (
-        "Health endpoint should be registered"
-    )
+    assert "/api/health" in routes or any(
+        "/health" in r for r in routes
+    ), "Health endpoint should be registered"
     print(f"✅ Found {len([r for r in routes if 'health' in r])} health endpoints")
 
 

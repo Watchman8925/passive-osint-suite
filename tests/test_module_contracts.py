@@ -93,9 +93,9 @@ class TestModuleRegistry:
             if "description" not in module_info or not module_info["description"]:
                 missing_desc.append(module_name)
 
-        assert len(missing_desc) == 0, (
-            f"Modules missing description: {', '.join(missing_desc)}"
-        )
+        assert (
+            len(missing_desc) == 0
+        ), f"Modules missing description: {', '.join(missing_desc)}"
 
     def test_all_entries_have_category(self):
         """All registry entries should have a category"""
@@ -106,9 +106,9 @@ class TestModuleRegistry:
             if "category" not in module_info or not module_info["category"]:
                 missing_cat.append(module_name)
 
-        assert len(missing_cat) == 0, (
-            f"Modules missing category: {', '.join(missing_cat)}"
-        )
+        assert (
+            len(missing_cat) == 0
+        ), f"Modules missing category: {', '.join(missing_cat)}"
 
 
 class TestModuleCapabilities:
@@ -156,9 +156,9 @@ class TestModuleCapabilities:
             for method_name in STANDARD_METHODS:
                 if hasattr(module_class, method_name):
                     method = getattr(module_class, method_name)
-                    assert callable(method), (
-                        f"{module_name}.{method_name} exists but is not callable"
-                    )
+                    assert callable(
+                        method
+                    ), f"{module_name}.{method_name} exists but is not callable"
 
 
 class TestModuleResponses:
@@ -280,9 +280,9 @@ class TestAPIIntegration:
             if module_name in registry:
                 try:
                     instance = get_module(module_name)
-                    assert instance is not None, (
-                        f"get_module('{module_name}') returned None"
-                    )
+                    assert (
+                        instance is not None
+                    ), f"get_module('{module_name}') returned None"
                 except Exception as e:
                     pytest.fail(f"get_module('{module_name}') raised exception: {e}")
 
@@ -327,9 +327,9 @@ class TestModuleDocumentation:
             if f"`{method}(" not in content and f"def {method}(" not in content:
                 missing.append(method)
 
-        assert len(missing) == 0, (
-            f"Contract documentation missing these methods: {', '.join(missing)}"
-        )
+        assert (
+            len(missing) == 0
+        ), f"Contract documentation missing these methods: {', '.join(missing)}"
 
 
 def test_module_audit_summary():
