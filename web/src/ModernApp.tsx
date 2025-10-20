@@ -161,11 +161,67 @@ const ModernApp = () => {
     setIsLoading(true);
     setSelectedModule(moduleId);
 
-    // Simulate API call for other modules
-    setTimeout(() => {
+    try {
+      // Map frontend module IDs to backend module names
+      const moduleNameMap: Record<string, string> = {
+        'email': 'email_intel',
+        'social_passive': 'social_media_footprint',
+        'ip': 'ip_intel',
+        'company': 'company_intel',
+        'crypto': 'crypto_intel',
+        'flight': 'flight_intel',
+        'web_scraper': 'web_scraper',
+        'github': 'github_search',
+        'wayback': 'wayback_machine',
+        'social': 'comprehensive_social_passive',
+        'darkweb': 'darkweb_intel',
+        'malware': 'malware_intel',
+        'financial': 'financial_intel',
+        'iot': 'iot_intel',
+        'network': 'network_analysis',
+        'dns': 'dns_intelligence',
+        'certificate': 'certificate_transparency',
+        'whois': 'whois_history',
+        'breaches': 'public_breach_search',
+        'patent': 'patent_passive',
+        'geospatial': 'geospatial_intel',
+      };
+
+      const moduleName = moduleNameMap[moduleId] || moduleId;
+
+      const response = await fetch(`${API_URL}/api/modules/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken || localStorage.getItem('auth_token') || ''}`
+        },
+        body: JSON.stringify({
+          module_name: moduleName,
+          parameters: {}
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Module execution failed' }));
+        throw new Error(errorData.detail || 'Failed to execute module');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        // TODO: Display results in a modal or results panel
+        console.log('Module execution result:', data.result);
+        alert(`Module ${moduleName} executed successfully! Check console for results.`);
+      } else {
+        throw new Error(data.error || 'Module execution failed');
+      }
+    } catch (err: any) {
+      console.error('Module execution error:', err);
+      alert(`Error: ${err.message || 'Failed to execute module. Please try again.'}`);
+    } finally {
       setIsLoading(false);
       setSelectedModule(null);
-    }, 2000);
+    }
   };
 
   const handleSearch = () => {

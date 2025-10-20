@@ -32,15 +32,16 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
         throw new Error('Please enter a valid domain name (e.g., example.com)');
       }
 
-      const response = await fetch(`${apiUrl}/api/modules/domain/run`, {
+      const response = await fetch(`${apiUrl}/api/modules/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify({ 
-          target: domain,
-          options: {
+          module_name: 'domain_recon',
+          parameters: {
+            target: domain,
             dns_lookup: true,
             whois_lookup: true,
             subdomain_scan: true
@@ -54,11 +55,21 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
       }
 
       const data = await response.json();
-      setResult(data);
-      toast.success('Domain investigation completed!');
+      
+      // Handle the standardized ModuleExecutionResponse format
+      if (data.status === 'success') {
+        setResult(data.result);
+        toast.success('Domain investigation completed!');
+      } else {
+        // Handle error response
+        const errorMsg = data.error || 'Domain investigation failed';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
     } catch (err: any) {
-      setError(err.message || 'Investigation failed. Please try again.');
-      toast.error(err.message || 'Investigation failed');
+      const errorMsg = err.message || 'Investigation failed. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsRunning(false);
     }
