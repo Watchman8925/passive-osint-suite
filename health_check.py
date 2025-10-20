@@ -236,7 +236,7 @@ class HealthChecker:
                     break
                 except ImportError:
                     continue
-            
+
             if not found:
                 self._add_check_result(
                     f"ai_{module}", "warning", f"{description} unavailable"
