@@ -8,6 +8,15 @@ interface TorProxyConfig {
   port: number;
 }
 
+interface TorControlResponse {
+  success: boolean;
+  message: string;
+  status?: {
+    active?: boolean;
+    [key: string]: any;
+  };
+}
+
 interface AnonymityConfig {
   tor: TorProxyConfig;
   doh: boolean;
@@ -115,47 +124,71 @@ class OSINTAPIClient {
   }
 
   // Anonymity Control Methods
-  async enableTor(): Promise<boolean> {
+  async enableTor(): Promise<TorControlResponse> {
     try {
       const response = await this.client.post('/api/anonymity/tor/enable');
-      this.anonymityConfig.tor.enabled = true;
-      toast.success('🧅 Tor network enabled');
-      return response.data.success;
-    } catch (error) {
-      toast.error('Failed to enable Tor network');
-      return false;
+      const data: TorControlResponse = response.data;
+      if (data.status && data.status.active !== undefined) {
+        this.anonymityConfig.tor.enabled = Boolean(data.status.active);
+      } else if (data.success) {
+        this.anonymityConfig.tor.enabled = true;
+      }
+      return data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Failed to enable Tor network',
+        status: error?.response?.data?.status,
+      };
     }
   }
 
-  async disableTor(): Promise<boolean> {
+  async disableTor(): Promise<TorControlResponse> {
     try {
       const response = await this.client.post('/api/anonymity/tor/disable');
-      this.anonymityConfig.tor.enabled = false;
-      toast.success('Tor network disabled');
-      return response.data.success;
-    } catch (error) {
-      toast.error('Failed to disable Tor network');
-      return false;
+      const data: TorControlResponse = response.data;
+      if (data.status && data.status.active !== undefined) {
+        this.anonymityConfig.tor.enabled = Boolean(data.status.active);
+      } else if (data.success) {
+        this.anonymityConfig.tor.enabled = false;
+      }
+      return data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Failed to disable Tor network',
+        status: error?.response?.data?.status,
+      };
     }
   }
 
   async getTorStatus(): Promise<{active: boolean, exitNode?: string, country?: string}> {
     try {
       const response = await this.client.get('/api/anonymity/tor/status');
-      return response.data;
+      const status = response.data;
+      if (typeof status?.active === 'boolean') {
+        this.anonymityConfig.tor.enabled = status.active;
+      }
+      return status;
     } catch (error) {
       return { active: false };
     }
   }
 
-  async newTorIdentity(): Promise<boolean> {
+  async newTorIdentity(): Promise<TorControlResponse> {
     try {
       const response = await this.client.post('/api/anonymity/tor/new-identity');
-      toast.success('🔄 New Tor identity acquired');
-      return response.data.success;
-    } catch (error) {
-      toast.error('Failed to acquire new Tor identity');
-      return false;
+      const data: TorControlResponse = response.data;
+      if (data.status && data.status.active !== undefined) {
+        this.anonymityConfig.tor.enabled = Boolean(data.status.active);
+      }
+      return data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Failed to acquire new Tor identity',
+        status: error?.response?.data?.status,
+      };
     }
   }
 
