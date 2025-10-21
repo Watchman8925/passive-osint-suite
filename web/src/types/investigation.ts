@@ -71,6 +71,7 @@ export interface Investigation {
   created_at: string;
   started_at?: string;
   completed_at?: string;
+  archived_at?: string;
   deadline?: string;
   estimated_duration: number;
   tasks: Record<string, InvestigationTask>;
@@ -79,6 +80,7 @@ export interface Investigation {
   ai_analysis?: Record<string, any>;
   configuration: Record<string, any>;
   metadata: Record<string, any>;
+  archived?: boolean;
 }
 
 export interface InvestigationProgress {

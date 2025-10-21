@@ -11,6 +11,8 @@ import os
 import importlib
 import importlib.util
 from contextlib import asynccontextmanager
+from dataclasses import asdict, is_dataclass
+import ipaddress
 
 # Load environment variables from .env file
 try:
@@ -21,7 +23,7 @@ except ImportError:
     pass  # dotenv is optional
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Literal, TYPE_CHECKING, cast, Tuple
+from typing import Any, Dict, List, Optional, Literal, TYPE_CHECKING, cast, Tuple, Set
 import time
 
 # Core OSINT modules and dependencies
@@ -37,9 +39,13 @@ from utils.transport import get_tor_status
 from pydantic import BaseModel, Field  # type: ignore
 
 try:
-    from investigations.investigation_manager import InvestigationManager  # type: ignore
+    from investigations.investigation_manager import (  # type: ignore
+        InvestigationManager,
+        InvestigationStatus,
+    )
 except Exception:  # pragma: no cover - optional advanced manager
     InvestigationManager = None
+    InvestigationStatus = None  # type: ignore
 from database.graph_database import GraphDatabaseAdapter
 
 # OSINT Module Registry
@@ -637,6 +643,9 @@ async def lifespan(app: FastAPI):
     except Exception:
         app.state.execution_engine = None
         logging.warning("Execution engine unavailable")
+
+    # Initialize in-memory cache for geospatial snapshots
+    app.state.geo_cache = {}
 
     # Set up event callback for WebSocket broadcasts
     def _event_callback(event_type: str, payload: Dict[str, Any]):
@@ -1254,90 +1263,584 @@ async def investigation_provenance(
 
 
 # ============================================================================
-# Geospatial Intelligence (Placeholder Endpoint)
+# Geospatial Intelligence Aggregator
 # ============================================================================
+
+GEO_CACHE_TTL_SECONDS = 60
+MAX_GEO_POINTS = 150
+MAX_FLIGHT_ROUTES = 50
+MAX_INFRA_LINKS = 150
+
+
+def _coerce_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            return float(stripped)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_datetime(value: Any) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        except (OSError, OverflowError, ValueError):
+            return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        if stripped.endswith("Z"):
+            stripped = stripped[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(stripped)
+        except ValueError:
+            return None
+    return None
+
+
+def _normalize_ip(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    try:
+        return str(ipaddress.ip_address(str(value).strip()))
+    except Exception:
+        return None
+
+
+def _normalize_endpoint(node: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(node, dict):
+        return None
+    lat = _coerce_float(node.get("lat") or node.get("latitude"))
+    lon = _coerce_float(node.get("lon") or node.get("longitude"))
+    if lat is None or lon is None:
+        coords = node.get("coordinates") or node.get("location")
+        if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+            lat = _coerce_float(coords[0])
+            lon = _coerce_float(coords[1])
+        elif isinstance(coords, dict):
+            lat = _coerce_float(coords.get("lat") or coords.get("latitude"))
+            lon = _coerce_float(coords.get("lon") or coords.get("longitude"))
+    if lat is None or lon is None:
+        return None
+
+    endpoint: Dict[str, Any] = {"lat": lat, "lon": lon}
+    for key in ("label", "name"):
+        label = node.get(key)
+        if label:
+            endpoint["label"] = label
+            break
+    if node.get("icao"):
+        endpoint["icao"] = node["icao"]
+    if node.get("iata"):
+        endpoint["iata"] = node["iata"]
+    if node.get("city"):
+        endpoint["city"] = node["city"]
+
+    normalized_ip = _normalize_ip(node.get("ip") or node.get("ip_address"))
+    if normalized_ip:
+        endpoint["ip"] = normalized_ip
+
+    asn_value = (
+        node.get("asn")
+        or node.get("asn_org")
+        or node.get("autonomous_system_organization")
+        or node.get("asnName")
+    )
+    if asn_value:
+        endpoint["asn"] = asn_value
+
+    return endpoint
+
+
+def _normalize_investigation_record(item: Any) -> Dict[str, Any]:
+    if isinstance(item, dict):
+        return item
+    if is_dataclass(item):
+        return asdict(item)
+    to_dict = getattr(item, "to_dict", None)
+    if callable(to_dict):
+        try:
+            return to_dict()
+        except Exception:
+            pass
+    model_dump = getattr(item, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return model_dump()
+        except Exception:
+            pass
+    if hasattr(item, "__dict__"):
+        return {k: v for k, v in vars(item).items() if not k.startswith("_")}
+    return {}
+
+
+def _dedupe_points(points: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: List[Dict[str, Any]] = []
+    seen: Set[Tuple[str, float, float]] = set()
+    for point in sorted(
+        points,
+        key=lambda p: p.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    ):
+        ip = point.get("ip")
+        lat = point.get("lat")
+        lon = point.get("lon")
+        if ip is None or lat is None or lon is None:
+            continue
+        key = (ip, round(float(lat), 6), round(float(lon), 6))
+        if key in seen:
+            continue
+        seen.add(key)
+        point.pop("_ts", None)
+        deduped.append(point)
+        if len(deduped) >= MAX_GEO_POINTS:
+            break
+    return deduped
+
+
+def _dedupe_routes(routes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: List[Dict[str, Any]] = []
+    seen: Set[Tuple[str, float, float, float, float]] = set()
+    for route in sorted(
+        routes,
+        key=lambda r: r.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    ):
+        path = route.get("path") or []
+        if not isinstance(path, list) or len(path) < 2:
+            continue
+        try:
+            start = path[0]
+            end = path[-1]
+            key = (
+                str(route.get("flight")),
+                round(float(start[0]), 4),
+                round(float(start[1]), 4),
+                round(float(end[0]), 4),
+                round(float(end[1]), 4),
+            )
+        except Exception:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        route.pop("_ts", None)
+        deduped.append(route)
+        if len(deduped) >= MAX_FLIGHT_ROUTES:
+            break
+    return deduped
+
+
+def _dedupe_links(links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: List[Dict[str, Any]] = []
+    seen: Set[Tuple[float, float, float, float, Optional[str]]] = set()
+    for link in sorted(
+        links,
+        key=lambda l: l.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    ):
+        origin = link.get("from") or {}
+        dest = link.get("to") or {}
+        try:
+            key = (
+                round(float(origin.get("lat")), 6),
+                round(float(origin.get("lon")), 6),
+                round(float(dest.get("lat")), 6),
+                round(float(dest.get("lon")), 6),
+                link.get("relationship"),
+            )
+        except Exception:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        link.pop("_ts", None)
+        deduped.append(link)
+        if len(deduped) >= MAX_INFRA_LINKS:
+            break
+    return deduped
+
+
+def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+]:
+    raw_points: List[Dict[str, Any]] = []
+    raw_routes: List[Dict[str, Any]] = []
+    raw_links: List[Dict[str, Any]] = []
+
+    def add_point(
+        ip: Optional[str],
+        lat: Optional[float],
+        lon: Optional[float],
+        label: Optional[str],
+        asn: Optional[str],
+        timestamp: Optional[datetime],
+    ) -> None:
+        if not ip or lat is None or lon is None:
+            return
+        point: Dict[str, Any] = {"ip": ip, "lat": lat, "lon": lon}
+        if label:
+            point["label"] = label
+        if asn:
+            point["asn"] = asn
+        if timestamp:
+            point["seen_at"] = timestamp.isoformat().replace("+00:00", "Z")
+            point["_ts"] = timestamp
+        raw_points.append(point)
+
+    def normalize_route(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+        if not isinstance(candidate, dict):
+            return None
+
+        path: List[List[float]] = []
+        if isinstance(candidate.get("path"), list):
+            for coord in candidate["path"]:
+                if isinstance(coord, (list, tuple)) and len(coord) >= 2:
+                    lat = _coerce_float(coord[0])
+                    lon = _coerce_float(coord[1])
+                elif isinstance(coord, dict):
+                    lat = _coerce_float(coord.get("lat") or coord.get("latitude"))
+                    lon = _coerce_float(coord.get("lon") or coord.get("longitude"))
+                else:
+                    continue
+                if lat is None or lon is None:
+                    continue
+                path.append([lat, lon])
+
+        origin = _normalize_endpoint(candidate.get("from") or candidate.get("origin"))
+        destination = _normalize_endpoint(candidate.get("to") or candidate.get("destination"))
+
+        if not path and origin and destination:
+            path = [
+                [origin["lat"], origin["lon"]],
+                [destination["lat"], destination["lon"]],
+            ]
+
+        if len(path) < 2:
+            return None
+
+        flight_id = (
+            candidate.get("flight")
+            or candidate.get("identifier")
+            or candidate.get("callsign")
+            or candidate.get("call_sign")
+        )
+        if not flight_id and origin and destination:
+            flight_id = f"{origin.get('label', 'origin')}→{destination.get('label', 'dest')}"
+
+        route: Dict[str, Any] = {"flight": str(flight_id or f"route-{len(path)}"), "path": path}
+        if origin:
+            route["from"] = origin
+        if destination:
+            route["to"] = destination
+        status = candidate.get("status") or candidate.get("state")
+        if status:
+            route["status"] = status
+
+        ts = (
+            _parse_datetime(candidate.get("timestamp"))
+            or _parse_datetime(candidate.get("generated_at"))
+            or fallback_ts
+        )
+        if ts:
+            route["generated_at"] = ts.isoformat().replace("+00:00", "Z")
+            route["_ts"] = ts
+        return route
+
+    def normalize_link(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+        if not isinstance(candidate, dict):
+            return None
+        origin = _normalize_endpoint(
+            candidate.get("from") or candidate.get("source") or candidate.get("origin")
+        )
+        destination = _normalize_endpoint(
+            candidate.get("to") or candidate.get("target") or candidate.get("destination")
+        )
+        if not origin or not destination:
+            return None
+
+        link_id = candidate.get("id") or candidate.get("name")
+        if not link_id:
+            relation = candidate.get("relationship") or candidate.get("type")
+            link_id = (
+                relation
+                or f"link-{hash((origin['lat'], origin['lon'], destination['lat'], destination['lon'])) & 0xFFFFFFFF:x}"
+            )
+
+        link: Dict[str, Any] = {"id": str(link_id), "from": origin, "to": destination}
+        relation = candidate.get("relationship") or candidate.get("type") or candidate.get("description")
+        if relation:
+            link["relationship"] = relation
+
+        ts = (
+            _parse_datetime(candidate.get("timestamp"))
+            or _parse_datetime(candidate.get("detected_at"))
+            or fallback_ts
+        )
+        if ts:
+            link["observed_at"] = ts.isoformat().replace("+00:00", "Z")
+            link["_ts"] = ts
+        return link
+
+    def walk(node: Any, inherited_ts: Optional[datetime] = None) -> None:
+        if isinstance(node, dict):
+            metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+            current_ts = (
+                _parse_datetime(node.get("timestamp"))
+                or _parse_datetime(node.get("generated_at"))
+                or _parse_datetime(node.get("observed_at"))
+                or _parse_datetime(metadata.get("timestamp"))
+                or inherited_ts
+            )
+
+            ip_value = _normalize_ip(node.get("ip") or node.get("ip_address"))
+            lat_value = _coerce_float(node.get("lat") or node.get("latitude"))
+            lon_value = _coerce_float(node.get("lon") or node.get("longitude"))
+            label_value = node.get("label") or node.get("city") or node.get("name")
+            asn_value = (
+                node.get("asn")
+                or node.get("asn_org")
+                or node.get("autonomous_system_organization")
+                or node.get("asnName")
+            )
+            if ip_value and lat_value is not None and lon_value is not None:
+                add_point(ip_value, lat_value, lon_value, label_value, asn_value, current_ts)
+
+            for geo_key in ("geolocation", "geo", "ip_geolocation", "location"):
+                geo_value = node.get(geo_key)
+                if isinstance(geo_value, dict):
+                    ip_candidate = _normalize_ip(
+                        geo_value.get("ip")
+                        or geo_value.get("ip_address")
+                        or ip_value
+                    )
+                    lat_candidate = _coerce_float(geo_value.get("lat") or geo_value.get("latitude"))
+                    lon_candidate = _coerce_float(geo_value.get("lon") or geo_value.get("longitude"))
+                    if lat_candidate is None or lon_candidate is None:
+                        coords = geo_value.get("coordinates")
+                        if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                            lat_candidate = _coerce_float(coords[0])
+                            lon_candidate = _coerce_float(coords[1])
+                    label_candidate = (
+                        geo_value.get("label")
+                        or geo_value.get("city")
+                        or geo_value.get("country")
+                        or label_value
+                    )
+                    asn_candidate = (
+                        geo_value.get("asn")
+                        or geo_value.get("asn_org")
+                        or geo_value.get("autonomous_system_organization")
+                        or asn_value
+                    )
+                    if ip_candidate and lat_candidate is not None and lon_candidate is not None:
+                        add_point(
+                            ip_candidate,
+                            lat_candidate,
+                            lon_candidate,
+                            label_candidate,
+                            asn_candidate,
+                            current_ts,
+                        )
+                elif isinstance(geo_value, (list, tuple)) and len(geo_value) >= 2 and ip_value:
+                    lat_candidate = _coerce_float(geo_value[0])
+                    lon_candidate = _coerce_float(geo_value[1])
+                    if lat_candidate is not None and lon_candidate is not None:
+                        add_point(ip_value, lat_candidate, lon_candidate, label_value, asn_value, current_ts)
+
+            for map_key in ("geolocations", "locations", "ip_geolocations"):
+                geo_map = node.get(map_key)
+                if isinstance(geo_map, dict):
+                    for raw_ip, geo_details in geo_map.items():
+                        normalized_ip = _normalize_ip(raw_ip)
+                        if isinstance(geo_details, dict):
+                            ip_override = _normalize_ip(
+                                geo_details.get("ip") or geo_details.get("ip_address")
+                            )
+                            lat_candidate = _coerce_float(
+                                geo_details.get("lat") or geo_details.get("latitude")
+                            )
+                            lon_candidate = _coerce_float(
+                                geo_details.get("lon") or geo_details.get("longitude")
+                            )
+                            if lat_candidate is None or lon_candidate is None:
+                                coords = geo_details.get("coordinates")
+                                if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                                    lat_candidate = _coerce_float(coords[0])
+                                    lon_candidate = _coerce_float(coords[1])
+                            label_candidate = (
+                                geo_details.get("label")
+                                or geo_details.get("city")
+                                or geo_details.get("country")
+                            )
+                            asn_candidate = (
+                                geo_details.get("asn")
+                                or geo_details.get("asn_org")
+                                or geo_details.get("autonomous_system_organization")
+                            )
+                            resolved_ip = ip_override or normalized_ip
+                            if resolved_ip and lat_candidate is not None and lon_candidate is not None:
+                                add_point(
+                                    resolved_ip,
+                                    lat_candidate,
+                                    lon_candidate,
+                                    label_candidate,
+                                    asn_candidate,
+                                    current_ts,
+                                )
+
+            candidate_routes: List[Any] = []
+            if isinstance(node.get("flight_routes"), list):
+                candidate_routes.extend(node["flight_routes"])
+            if (
+                node.get("flight")
+                or node.get("identifier")
+                or node.get("callsign")
+                or node.get("call_sign")
+            ) and (
+                isinstance(node.get("path"), list)
+                or node.get("from")
+                or node.get("to")
+            ):
+                candidate_routes.append(node)
+            for candidate in candidate_routes:
+                route = normalize_route(candidate, current_ts)
+                if route:
+                    raw_routes.append(route)
+
+            for key in ("infrastructure_links", "links", "relationships"):
+                payload = node.get(key)
+                if isinstance(payload, list):
+                    for entry in payload:
+                        link = normalize_link(entry, current_ts)
+                        if link:
+                            raw_links.append(link)
+
+            infra_container = node.get("infrastructure")
+            if isinstance(infra_container, dict):
+                maybe_links = infra_container.get("links") or infra_container.get("connections")
+                if isinstance(maybe_links, list):
+                    for entry in maybe_links:
+                        link = normalize_link(entry, current_ts)
+                        if link:
+                            raw_links.append(link)
+
+            data_section = node.get("data")
+            if isinstance(data_section, (dict, list)):
+                walk(data_section, current_ts)
+            else:
+                for child in node.values():
+                    if isinstance(child, (dict, list)):
+                        walk(child, current_ts)
+
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, inherited_ts)
+
+    for record in records:
+        for container_key in ("ai_analysis", "results"):
+            container = record.get(container_key)
+            if isinstance(container, dict):
+                for value in container.values():
+                    walk(value)
+            elif isinstance(container, list):
+                for value in container:
+                    walk(value)
+
+    return (
+        _dedupe_points(raw_points),
+        _dedupe_routes(raw_routes),
+        _dedupe_links(raw_links),
+    )
+
+
+async def _load_investigation_records(user_id: Optional[str]) -> List[Dict[str, Any]]:
+    manager = getattr(app.state, "investigation_manager", None)
+    if not manager or not user_id:
+        return []
+
+    investigations: Any = []
+    try:
+        investigations = await manager.list_investigations(
+            owner_id=user_id,
+            skip=0,
+            limit=50,
+            include_archived=False,
+        )
+        if isinstance(investigations, dict) and "items" in investigations:
+            investigations = investigations["items"]
+    except TypeError:
+        try:
+            investigations = await manager.list_investigations(
+                analyst=user_id,
+                limit=50,
+            )
+        except TypeError:
+            investigations = await manager.list_investigations(limit=50)
+    except Exception as exc:
+        logging.debug("Geo snapshot investigation listing failed: %s", exc)
+        return []
+
+    records: List[Dict[str, Any]] = []
+    if investigations:
+        for item in investigations:
+            normalized = _normalize_investigation_record(item)
+            if normalized:
+                records.append(normalized)
+    return records
 
 
 @app.get("/api/geo")
-async def geo_snapshot():
-    """Return a lightweight snapshot of geospatial intelligence data.
-    Currently returns placeholder points and flight routes for the mapping
-    widget. In future iterations this will aggregate:
-      * Resolved IP geolocations (network / infrastructure module)
-      * Flight paths (aviation intelligence module)
-      * Potential infrastructure relationship lines
+async def geo_snapshot(user_id: Optional[str] = Depends(verify_token)):
+    """Aggregate recent geospatial intelligence for the authenticated analyst."""
 
-    Response schema:
-    {
-      "generated_at": ISO8601,
-      "ip_points": [ { ip, lat, lon, asn, label } ],
-                    "flight_routes": [
-                        {
-                            flight,
-                            from: {icao,lat,lon,city},
-                            to: {...},
-                            path: [[lat,lon],...],
-                            status
-                        }
-                    ]
-    }
-    This endpoint is unauthenticated for rapid internal dashboard rendering.
-    DO NOT expose publicly without access controls.
-    """
-    # Placeholder sample data; coordinates approximate.
-    ip_points = [
-        {
-            "ip": "8.8.8.8",
-            "lat": 37.751,
-            "lon": -97.822,
-            "asn": "AS15169",
-            "label": "Public DNS",
-        },
-        {
-            "ip": "1.1.1.1",
-            "lat": -33.494,
-            "lon": 143.2104,
-            "asn": "AS13335",
-            "label": "Resolver",
-        },
-        {
-            "ip": "203.0.113.10",
-            "lat": 51.509,
-            "lon": -0.118,
-            "asn": "AS64500",
-            "label": "Sample Infra",
-        },
-    ]
+    now = datetime.now(timezone.utc)
+    cache = getattr(app.state, "geo_cache", None)
+    if (
+        isinstance(cache, dict)
+        and cache.get("user_id") == user_id
+        and isinstance(cache.get("expires_at"), datetime)
+        and now < cast(datetime, cache.get("expires_at"))
+        and cache.get("payload")
+    ):
+        return cache["payload"]
 
-    flight_routes = [
-        {
-            "flight": "AB123",
-            "from": {
-                "icao": "KJFK",
-                "lat": 40.6413,
-                "lon": -73.7781,
-                "city": "New York",
-            },
-            "to": {
-                "icao": "EGLL",
-                "lat": 51.4700,
-                "lon": -0.4543,
-                "city": "London",
-            },
-            "path": [
-                [40.6413, -73.7781],
-                [45.0, -50.0],  # Mid-Atlantic waypoint (approx)
-                [51.4700, -0.4543],
-            ],
-            "status": "enroute",
-        }
-    ]
+    records = await _load_investigation_records(user_id)
+    ip_points, flight_routes, infrastructure_links = _collect_geo_artifacts(records)
 
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    payload = {
+        "generated_at": now.isoformat().replace("+00:00", "Z"),
+        "ttl": GEO_CACHE_TTL_SECONDS,
+        "next_refresh": (
+            now + timedelta(seconds=GEO_CACHE_TTL_SECONDS)
+        ).isoformat().replace("+00:00", "Z"),
         "ip_points": ip_points,
         "flight_routes": flight_routes,
+        "infrastructure_links": infrastructure_links,
     }
+
+    app.state.geo_cache = {
+        "user_id": user_id,
+        "expires_at": now + timedelta(seconds=GEO_CACHE_TTL_SECONDS),
+        "payload": payload,
+    }
+
+    return payload
 
 
 @app.post("/api/investigations")
@@ -1477,6 +1980,182 @@ async def start_investigation(
         return {"status": "started", "investigation_id": investigation_id}
     except Exception as e:
         logging.error(f"Failed to start investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/pause")
+async def pause_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Pause an active investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        if status_value != active_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not active and cannot be paused",
+            )
+
+        paused = await manager.pause_investigation(investigation_id)
+        if not paused:
+            raise HTTPException(
+                status_code=500, detail="Unable to pause investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_paused",
+                "status": "paused",
+                "message": "Investigation paused",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "paused",
+            "investigation_id": investigation_id,
+            "message": "Investigation paused successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to pause investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/resume")
+async def resume_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Resume a paused investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value != paused_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not paused and cannot be resumed",
+            )
+
+        resumed = await manager.resume_investigation(investigation_id)
+        if not resumed:
+            raise HTTPException(
+                status_code=500, detail="Unable to resume investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_resumed",
+                "status": "active",
+                "message": "Investigation resumed",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "active",
+            "investigation_id": investigation_id,
+            "message": "Investigation resumed successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to resume investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/stop")
+async def stop_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Hard stop an investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value not in (active_value, paused_value):
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not running or paused and cannot be stopped",
+            )
+
+        stopped = await manager.stop_investigation(investigation_id)
+        if not stopped:
+            raise HTTPException(
+                status_code=500, detail="Unable to stop investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_stopped",
+                "status": "archived",
+                "message": "Investigation stopped",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "archived",
+            "investigation_id": investigation_id,
+            "message": "Investigation stopped successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop investigation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -2971,6 +3650,41 @@ class AutonomousInvestigationRequest(BaseModel):
     max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
 
 
+_autopivot_fallback_lock = asyncio.Lock()
+
+
+async def _get_autopivot_engine() -> Any:
+    """Return the active AI engine or a deterministic offline fallback."""
+
+    engine = getattr(app.state, "ai_engine", None)
+    if engine is not None:
+        return engine
+
+    fallback = getattr(app.state, "_autopivot_engine", None)
+    if fallback is not None:
+        return fallback
+
+    async with _autopivot_fallback_lock:
+        fallback = getattr(app.state, "_autopivot_engine", None)
+        if fallback is None:
+            try:
+                from core.autopivot_fallback import DeterministicAutopivotEngine
+
+                fallback = DeterministicAutopivotEngine()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                fallback = None
+            setattr(app.state, "_autopivot_engine", fallback)
+
+    if fallback is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Autopivot engine unavailable",
+        )
+
+    return fallback
+
+
 @app.post("/api/autopivot/suggest")
 async def suggest_autopivots(
     request: AutopivotRequest,
@@ -2986,8 +3700,10 @@ async def suggest_autopivots(
         if not investigation:
             raise HTTPException(status_code=404, detail="Investigation not found")
 
-        # Get autopivot suggestions from AI engine
-        pivots = await app.state.ai_engine.suggest_autopivots(
+        engine = await _get_autopivot_engine()
+
+        # Get autopivot suggestions from AI engine or deterministic fallback
+        pivots = await engine.suggest_autopivots(
             investigation_data=investigation, max_pivots=request.max_pivots
         )
 
@@ -2998,6 +3714,8 @@ async def suggest_autopivots(
             "generated_at": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autopivot suggestion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -3010,8 +3728,10 @@ async def start_autonomous_investigation(
 ):
     """Start fully autonomous investigation with automatic pivoting"""
     try:
+        engine = await _get_autopivot_engine()
+
         # Execute autonomous investigation
-        result = await app.state.ai_engine.execute_autonomous_investigation(
+        result = await engine.execute_autonomous_investigation(
             initial_target=request.target,
             target_type=request.target_type,
             max_depth=request.max_depth,
@@ -3028,6 +3748,8 @@ async def start_autonomous_investigation(
             "completed_at": result["completed_at"],
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autonomous investigation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,46 +3,49 @@
 
 export const colors = {
   background: {
-    base: '#ffffff',
-    subtle: '#f5f7fa',
-    muted: '#eef2f6',
-    accent: 'linear-gradient(to right, #7e22ce, #2563eb)'
+    base: '#020617',
+    subtle: 'rgba(2, 6, 23, 0.92)',
+    muted: 'rgba(8, 15, 40, 0.78)',
+    gradient: 'linear-gradient(135deg, #010409 0%, #031633 45%, #020617 100%)'
   },
-  surface: {
-    base: '#ffffff',
-    elevated: 'rgba(255,255,255,0.7)',
-    hover: 'rgba(255,255,255,0.85)',
-    border: 'rgba(0,0,0,0.08)'
+  glass: {
+    surface: 'rgba(15, 23, 42, 0.68)',
+    elevated: 'rgba(15, 23, 42, 0.8)',
+    hover: 'rgba(24, 35, 65, 0.88)',
+    border: 'rgba(148, 163, 184, 0.4)',
+    highlight: 'rgba(255, 255, 255, 0.16)'
   },
   text: {
-    primary: '#0f172a',
-    secondary: '#334155',
-    muted: '#64748b',
-    inverse: '#ffffff'
+    primary: '#f8fafc',
+    secondary: '#cbd5f5',
+    muted: '#94a3b8',
+    inverse: '#f8fafc'
   },
-  brand: {
-    purple: '#7e22ce',
-    blue: '#2563eb',
-    gradientFrom: '#7e22ce',
-    gradientTo: '#2563eb'
+  accent: {
+    blue: '#38bdf8',
+    seafoam: '#2dd4bf',
+    silver: '#d1d5db',
+    gold: '#facc15',
+    magenta: '#f472b6'
   },
   status: {
-    success: '#10b981',
-    warning: '#f59e0b',
-    danger: '#ef4444',
-    info: '#3b82f6'
+    success: '#34d399',
+    warning: '#fbbf24',
+    danger: '#f87171',
+    info: '#38bdf8'
   },
   borderRadius: {
-    xs: '3px',
-    sm: '6px',
-    md: '10px',
-    lg: '16px',
-    xl: '24px'
+    xs: '4px',
+    sm: '8px',
+    md: '14px',
+    lg: '20px',
+    xl: '28px'
   },
   shadow: {
-    sm: '0 1px 2px rgba(0,0,0,0.08)',
-    md: '0 4px 12px -2px rgba(0,0,0,0.12)',
-    lg: '0 8px 28px -6px rgba(0,0,0,0.18)'
+    flat: 'none',
+    base: '0 18px 38px -20px rgba(8, 47, 73, 0.85), 0 0 40px -24px rgba(45, 212, 191, 0.45)',
+    hover: '0 24px 50px -20px rgba(2, 132, 199, 0.7), 0 0 60px -30px rgba(250, 204, 21, 0.55)',
+    modal: '0 40px 90px -30px rgba(15, 23, 42, 0.95)'
   }
 };
 

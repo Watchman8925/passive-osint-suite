@@ -564,6 +564,53 @@ class InvestigationManager:
         # Archive investigation
         await self._archive_investigation(investigation_id)
 
+    async def archive_investigation(self, investigation_id: str) -> Dict[str, Any]:
+        """Public wrapper to archive an investigation and update metadata."""
+
+        investigation = await self.get_investigation(investigation_id)
+        if not investigation:
+            raise ValueError("Investigation not found")
+
+        # If already archived, return existing metadata without duplicating work
+        if investigation.status == InvestigationStatus.ARCHIVED:
+            archived_at = investigation.metadata.get("archived_at")
+            return {
+                "investigation_id": investigation_id,
+                "status": InvestigationStatus.ARCHIVED.value,
+                "archived_at": archived_at,
+            }
+
+        now = datetime.now()
+        investigation.status = InvestigationStatus.ARCHIVED
+        investigation.metadata = dict(investigation.metadata or {})
+        investigation.metadata["archived_at"] = now.isoformat()
+        lifecycle = investigation.metadata.get("lifecycle")
+        if not isinstance(lifecycle, dict):
+            lifecycle = {}
+            investigation.metadata["lifecycle"] = lifecycle
+        lifecycle["archived_at"] = now.isoformat()
+
+        # Persist updated investigation prior to moving it to the archive folder
+        await self._save_investigation(investigation)
+
+        # Move serialized representation to archive storage
+        await self._archive_investigation(investigation_id)
+
+        await self._log_action(
+            action="investigation_archived",
+            details={
+                "investigation_id": investigation_id,
+                "name": investigation.name,
+                "archived_at": now.isoformat(),
+            },
+        )
+
+        return {
+            "investigation_id": investigation_id,
+            "status": InvestigationStatus.ARCHIVED.value,
+            "archived_at": now.isoformat(),
+        }
+
     async def _fail_investigation(self, investigation_id: str, error: str):
         """Mark investigation as failed"""
         investigation = self.investigations[investigation_id]
@@ -621,6 +668,14 @@ class InvestigationManager:
         investigation.status = InvestigationStatus.PAUSED
         await self._save_investigation(investigation)
 
+        await self._log_action(
+            action="investigation_paused",
+            details={
+                "investigation_id": investigation_id,
+                "name": investigation.name,
+            },
+        )
+
         return True
 
     async def resume_investigation(self, investigation_id: str) -> bool:
@@ -638,6 +693,44 @@ class InvestigationManager:
 
         # Resume task execution
         asyncio.create_task(self._execute_investigation(investigation_id))
+
+        await self._log_action(
+            action="investigation_resumed",
+            details={
+                "investigation_id": investigation_id,
+                "name": investigation.name,
+            },
+        )
+
+        return True
+
+    async def stop_investigation(self, investigation_id: str) -> bool:
+        """Hard stop (archive) a running or paused investigation"""
+        investigation = await self.get_investigation(investigation_id)
+        if not investigation:
+            return False
+
+        if investigation.status not in (
+            InvestigationStatus.ACTIVE,
+            InvestigationStatus.PAUSED,
+        ):
+            return False
+
+        investigation.status = InvestigationStatus.ARCHIVED
+        investigation.completed_at = datetime.now()
+        await self._save_investigation(investigation)
+
+        await self._archive_investigation(
+            investigation_id, destination="archived"
+        )
+
+        await self._log_action(
+            action="investigation_stopped",
+            details={
+                "investigation_id": investigation_id,
+                "name": investigation.name,
+            },
+        )
 
         return True
 
@@ -766,12 +859,19 @@ class InvestigationManager:
             logger.error(f"Failed to load investigation {investigation_id}: {e}")
             return None
 
-    async def _archive_investigation(self, investigation_id: str):
-        """Archive completed investigation"""
+    async def _archive_investigation(
+        self, investigation_id: str, destination: str = "completed"
+    ):
+        """Archive an investigation to the specified destination folder."""
         source_path = self.storage_path / "active" / f"{investigation_id}.json"
-        dest_path = self.storage_path / "completed" / f"{investigation_id}.json"
+        dest_path = self.storage_path / "archived" / f"{investigation_id}.json"
+        dest_dir = self.storage_path / destination
+        dest_dir.mkdir(exist_ok=True)
+        dest_path = dest_dir / f"{investigation_id}.json"
 
         if source_path.exists():
+            if dest_path.exists():
+                dest_path.unlink()
             source_path.rename(dest_path)
 
     async def _log_action(self, action: str, details: Dict[str, Any]) -> None:
