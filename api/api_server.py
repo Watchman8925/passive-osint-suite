@@ -2971,6 +2971,41 @@ class AutonomousInvestigationRequest(BaseModel):
     max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
 
 
+_autopivot_fallback_lock = asyncio.Lock()
+
+
+async def _get_autopivot_engine() -> Any:
+    """Return the active AI engine or a deterministic offline fallback."""
+
+    engine = getattr(app.state, "ai_engine", None)
+    if engine is not None:
+        return engine
+
+    fallback = getattr(app.state, "_autopivot_engine", None)
+    if fallback is not None:
+        return fallback
+
+    async with _autopivot_fallback_lock:
+        fallback = getattr(app.state, "_autopivot_engine", None)
+        if fallback is None:
+            try:
+                from core.autopivot_fallback import DeterministicAutopivotEngine
+
+                fallback = DeterministicAutopivotEngine()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                fallback = None
+            setattr(app.state, "_autopivot_engine", fallback)
+
+    if fallback is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Autopivot engine unavailable",
+        )
+
+    return fallback
+
+
 @app.post("/api/autopivot/suggest")
 async def suggest_autopivots(
     request: AutopivotRequest,
@@ -2986,8 +3021,10 @@ async def suggest_autopivots(
         if not investigation:
             raise HTTPException(status_code=404, detail="Investigation not found")
 
-        # Get autopivot suggestions from AI engine
-        pivots = await app.state.ai_engine.suggest_autopivots(
+        engine = await _get_autopivot_engine()
+
+        # Get autopivot suggestions from AI engine or deterministic fallback
+        pivots = await engine.suggest_autopivots(
             investigation_data=investigation, max_pivots=request.max_pivots
         )
 
@@ -2998,6 +3035,8 @@ async def suggest_autopivots(
             "generated_at": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autopivot suggestion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -3010,8 +3049,10 @@ async def start_autonomous_investigation(
 ):
     """Start fully autonomous investigation with automatic pivoting"""
     try:
+        engine = await _get_autopivot_engine()
+
         # Execute autonomous investigation
-        result = await app.state.ai_engine.execute_autonomous_investigation(
+        result = await engine.execute_autonomous_investigation(
             initial_target=request.target,
             target_type=request.target_type,
             max_depth=request.max_depth,
@@ -3028,6 +3069,8 @@ async def start_autonomous_investigation(
             "completed_at": result["completed_at"],
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autonomous investigation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
