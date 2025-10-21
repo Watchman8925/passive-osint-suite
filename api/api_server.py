@@ -37,9 +37,13 @@ from utils.transport import get_tor_status
 from pydantic import BaseModel, Field  # type: ignore
 
 try:
-    from investigations.investigation_manager import InvestigationManager  # type: ignore
+    from investigations.investigation_manager import (  # type: ignore
+        InvestigationManager,
+        InvestigationStatus,
+    )
 except Exception:  # pragma: no cover - optional advanced manager
     InvestigationManager = None
+    InvestigationStatus = None  # type: ignore
 from database.graph_database import GraphDatabaseAdapter
 
 # OSINT Module Registry
@@ -1477,6 +1481,182 @@ async def start_investigation(
         return {"status": "started", "investigation_id": investigation_id}
     except Exception as e:
         logging.error(f"Failed to start investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/pause")
+async def pause_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Pause an active investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        if status_value != active_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not active and cannot be paused",
+            )
+
+        paused = await manager.pause_investigation(investigation_id)
+        if not paused:
+            raise HTTPException(
+                status_code=500, detail="Unable to pause investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_paused",
+                "status": "paused",
+                "message": "Investigation paused",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "paused",
+            "investigation_id": investigation_id,
+            "message": "Investigation paused successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to pause investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/resume")
+async def resume_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Resume a paused investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value != paused_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not paused and cannot be resumed",
+            )
+
+        resumed = await manager.resume_investigation(investigation_id)
+        if not resumed:
+            raise HTTPException(
+                status_code=500, detail="Unable to resume investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_resumed",
+                "status": "active",
+                "message": "Investigation resumed",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "active",
+            "investigation_id": investigation_id,
+            "message": "Investigation resumed successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to resume investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/stop")
+async def stop_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Hard stop an investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value not in (active_value, paused_value):
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not running or paused and cannot be stopped",
+            )
+
+        stopped = await manager.stop_investigation(investigation_id)
+        if not stopped:
+            raise HTTPException(
+                status_code=500, detail="Unable to stop investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_stopped",
+                "status": "archived",
+                "message": "Investigation stopped",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "archived",
+            "investigation_id": investigation_id,
+            "message": "Investigation stopped successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop investigation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -2971,6 +3151,41 @@ class AutonomousInvestigationRequest(BaseModel):
     max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
 
 
+_autopivot_fallback_lock = asyncio.Lock()
+
+
+async def _get_autopivot_engine() -> Any:
+    """Return the active AI engine or a deterministic offline fallback."""
+
+    engine = getattr(app.state, "ai_engine", None)
+    if engine is not None:
+        return engine
+
+    fallback = getattr(app.state, "_autopivot_engine", None)
+    if fallback is not None:
+        return fallback
+
+    async with _autopivot_fallback_lock:
+        fallback = getattr(app.state, "_autopivot_engine", None)
+        if fallback is None:
+            try:
+                from core.autopivot_fallback import DeterministicAutopivotEngine
+
+                fallback = DeterministicAutopivotEngine()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                fallback = None
+            setattr(app.state, "_autopivot_engine", fallback)
+
+    if fallback is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Autopivot engine unavailable",
+        )
+
+    return fallback
+
+
 @app.post("/api/autopivot/suggest")
 async def suggest_autopivots(
     request: AutopivotRequest,
@@ -2986,15 +3201,11 @@ async def suggest_autopivots(
         if not investigation:
             raise HTTPException(status_code=404, detail="Investigation not found")
 
-        ai_engine = getattr(app.state, "ai_engine", None)
-        if not ai_engine or not hasattr(ai_engine, "suggest_autopivots"):
-            raise HTTPException(status_code=503, detail="Autopivot engine unavailable")
+        engine = await _get_autopivot_engine()
 
-        # Get autopivot suggestions from AI engine
-        pivots = await ai_engine.suggest_autopivots(
-            investigation_data=investigation,
-            max_pivots=request.max_pivots,
-            store=app.state.investigation_manager,
+        # Get autopivot suggestions from AI engine or deterministic fallback
+        pivots = await engine.suggest_autopivots(
+            investigation_data=investigation, max_pivots=request.max_pivots
         )
 
         return {
@@ -3004,6 +3215,8 @@ async def suggest_autopivots(
             "generated_at": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autopivot suggestion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -3016,8 +3229,10 @@ async def start_autonomous_investigation(
 ):
     """Start fully autonomous investigation with automatic pivoting"""
     try:
+        engine = await _get_autopivot_engine()
+
         # Execute autonomous investigation
-        result = await app.state.ai_engine.execute_autonomous_investigation(
+        result = await engine.execute_autonomous_investigation(
             initial_target=request.target,
             target_type=request.target_type,
             max_depth=request.max_depth,
@@ -3034,6 +3249,8 @@ async def start_autonomous_investigation(
             "completed_at": result["completed_at"],
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autonomous investigation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

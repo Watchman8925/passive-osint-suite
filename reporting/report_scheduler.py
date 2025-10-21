@@ -83,8 +83,13 @@ class ReportScheduler:
         try:
             logger.info(f"Executing scheduled report: {schedule.name}")
 
-            # Generate mock investigation data (in real implementation, this would fetch from database)
-            investigation_data = self._generate_mock_investigation_data(schedule)
+            investigation_data = self._load_investigation_dataset(schedule)
+            if not investigation_data:
+                logger.warning(
+                    "Skipping scheduled report %s: no investigation data found",
+                    schedule.name,
+                )
+                return
 
             # Generate report
             if schedule.template == "executive_summary":
@@ -92,20 +97,9 @@ class ReportScheduler:
                     investigation_data
                 )
             else:
-                report_data = {
-                    "investigation_id": f"scheduled_{schedule.report_id}_{datetime.now().strftime('%Y%m%d')}",
-                    "generated_at": datetime.now().isoformat(),
-                    "title": schedule.name,
-                    "executive_summary": f"Scheduled {schedule.frequency} intelligence report",
-                    "key_findings": [
-                        "Automated intelligence gathering",
-                        "Scheduled analysis delivery",
-                    ],
-                    "recommendations": [
-                        "Review report contents",
-                        "Take appropriate security actions",
-                    ],
-                }
+                report_data = self.reporting_engine.generate_technical_report(
+                    investigation_data
+                )
 
             # Generate PDF
             pdf_filename = (
@@ -124,29 +118,24 @@ class ReportScheduler:
         except Exception as e:
             logger.error(f"Failed to execute scheduled report {schedule.name}: {e}")
 
-    def _generate_mock_investigation_data(self, schedule: ReportSchedule) -> Dict:
-        """Generate mock investigation data for scheduled reports"""
-        # In a real implementation, this would fetch actual investigation data
-        # based on the schedule filters and date ranges
-        return {
-            "investigation_id": f"scheduled_{schedule.report_id}",
-            "targets": schedule.filters.get("targets", ["example.com"]),
-            "domain_data": {
-                "subdomains_found": 15,
-                "recent_registrations": False,
-                "suspicious_patterns": ["suspicious-domain-pattern"],
-            },
-            "ip_data": {
-                "blacklisted_ips": 2,
-                "geographic_distribution": {"US": 5, "EU": 3},
-                "cloud_providers": ["AWS", "Azure"],
-            },
-            "breach_data": {
-                "total_breaches": 3,
-                "recent_breaches": [{"date": "2024-01-15", "source": "Example Breach"}],
-            },
-            "social_data": {"total_profiles": 8, "recent_activity": True},
-        }
+    def _load_investigation_dataset(self, schedule: ReportSchedule) -> Dict:
+        """Load real investigation data for the scheduled report."""
+
+        investigation_id = schedule.filters.get("investigation_id")
+        if not investigation_id:
+            logger.warning(
+                "Scheduled report %s missing investigation_id filter", schedule.name
+            )
+            return {}
+
+        dataset = self.reporting_engine.build_dataset(investigation_id)
+        if dataset:
+            return dataset
+
+        logger.warning(
+            "Investigation %s has no recorded data for reporting", investigation_id
+        )
+        return {}
 
     async def _send_report_email(self, pdf_path: str, schedule: ReportSchedule):
         """Send report via email"""

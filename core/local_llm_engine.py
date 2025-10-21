@@ -20,14 +20,18 @@ Features:
 """
 
 import asyncio
+import json
 import logging
 import os
 import subprocess
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests  # type: ignore
+
+from core.autonomous_pipeline import AutonomousInvestigationEngine
 
 # Local LLM backends
 try:
@@ -85,6 +89,7 @@ class LocalLLMEngine:
 
     def __init__(self, config: Optional[Dict] = None):
         self.config = config or {}
+        self.force_backend = self.config.get("force_backend")
         self.available_backends = self._detect_backends()
         self.active_backend = None
         self.models: Dict[str, Any] = {}
@@ -94,6 +99,16 @@ class LocalLLMEngine:
 
         # Initialize the best available backend
         self._initialize_backend()
+
+        if not self.active_backend:
+            # Always provide a functional fallback so higher level features stay usable
+            self.active_backend = "rule_based"
+            logger.info(
+                "Falling back to rule-based heuristics for local LLM operations"
+            )
+
+        # Evidence-driven autonomous investigation pipeline
+        self.autonomous_engine = AutonomousInvestigationEngine()
 
     def _detect_backends(self) -> Dict[str, bool]:
         """Detect available local LLM backends."""
@@ -212,23 +227,55 @@ class LocalLLMEngine:
 
     def _initialize_backend(self):
         """Initialize the best available backend."""
-        if self.available_backends["perplexity"]:
-            self.active_backend = "perplexity"
-            self._setup_perplexity()
-        elif self.available_backends["openai"]:
-            self.active_backend = "openai"
-            self._setup_openai()
-        elif self.available_backends["ollama"]:
-            self.active_backend = "ollama"
-            self._setup_ollama()
-        elif self.available_backends["transformers"]:
+        if self.force_backend:
+            logger.info(f"Force-initializing backend: {self.force_backend}")
+            self._initialize_specific_backend(self.force_backend)
+            return
+
+        if self.available_backends.get("transformers"):
             self.active_backend = "transformers"
             self._setup_transformers()
-        elif self.available_backends["llamacpp"]:
+        elif self.available_backends.get("ollama"):
+            self.active_backend = "ollama"
+            self._setup_ollama()
+        elif self.available_backends.get("llamacpp"):
             self.active_backend = "llamacpp"
             self._setup_llamacpp()
+        elif self.available_backends.get("perplexity"):
+            self.active_backend = "perplexity"
+            self._setup_perplexity()
+        elif self.available_backends.get("openai"):
+            self.active_backend = "openai"
+            self._setup_openai()
         else:
-            logger.warning("No LLM backends available. API keys may be missing.")
+            logger.warning(
+                "No advanced LLM backends available. Falling back to heuristic responses."
+            )
+
+    def _initialize_specific_backend(self, backend: str) -> None:
+        """Initialize a specific backend, used when force_backend is provided."""
+
+        initializer_map = {
+            "transformers": self._setup_transformers,
+            "ollama": self._setup_ollama,
+            "llamacpp": self._setup_llamacpp,
+            "perplexity": self._setup_perplexity,
+            "openai": self._setup_openai,
+            "rule_based": lambda: None,
+        }
+
+        if backend not in initializer_map:
+            raise ValueError(f"Unsupported backend requested: {backend}")
+
+        if backend != "rule_based" and not self.available_backends.get(backend, False):
+            logger.warning(
+                f"Requested backend '{backend}' not available. Using heuristic mode instead."
+            )
+            self.active_backend = "rule_based"
+            return
+
+        self.active_backend = backend
+        initializer_map[backend]()
 
     def _get_perplexity_api_key(self) -> str:
         """Get Perplexity API key from config or environment."""
@@ -700,6 +747,8 @@ class LocalLLMEngine:
                 response = await self._query_transformers(prompt, model)
             elif self.active_backend == "llamacpp":
                 response = await self._query_llamacpp(prompt, model)
+            elif self.active_backend == "rule_based":
+                response = await self._query_rule_based(prompt)
             else:
                 raise RuntimeError("No active LLM backend available")
 
@@ -716,6 +765,24 @@ class LocalLLMEngine:
         except Exception as e:
             logger.error(f"LLM query failed: {e}")
             raise
+
+    async def _query_rule_based(self, prompt: str) -> str:
+        """Provide deterministic heuristic output when no model backend is available."""
+
+        def summarize() -> str:
+            lines = [line.strip() for line in prompt.splitlines() if line.strip()]
+            if not lines:
+                return "No input provided."
+
+            summary = " ".join(lines[-5:])
+            summary = summary[:400]
+            return (
+                "Heuristic analysis: "
+                + summary
+                + ("..." if len(summary) == 400 else "")
+            )
+
+        return await asyncio.to_thread(summarize)
 
     async def _query_ollama(self, prompt: str, model: Optional[str] = None) -> str:
         """Query Ollama backend."""
@@ -1248,6 +1315,118 @@ Targets: {", ".join(targets) if targets else "None specified"}
         """Analyze intelligence data using LLM (alias for analyze_investigation)."""
         return await self.analyze_investigation(
             intelligence_data, analysis_type, context, include_raw_data=True
+        )
+
+    # ------------------------------------------------------------------
+    # Autopivot support
+    # ------------------------------------------------------------------
+
+    def _normalize_investigation(
+        self, investigation_data: Any
+    ) -> Dict[str, Any]:
+        """Normalize investigation structures into dictionaries."""
+
+        if isinstance(investigation_data, dict):
+            return investigation_data
+
+        if hasattr(investigation_data, "dict"):
+            try:
+                return investigation_data.dict()
+            except Exception:  # pragma: no cover - depends on pydantic availability
+                pass
+
+        if hasattr(investigation_data, "__dict__"):
+            try:
+                return asdict(investigation_data)
+            except Exception:
+                return dict(vars(investigation_data))
+
+        return {"data": investigation_data}
+
+    def _collect_result_text(self, results: Any) -> str:
+        """Flatten nested results into a searchable text blob."""
+
+        fragments: List[str] = []
+
+        if isinstance(results, dict):
+            for value in results.values():
+                fragments.append(self._collect_result_text(value))
+        elif isinstance(results, list):
+            for value in results:
+                fragments.append(self._collect_result_text(value))
+        elif isinstance(results, str):
+            fragments.append(results)
+        elif results is not None:
+            fragments.append(str(results))
+
+        return " \n".join([fragment for fragment in fragments if fragment])
+
+    def _infer_target_type(self, target: str) -> str:
+        if re.match(r"^\d{1,3}(?:\.\d{1,3}){3}$", target):
+            return "ip"
+        if re.match(r"^[0-9a-fA-F:]+$", target) and ":" in target:
+            return "ip"
+        if re.match(r"^.+@.+\..+$", target):
+            return "email"
+        if target.startswith("@"):
+            return "username"
+        if re.match(r"^[A-Za-z0-9._-]+\.[A-Za-z]{2,}$", target):
+            return "domain"
+        if re.match(r"^[A-Za-z0-9._-]+$", target):
+            return "username"
+        return "keyword"
+
+    async def suggest_autopivots(
+        self, investigation_data: Dict[str, Any], max_pivots: int = 5
+    ) -> List[Dict[str, Any]]:
+        normalized = self._normalize_investigation(investigation_data)
+
+        investigation_id = (
+            normalized.get("id")
+            or normalized.get("investigation_id")
+            or normalized.get("uuid")
+        )
+        if not investigation_id:
+            raise ValueError("Investigation identifier is required for autopivoting")
+
+        name = normalized.get("name") or f"Investigation {investigation_id}"
+        self.autonomous_engine.ensure_investigation(investigation_id, name)
+
+        existing_findings = self.autonomous_engine.tracker.get_all_findings(
+            investigation_id
+        )
+
+        if not existing_findings:
+            targets = normalized.get("targets") or []
+            if isinstance(targets, str):
+                targets = [targets]
+
+            for target in targets:
+                target_type = self._infer_target_type(target)
+                await self.autonomous_engine.collect_and_plan(
+                    investigation_id,
+                    target,
+                    target_type,
+                    max_pivots=max_pivots,
+                )
+
+        return await self.autonomous_engine.suggest_pivots(
+            investigation_id, max_pivots=max_pivots
+        )
+
+    async def execute_autonomous_investigation(
+        self,
+        initial_target: str,
+        target_type: str,
+        max_depth: int = 3,
+        max_pivots_per_level: int = 3,
+    ) -> Dict[str, Any]:
+        inferred_type = target_type or self._infer_target_type(initial_target)
+        return await self.autonomous_engine.execute_autonomous_investigation(
+            initial_target,
+            inferred_type,
+            max_depth=max_depth,
+            max_pivots_per_level=max_pivots_per_level,
         )
 
 
