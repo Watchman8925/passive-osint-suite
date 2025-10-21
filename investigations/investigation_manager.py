@@ -483,7 +483,7 @@ class InvestigationManager:
             raise ValueError(f"Module '{module_name}' is not available in MODULE_REGISTRY")
 
         module_class = module_info["class"]
-        module_instance = module_class()
+        module_instance = module_class(self.secrets_manager)
 
         targets = task.targets
         parameters = task.parameters
