@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -16,9 +16,11 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
+import { saveAs } from 'file-saver';
+import toast from 'react-hot-toast';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { osintAPI } from '../../services/osintAPI';
+import { exportService, ExportOptions } from '../../services/exportService';
 
 export interface InvestigationResult {
   id: string;
@@ -144,7 +146,6 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({ investigati
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(false);
 
   const filteredResults = results.filter(result => {
     if (investigationId && result.investigation_id !== investigationId) return false;
@@ -161,14 +162,58 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({ investigati
     return matchesSearch && matchesStatus && matchesModule;
   });
 
-  const handleExport = async (result: InvestigationResult, format: 'json' | 'csv' | 'pdf') => {
-    try {
-      // Implementation will be added in export functionality
-      console.log(`Exporting result ${result.id} as ${format}`);
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
-  };
+  const [activeExportKey, setActiveExportKey] = useState<string | null>(null);
+
+  const isExporting = useCallback(
+    (resultId: string, format: ExportOptions['format']) => activeExportKey === `${resultId}:${format}`,
+    [activeExportKey]
+  );
+
+  const handleExport = useCallback(
+    async (result: InvestigationResult, format: ExportOptions['format']) => {
+      const exportKey = `${result.id}:${format}`;
+      try {
+        setActiveExportKey(exportKey);
+        const exportResult = await exportService.exportResult(result, {
+          format,
+          includeMetadata: true,
+          includeRawData: true,
+        });
+
+        if (!exportResult.success || (!exportResult.blob && !exportResult.downloadUrl)) {
+          toast.error(exportResult.error || `Unable to export result as ${format.toUpperCase()}`);
+          return;
+        }
+
+        const filename =
+          exportResult.filename ||
+          `result_${result.id}.${format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : format}`;
+
+        if (exportResult.blob) {
+          saveAs(exportResult.blob, filename);
+        } else if (exportResult.downloadUrl) {
+          const link = document.createElement('a');
+          link.href = exportResult.downloadUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (exportResult.downloadUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(exportResult.downloadUrl);
+          }
+        }
+
+        toast.success(`Exported result as ${format.toUpperCase()}`);
+      } catch (error) {
+        console.error('Export failed:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to export result: ${message}`);
+      } finally {
+        setActiveExportKey(prev => (prev === exportKey ? null : prev));
+      }
+    },
+    []
+  );
 
   const handleVisualize = (result: InvestigationResult) => {
     // Implementation will be added in visualization functionality
@@ -329,8 +374,17 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({ investigati
                   size="sm"
                   variant="outline"
                   onClick={() => handleExport(result, 'json')}
+                  disabled={isExporting(result.id, 'json')}
+                  aria-label={`Export ${result.investigation_name} as JSON`}
                 >
-                  <DocumentArrowDownIcon className="w-4 h-4" />
+                  {isExporting(result.id, 'json') ? (
+                    <span className="flex items-center gap-2 text-xs">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Exporting
+                    </span>
+                  ) : (
+                    <DocumentArrowDownIcon className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             </motion.div>
@@ -443,14 +497,32 @@ const ResultDetailModal: React.FC<ResultDetailModalProps> = ({ result, isOpen, o
 
           {/* Export Options */}
           <div className="flex space-x-4">
-            <Button onClick={() => console.log('Export JSON')}>
-              Export JSON
+            <Button
+              onClick={() => handleExport(result, 'json')}
+              disabled={isExporting(result.id, 'json')}
+            >
+              {isExporting(result.id, 'json') ? 'Exporting JSON…' : 'Export JSON'}
             </Button>
-            <Button variant="outline" onClick={() => console.log('Export CSV')}>
-              Export CSV
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'csv')}
+              disabled={isExporting(result.id, 'csv')}
+            >
+              {isExporting(result.id, 'csv') ? 'Exporting CSV…' : 'Export CSV'}
             </Button>
-            <Button variant="outline" onClick={() => console.log('Export PDF')}>
-              Export PDF
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'pdf')}
+              disabled={isExporting(result.id, 'pdf')}
+            >
+              {isExporting(result.id, 'pdf') ? 'Exporting PDF…' : 'Export PDF'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'excel')}
+              disabled={isExporting(result.id, 'excel')}
+            >
+              {isExporting(result.id, 'excel') ? 'Exporting Excel…' : 'Export Excel'}
             </Button>
             <Button variant="outline" onClick={() => console.log('Visualize')}>
               <ChartBarIcon className="w-4 h-4 mr-2" />
