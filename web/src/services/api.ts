@@ -46,7 +46,17 @@ class APIClient {
 
   // Authentication
   async login(credentials: { username: string; password: string }) {
-    const response = await this.client.post('/auth/login', credentials);
+    let response;
+    try {
+      response = await this.client.post('/auth/login', credentials);
+    } catch (error: any) {
+      // If the endpoint does not exist, try the old path
+      if (error.response && (error.response.status === 404 || error.response.status === 405)) {
+        response = await this.client.post('/api/auth/login', credentials);
+      } else {
+        throw error;
+      }
+    }
     const { access_token } = response.data ?? {};
     if (!access_token) {
       throw new Error('Authentication response did not include an access token');
