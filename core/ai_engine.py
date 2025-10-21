@@ -955,7 +955,10 @@ class OSINTAIEngine:
             entry = aggregated[key]
             entry["finding_ids"].append(finding.id)
             entry["source_modules"].add(finding.source_module)
-            entry["confidence"].append(float(getattr(finding, "confidence", 0.6) if getattr(finding, "confidence", None) is not None else 0.6))
+            confidence_value = getattr(finding, "confidence", None)
+            if confidence_value is None:
+                confidence_value = 0.6
+            entry["confidence"].append(float(confidence_value))
             entry["graph_degree"] = max(entry["graph_degree"], graph_degrees.get(key, 0))
 
         # include graph entities not already captured by findings
