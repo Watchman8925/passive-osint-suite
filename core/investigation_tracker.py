@@ -276,7 +276,7 @@ class InvestigationTracker:
             elif existing[1] == "high" or priority == "high":
                 new_priority = "high"
 
-            current_count = existing[2] if isinstance(existing[2], (int, float)) else 0
+            current_count = existing[2]
             cursor.execute(
                 """
                 UPDATE leads
