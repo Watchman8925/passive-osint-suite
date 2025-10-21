@@ -1037,7 +1037,7 @@ def _tor_control_command(
         refreshed_status = get_tor_status()
         return (
             False,
-            f"Unable to {action.replace('_', ' ')}: {exc}",
+            f"Unable to {action.replace('_', ' ')} due to an internal error.",
             refreshed_status,
             500,
         )
