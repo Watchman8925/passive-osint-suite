@@ -118,7 +118,7 @@ def test_autopivot_endpoint_returns_evidence_based_pivots(tmp_path, tracker):
         assert updated is not None
         assert updated.get("pending_pivot_rescore") is False
         pivot_scores = updated.get("pivot_scores", {})
-        assert "example.com" in pivot_scores.keys()
+        assert "example.com" in pivot_scores
         assert pivot_scores["example.com"]["score"] == pivots[0]["confidence"]
 
     asyncio.run(_run())
