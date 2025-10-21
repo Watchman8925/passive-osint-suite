@@ -212,7 +212,7 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({ investigati
         setActiveExportKey(prev => (prev === exportKey ? null : prev));
       }
     },
-    []
+    [exportService, toast, saveAs]
   );
 
   const handleVisualize = (result: InvestigationResult) => {
