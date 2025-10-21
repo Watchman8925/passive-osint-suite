@@ -19,13 +19,13 @@ from evidence.store import EvidenceStore
 
 @pytest.fixture
 def tracker(tmp_path):
-    tracker_module._tracker_instance = tracker_module.InvestigationTracker(  # type: ignore[attr-defined]
+    tracker_module.set_tracker_instance(tracker_module.InvestigationTracker(
         storage_path=str(tmp_path / "tracker")
-    )
+    ))
     try:
         yield tracker_module._tracker_instance
     finally:
-        tracker_module._tracker_instance = None  # type: ignore[attr-defined]
+        tracker_module.clear_tracker_instance()
 
 
 async def _prepare_investigation(tmp_path, tracker):
