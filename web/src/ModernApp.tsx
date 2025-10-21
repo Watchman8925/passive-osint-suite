@@ -865,7 +865,7 @@ const ModernApp = () => {
                         ].map((inv) => (
                         <div key={inv.id} className="flex items-center space-x-4 p-4 glass border border-[var(--glass-border)]/70 rounded-2xl hover:bg-[var(--glass-hover)] transition-colors">
                             <div className={`w-3 h-3 rounded-full ${
-                              inv.status === 'active' ? 'bg-[var(--glass-surface)]0' : 'bg-[var(--glass-surface)]0'
+                              inv.status === 'active' ? 'bg-[var(--accent-blue)]' : 'bg-[var(--accent-seafoam)]'
                             }`}></div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
