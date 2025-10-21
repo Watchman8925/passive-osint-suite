@@ -45,7 +45,7 @@ export const Card: React.FC<CardProps> = ({
       style={surfaceStyle}
     >
       {(title || actions) && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--glass-border)]/70">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--glass-border)]/70">
           {title && <h3 className="text-sm font-semibold text-[var(--text-secondary)]">{title}</h3>}
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
