@@ -174,7 +174,7 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
     try {
       const response = await apiClient.get<APIModuleInfo[]>('/api/modules');
       const moduleList = Array.isArray(response) ? response : [];
-      const transformed = moduleList.map(buildModule).sort((a, b) => a.displayName.localeCompare(b.displayName));
+      const transformed = moduleList.map(buildModule);
       setModules(transformed);
     } catch (err) {
       setError(extractErrorMessage(err));
