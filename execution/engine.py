@@ -10,6 +10,7 @@ from capabilities import REGISTRY
 from evidence.store import EvidenceStore, get_default_store
 from graph import GraphAdapter, get_default_graph
 from investigation_adapter import PersistentInvestigationStore
+from core.investigation_tracker import get_investigation_tracker
 from planner import Plan, PlannedTask, Planner
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,11 @@ class ExecutionEngine:
                 )
                 evidence_ids.append(rec.evidence_id)
             # Graph updates
+            try:
+                tracker = get_investigation_tracker()
+            except Exception:
+                tracker = None
+            tracker_finding_ids: List[str] = []
             for ent in result.produced_entities:
                 etype = ent.get("type") or "entity"
                 key = (
@@ -144,7 +150,33 @@ class ExecutionEngine:
                     or str(hash(frozenset(ent.items())))
                 )
                 props = {k: v for k, v in ent.items() if k not in ("type", "value")}
+                props.setdefault("investigation_id", investigation_id)
                 self.graph.upsert_entity(etype, key, props)
+                if tracker:
+                    value = ent.get("value") or ent.get("domain") or ent.get("subject")
+                    if value is None:
+                        continue
+                    try:
+                        confidence = float(ent.get("confidence", 0.6))
+                    except (TypeError, ValueError):
+                        confidence = 0.6
+                    confidence = max(0.0, min(confidence, 1.0))
+                    metadata = {k: v for k, v in ent.items() if k != "type"}
+                    metadata["task_id"] = task.id
+                    metadata["investigation_id"] = investigation_id
+                    try:
+                        fid = tracker.add_finding(
+                            investigation_id=investigation_id,
+                            finding_type=str(etype),
+                            value=str(value),
+                            source_module=task.capability_id or "unknown",
+                            confidence=confidence,
+                            metadata=metadata,
+                        )
+                        if fid:
+                            tracker_finding_ids.append(fid)
+                    except Exception as tracker_error:  # pragma: no cover - tracker best-effort
+                        logger.debug(f"Tracker add finding failed: {tracker_error}")
             for rel in result.produced_relationships:
                 try:
                     source = rel.get("source")  # expected (type,key)
@@ -153,7 +185,9 @@ class ExecutionEngine:
                     if isinstance(source, (list, tuple)) and isinstance(
                         target, (list, tuple)
                     ):
-                        self.graph.link(tuple(source), tuple(target), rel_type, {})
+                        rel_props = dict(rel.get("properties", {}))
+                        rel_props.setdefault("investigation_id", investigation_id)
+                        self.graph.link(tuple(source), tuple(target), rel_type, rel_props)
                 except Exception as e:  # pragma: no cover
                     logger.warning(f"Relationship add failed: {e}")
             task.status = "completed" if result.success else "failed"
@@ -163,7 +197,7 @@ class ExecutionEngine:
                 investigation_id,
                 task,
             )
-            return ExecutionResult(
+            exec_result = ExecutionResult(
                 task_id=task.id,
                 success=result.success,
                 error=result.error,
@@ -171,12 +205,28 @@ class ExecutionEngine:
                 produced_relationships=result.produced_relationships,
                 evidence_ids=evidence_ids,
             )
+            if hasattr(self.store, "record_task_output"):
+                try:
+                    await self.store.record_task_output(
+                        investigation_id=investigation_id,
+                        capability_id=task.capability_id or "unknown",
+                        task_id=task.id,
+                        success=result.success,
+                        produced_entities=result.produced_entities,
+                        produced_relationships=result.produced_relationships,
+                        evidence_ids=evidence_ids,
+                        findings=tracker_finding_ids,
+                        error=result.error,
+                    )
+                except Exception as store_error:  # pragma: no cover - persistence best effort
+                    logger.error(f"Failed to persist task output: {store_error}")
+            return exec_result
         except Exception as e:
             task.status = "failed"
             self._persist_plan(plan)
             self._emit("task_failed", investigation_id, task, extra={"error": str(e)})
             logger.error(f"Execution failed for {task.capability_id}: {e}")
-            return ExecutionResult(
+            exec_result = ExecutionResult(
                 task_id=task.id,
                 success=False,
                 error=str(e),
@@ -184,6 +234,22 @@ class ExecutionEngine:
                 produced_relationships=[],
                 evidence_ids=[],
             )
+            if hasattr(self.store, "record_task_output"):
+                try:
+                    await self.store.record_task_output(
+                        investigation_id=investigation_id,
+                        capability_id=task.capability_id or "unknown",
+                        task_id=task.id,
+                        success=False,
+                        produced_entities=[],
+                        produced_relationships=[],
+                        evidence_ids=[],
+                        findings=[],
+                        error=str(e),
+                    )
+                except Exception as store_error:  # pragma: no cover
+                    logger.error(f"Failed to persist failed task output: {store_error}")
+            return exec_result
 
     async def run_all(self, investigation_id: str):
         while True:

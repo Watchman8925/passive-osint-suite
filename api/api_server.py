@@ -2986,9 +2986,15 @@ async def suggest_autopivots(
         if not investigation:
             raise HTTPException(status_code=404, detail="Investigation not found")
 
+        ai_engine = getattr(app.state, "ai_engine", None)
+        if not ai_engine or not hasattr(ai_engine, "suggest_autopivots"):
+            raise HTTPException(status_code=503, detail="Autopivot engine unavailable")
+
         # Get autopivot suggestions from AI engine
-        pivots = await app.state.ai_engine.suggest_autopivots(
-            investigation_data=investigation, max_pivots=request.max_pivots
+        pivots = await ai_engine.suggest_autopivots(
+            investigation_data=investigation,
+            max_pivots=request.max_pivots,
+            store=app.state.investigation_manager,
         )
 
         return {

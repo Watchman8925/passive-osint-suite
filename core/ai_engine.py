@@ -9,9 +9,10 @@ import asyncio
 import json
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import openai
@@ -23,6 +24,8 @@ try:  # Optional provider
 except Exception:  # pragma: no cover
     Anthropic = None  # type: ignore
 from jinja2 import Template
+
+from graph import get_default_graph
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +53,24 @@ class OSINTAIEngine:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         model_url: str = "https://api.openai.com/v1",
         model_name: str = "gpt-4",
         provider: str = "openai",
         enable_autopivot: bool = True,
+        initialize_clients: bool = True,
     ):
         self.api_key = api_key
         self.model_url = model_url
         self.model_name = model_name
         self.provider = provider
         self.enable_autopivot = enable_autopivot
+        self.client = None
+        self._graph = get_default_graph()
 
-        # Initialize AI client
-        self._init_ai_client()
+        # Initialize AI client when credentials/provider available
+        if initialize_clients and self.api_key:
+            self._init_ai_client()
 
         # Load analysis templates
         self.analysis_templates = self._load_analysis_templates()
@@ -71,9 +78,19 @@ class OSINTAIEngine:
         # OSINT-specific knowledge base
         self.osint_knowledge = self._load_osint_knowledge()
 
+    def set_graph_adapter(self, graph_adapter) -> None:
+        """Allow tests or callers to inject a specific graph adapter instance."""
+        self._graph = graph_adapter
+
     def _init_ai_client(self):
         """Initialize AI client based on provider"""
+        if not self.api_key:
+            logger.info("AI client initialization skipped - no API key provided")
+            self.client = None
+            return
         if self.provider == "openai":
+            if openai is None:
+                raise ImportError("openai package is required for OpenAI provider")
             openai.api_key = self.api_key
             if self.model_url != "https://api.openai.com/v1":
                 openai.api_base = self.model_url
@@ -762,7 +779,10 @@ class OSINTAIEngine:
             return "I'm sorry, I encountered an error processing your request."
 
     async def suggest_autopivots(
-        self, investigation_data: Dict[str, Any], max_pivots: int = 5
+        self,
+        investigation_data: Dict[str, Any],
+        max_pivots: int = 5,
+        store: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Suggest intelligent pivot points for autonomous investigation expansion.
@@ -778,67 +798,202 @@ class OSINTAIEngine:
             logger.warning("Autopivoting is disabled")
             return []
 
+        investigation_id = investigation_data.get("id")
+        if not investigation_id:
+            logger.error("Investigation data missing identifier for autopivot scoring")
+            return []
+
         try:
-            # Analyze current investigation results for pivot opportunities
-            pivot_prompt = f"""
-            Analyze the following OSINT investigation results and suggest {max_pivots} high-value 
-            pivot points for further investigation.
-            
-            Investigation: {investigation_data.get("name", "Unknown")}
-            Current targets: {", ".join(investigation_data.get("targets", []))}
-            
-            Results summary:
-            {json.dumps(investigation_data.get("results", {}), indent=2)[:2000]}
-            
-            Provide pivot suggestions in the following JSON format:
-            {{
-                "pivots": [
-                    {{
-                        "target": "example.com",
-                        "target_type": "domain|email|ip|person|company",
-                        "reason": "Why this pivot is valuable",
-                        "confidence": 0.9,
-                        "priority": "high|medium|low",
-                        "recommended_modules": ["module1", "module2"]
-                    }}
-                ]
-            }}
-            
-            Focus on:
-            1. Related entities mentioned in results
-            2. Connected infrastructure (domains, IPs)
-            3. Associated email addresses or usernames
-            4. Related organizations or individuals
-            5. Suspicious patterns or anomalies requiring deeper investigation
-            """
+            if not self._should_rescore_pivots(investigation_data):
+                stored = investigation_data.get("latest_pivots", [])
+                return stored[:max_pivots]
 
-            response = await self._call_ai_model(pivot_prompt, "autopivot")
-
-            # Parse pivot suggestions
+            findings = []
             try:
-                pivot_data = json.loads(response)
-                pivots = pivot_data.get("pivots", [])
+                from core.investigation_tracker import get_investigation_tracker
 
-                # Sort by confidence and priority
-                pivots.sort(
-                    key=lambda x: (
-                        {"high": 3, "medium": 2, "low": 1}.get(
-                            x.get("priority", "low"), 1
-                        ),
-                        x.get("confidence", 0),
-                    ),
-                    reverse=True,
-                )
+                tracker = get_investigation_tracker()
+                findings = tracker.get_all_findings(investigation_id)
+            except Exception as tracker_error:
+                logger.debug(f"Investigation tracker unavailable: {tracker_error}")
 
-                return pivots[:max_pivots]
+            graph_entities, graph_degrees = self._collect_graph_context(investigation_id)
+            pivots, pivot_scores = self._score_pivots(
+                investigation_id,
+                findings,
+                graph_entities,
+                graph_degrees,
+                investigation_data.get("targets", []),
+            )
 
-            except json.JSONDecodeError:
-                logger.error("Failed to parse autopivot response as JSON")
-                return self._extract_pivots_from_text(response, max_pivots)
+            if store is not None and hasattr(store, "update_pivot_scores"):
+                try:
+                    await store.update_pivot_scores(investigation_id, pivot_scores, pivots)
+                except Exception as store_error:
+                    logger.error(f"Failed to persist pivot scores: {store_error}")
+
+            return pivots[:max_pivots]
 
         except Exception as e:
             logger.error(f"Autopivot suggestion failed: {e}")
             return []
+
+    def _should_rescore_pivots(self, investigation_data: Dict[str, Any]) -> bool:
+        if investigation_data.get("pending_pivot_rescore"):
+            return True
+        if not investigation_data.get("latest_pivots"):
+            return True
+        if not investigation_data.get("pivot_scores"):
+            return True
+        last_evidence = investigation_data.get("last_evidence_at")
+        scored_info = investigation_data.get("pivot_scores", {})
+        scored_at = scored_info.get("_last_scored_at") if isinstance(scored_info, dict) else None
+        if last_evidence and scored_at:
+            try:
+                evidence_dt = datetime.fromisoformat(str(last_evidence))
+                scored_dt = datetime.fromisoformat(str(scored_at))
+                if scored_dt < evidence_dt:
+                    return True
+            except Exception:
+                return True
+        return False
+
+    def _collect_graph_context(
+        self, investigation_id: str
+    ) -> Tuple[Dict[Tuple[str, str], Dict[str, Any]], Dict[Tuple[str, str], int]]:
+        snapshot = self._graph.export_snapshot()
+        entities: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        degrees: Dict[Tuple[str, str], int] = defaultdict(int)
+        for ent in snapshot.get("entities", []):
+            props = ent.get("properties", {})
+            if props.get("investigation_id") != investigation_id:
+                continue
+            key = (ent.get("type"), ent.get("key"))
+            if None in key:
+                continue
+            entities[key] = ent
+        for edge in snapshot.get("edges", []):
+            for endpoint in (edge.get("source"), edge.get("target")):
+                if not endpoint:
+                    continue
+                endpoint_key = tuple(endpoint)
+                if endpoint_key in entities:
+                    degrees[endpoint_key] += 1
+        return entities, degrees
+
+    def _score_pivots(
+        self,
+        investigation_id: str,
+        findings: List[Any],
+        graph_entities: Dict[Tuple[str, str], Dict[str, Any]],
+        graph_degrees: Dict[Tuple[str, str], int],
+        initial_targets: List[str],
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        from capabilities import REGISTRY
+
+        recommended_modules = {
+            "domain": ["dns_basic", "whois_lookup", "ssl_cert_fetch"],
+            "ip": ["dns_basic"],
+            "email": ["passive_search"],
+            "person": ["passive_search"],
+            "company": ["passive_search"],
+        }
+
+        def module_list(ftype: str) -> List[str]:
+            mods = recommended_modules.get(ftype, ["passive_search"])
+            filtered = [m for m in mods if m in REGISTRY]
+            return filtered or mods
+
+        aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+        for finding in findings:
+            key = (finding.finding_type, finding.value)
+            if key not in aggregated:
+                aggregated[key] = {
+                    "score": 0.0,
+                    "finding_ids": [],
+                    "source_modules": set(),
+                    "confidence": [],
+                    "graph_degree": graph_degrees.get(key, 0),
+                }
+            entry = aggregated[key]
+            entry["finding_ids"].append(finding.id)
+            entry["source_modules"].add(finding.source_module)
+            entry["confidence"].append(float(getattr(finding, "confidence", 0.6) or 0.0))
+            entry["graph_degree"] = max(entry["graph_degree"], graph_degrees.get(key, 0))
+
+        # include graph entities not already captured by findings
+        for key, entity in graph_entities.items():
+            if key not in aggregated:
+                aggregated[key] = {
+                    "score": 0.0,
+                    "finding_ids": [],
+                    "source_modules": set([entity["properties"].get("source_module", "graph")]),
+                    "confidence": [float(entity["properties"].get("confidence", 0.5) or 0.5)],
+                    "graph_degree": graph_degrees.get(key, 0),
+                }
+
+        pivots: List[Dict[str, Any]] = []
+        pivot_scores: Dict[str, Any] = {}
+        initial_targets_set = {t.lower() for t in initial_targets}
+
+        for (ftype, value), data in aggregated.items():
+            if not value:
+                continue
+            base = {
+                "domain": 0.55,
+                "ip": 0.6,
+                "email": 0.5,
+                "person": 0.5,
+                "company": 0.5,
+            }.get(ftype, 0.45)
+            avg_conf = sum(data["confidence"]) / max(len(data["confidence"]), 1)
+            graph_boost = min(0.2, 0.05 * data["graph_degree"])
+            score = max(0.1, min(1.0, base + 0.4 * avg_conf + graph_boost))
+            reason_parts = []
+            if data["finding_ids"]:
+                modules_txt = ", ".join(sorted(data["source_modules"])) or "unknown modules"
+                reason_parts.append(
+                    f"Observed by {modules_txt} with mean confidence {avg_conf:.2f}."
+                )
+            else:
+                reason_parts.append("Derived from investigation graph relationships.")
+            if data["graph_degree"]:
+                reason_parts.append(
+                    f"Connected to {data['graph_degree']} related entities in the knowledge graph."
+                )
+            if value.lower() in initial_targets_set:
+                reason_parts.append("Matches an existing investigation target, consider deeper enrichment.")
+            reason = " ".join(reason_parts)
+            modules = module_list(ftype)
+            pivot_entry = {
+                "target": value,
+                "target_type": ftype,
+                "reason": reason,
+                "confidence": round(score, 3),
+                "priority": self._score_to_priority(score),
+                "recommended_modules": modules,
+                "supporting_findings": len(data["finding_ids"]),
+            }
+            pivots.append(pivot_entry)
+            pivot_scores[value] = {
+                "score": round(score, 3),
+                "target_type": ftype,
+                "finding_ids": data["finding_ids"],
+                "source_modules": sorted(data["source_modules"]),
+                "graph_degree": data["graph_degree"],
+            }
+
+        pivots.sort(key=lambda item: item["confidence"], reverse=True)
+        return pivots, pivot_scores
+
+    @staticmethod
+    def _score_to_priority(score: float) -> str:
+        if score >= 0.75:
+            return "high"
+        if score >= 0.5:
+            return "medium"
+        return "low"
 
     def _extract_pivots_from_text(
         self, response: str, max_pivots: int
