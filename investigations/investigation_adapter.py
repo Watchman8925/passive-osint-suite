@@ -265,8 +265,8 @@ class PersistentInvestigationStore:
 
                 tracker = get_investigation_tracker()
                 tracker.create_investigation(inv_id, name)
-            except Exception:
-                logger.debug("Investigation tracker unavailable during creation")
+            except Exception as e:
+                logger.debug(f"Investigation tracker unavailable during creation: {e}")
             return inv_id
 
     async def list_investigations(
