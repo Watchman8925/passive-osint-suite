@@ -37,9 +37,13 @@ from utils.transport import get_tor_status
 from pydantic import BaseModel, Field  # type: ignore
 
 try:
-    from investigations.investigation_manager import InvestigationManager  # type: ignore
+    from investigations.investigation_manager import (  # type: ignore
+        InvestigationManager,
+        InvestigationStatus,
+    )
 except Exception:  # pragma: no cover - optional advanced manager
     InvestigationManager = None
+    InvestigationStatus = None  # type: ignore
 from database.graph_database import GraphDatabaseAdapter
 
 # OSINT Module Registry
@@ -1477,6 +1481,182 @@ async def start_investigation(
         return {"status": "started", "investigation_id": investigation_id}
     except Exception as e:
         logging.error(f"Failed to start investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/pause")
+async def pause_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Pause an active investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        if status_value != active_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not active and cannot be paused",
+            )
+
+        paused = await manager.pause_investigation(investigation_id)
+        if not paused:
+            raise HTTPException(
+                status_code=500, detail="Unable to pause investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_paused",
+                "status": "paused",
+                "message": "Investigation paused",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "paused",
+            "investigation_id": investigation_id,
+            "message": "Investigation paused successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to pause investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/resume")
+async def resume_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Resume a paused investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value != paused_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not paused and cannot be resumed",
+            )
+
+        resumed = await manager.resume_investigation(investigation_id)
+        if not resumed:
+            raise HTTPException(
+                status_code=500, detail="Unable to resume investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_resumed",
+                "status": "active",
+                "message": "Investigation resumed",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "active",
+            "investigation_id": investigation_id,
+            "message": "Investigation resumed successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to resume investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/stop")
+async def stop_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Hard stop an investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value not in (active_value, paused_value):
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not running or paused and cannot be stopped",
+            )
+
+        stopped = await manager.stop_investigation(investigation_id)
+        if not stopped:
+            raise HTTPException(
+                status_code=500, detail="Unable to stop investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_stopped",
+                "status": "archived",
+                "message": "Investigation stopped",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "archived",
+            "investigation_id": investigation_id,
+            "message": "Investigation stopped successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop investigation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
