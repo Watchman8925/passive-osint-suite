@@ -695,3 +695,14 @@ def get_investigation_tracker() -> InvestigationTracker:
     if _tracker_instance is None:
         _tracker_instance = InvestigationTracker()
     return _tracker_instance
+
+
+def set_tracker_instance(instance: Optional[InvestigationTracker]) -> None:
+    """Explicitly set the global tracker instance (useful for tests)."""
+    global _tracker_instance
+    _tracker_instance = instance
+
+
+def clear_tracker_instance() -> None:
+    """Reset the global tracker instance."""
+    set_tracker_instance(None)

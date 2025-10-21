@@ -30,6 +30,9 @@ from graph import get_default_graph
 logger = logging.getLogger(__name__)
 
 
+_FALLBACK_INIT_FAILED = object()
+
+
 @dataclass
 class AIAnalysisResult:
     """Result of AI analysis"""
@@ -854,7 +857,7 @@ class OSINTAIEngine:
             return []
 
     def _get_fallback_autopivot_engine(self):
-        if self._fallback_autopivot_engine is False:
+        if self._fallback_autopivot_engine is _FALLBACK_INIT_FAILED:
             return None
         if self._fallback_autopivot_engine is None:
             try:
@@ -867,7 +870,7 @@ class OSINTAIEngine:
                 logger.error(
                     "Unable to initialize fallback autopivot engine: %s", exc
                 )
-                self._fallback_autopivot_engine = False
+                self._fallback_autopivot_engine = _FALLBACK_INIT_FAILED
         return self._fallback_autopivot_engine
 
     def _should_rescore_pivots(self, investigation_data: Dict[str, Any]) -> bool:
