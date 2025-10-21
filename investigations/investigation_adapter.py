@@ -589,7 +589,8 @@ class PersistentInvestigationStore:
 
             inv.archived = True
             inv.status = SimpleStatus.archived
-            if inv.completed_at is None:
+            # Only set completed_at if investigation is not already completed
+            if inv.completed_at is None and inv.status not in (SimpleStatus.completed, SimpleStatus.failed):
                 inv.completed_at = datetime.now(timezone.utc)
             inv.archived_at = datetime.now(timezone.utc)
 
