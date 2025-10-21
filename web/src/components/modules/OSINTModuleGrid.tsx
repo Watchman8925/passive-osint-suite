@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   GlobeAltIcon,
@@ -18,142 +18,88 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { apiClient } from '../../services/apiClient';
+import type { NormalizedError } from '../../services/apiClient';
 
 export interface OSINTModule {
-  id: string;
-  name: string;
+  moduleName: string;
+  displayName: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   category: string;
+  categoryLabel: string;
   status: 'active' | 'beta' | 'premium';
-  endpoint: string;
+  className: string;
   features: string[];
 }
 
-const osintModules: OSINTModule[] = [
-  {
-    id: 'domain-recon',
-    name: 'Domain Reconnaissance',
-    description: 'Comprehensive passive domain analysis including DNS, WHOIS, subdomains, and security assessment',
-    icon: GlobeAltIcon,
-    category: 'Network Intelligence',
-    status: 'active',
-    endpoint: '/api/domain-recon',
-    features: ['DNS Analysis', 'WHOIS Data', 'Subdomain Discovery', 'SSL/TLS Analysis', 'Security Headers']
-  },
-  {
-    id: 'company-intel',
-    name: 'Company Intelligence',
-    description: 'Corporate investigation and business intelligence gathering from public sources',
-    icon: BuildingOfficeIcon,
-    category: 'Business Intelligence',
-    status: 'active',
-    endpoint: '/api/company-intel',
-    features: ['Company Profiles', 'Executive Information', 'Financial Data', 'News & Events', 'Regulatory Filings']
-  },
-  {
-    id: 'email-intel',
-    name: 'Email Intelligence',
-    description: 'Email investigation including breach detection, reputation analysis, and domain validation',
-    icon: EnvelopeIcon,
-    category: 'Communication Intelligence',
-    status: 'active',
-    endpoint: '/api/email-intel',
-    features: ['Breach Detection', 'Email Validation', 'Domain Analysis', 'Reputation Check', 'Social Media Links']
-  },
-  {
-    id: 'crypto-intel',
-    name: 'Cryptocurrency Intelligence',
-    description: 'Blockchain analysis and cryptocurrency transaction investigation',
-    icon: CurrencyDollarIcon,
-    category: 'Financial Intelligence',
-    status: 'active',
-    endpoint: '/api/crypto-intel',
-    features: ['Wallet Analysis', 'Transaction Tracking', 'Exchange Detection', 'Risk Assessment', 'Flow Analysis']
-  },
-  {
-    id: 'flight-intel',
-    name: 'Flight Intelligence',
-    description: 'Aviation intelligence including flight tracking, aircraft data, and airport information',
-    icon: PaperAirplaneIcon,
-    category: 'Transportation Intelligence',
-    status: 'active',
-    endpoint: '/api/flight-intel',
-    features: ['Flight Tracking', 'Aircraft Registry', 'Airport Data', 'Route Analysis', 'Operator Information']
-  },
-  {
-    id: 'ip-intel',
-    name: 'IP Intelligence',
-    description: 'IP address investigation including geolocation, ownership, and threat intelligence',
-    icon: ServerIcon,
-    category: 'Network Intelligence',
-    status: 'active',
-    endpoint: '/api/ip-intel',
-    features: ['Geolocation', 'ISP Information', 'Threat Intelligence', 'Port Scanning', 'Historical Data']
-  },
-  {
-    id: 'media-forensics',
-    name: 'Media Forensics',
-    description: 'Image and video analysis including metadata extraction and reverse image search',
-    icon: EyeIcon,
-    category: 'Digital Forensics',
-    status: 'beta',
-    endpoint: '/api/media-forensics',
-    features: ['EXIF Analysis', 'Reverse Image Search', 'Face Recognition', 'Object Detection', 'Geolocation']
-  },
-  {
-    id: 'network-intel',
-    name: 'Network Intelligence',
-    description: 'Network infrastructure analysis and mapping capabilities',
-    icon: MapIcon,
-    category: 'Network Intelligence',
-    status: 'active',
-    endpoint: '/api/network-intel',
-    features: ['Network Mapping', 'Traceroute Analysis', 'ASN Information', 'BGP Data', 'Peering Relationships']
-  },
-  {
-    id: 'conspiracy-analyzer',
-    name: 'Pattern Analysis',
-    description: 'Advanced pattern detection and relationship analysis across multiple data sources',
-    icon: DocumentMagnifyingGlassIcon,
-    category: 'Advanced Analytics',
-    status: 'premium',
-    endpoint: '/api/conspiracy-analyzer',
-    features: ['Pattern Recognition', 'Relationship Mapping', 'Anomaly Detection', 'Timeline Analysis', 'Correlation Engine']
-  },
-  {
-    id: 'bellingcat-toolkit',
-    name: 'Bellingcat Toolkit',
-    description: 'Specialized tools for investigative journalism and open source research',
-    icon: UserGroupIcon,
-    category: 'Investigative Tools',
-    status: 'active',
-    endpoint: '/api/bellingcat-toolkit',
-    features: ['Social Media Analysis', 'Verification Tools', 'Archive Search', 'Metadata Analysis', 'Timeline Creation']
-  },
-  {
-    id: 'audit-trail',
-    name: 'Audit & Compliance',
-    description: 'Investigation audit trail and compliance reporting system',
-    icon: ShieldCheckIcon,
-    category: 'Compliance',
-    status: 'active',
-    endpoint: '/api/audit-trail',
-    features: ['Activity Logging', 'Compliance Reports', 'Data Retention', 'Access Control', 'Legal Documentation']
-  },
-  {
-    id: 'reporting-engine',
-    name: 'Reporting Engine',
-    description: 'Comprehensive reporting and data visualization capabilities',
-    icon: ChartBarIcon,
-    category: 'Reporting',
-    status: 'active',
-    endpoint: '/api/reporting-engine',
-    features: ['Custom Reports', 'Data Visualization', 'Export Options', 'Automated Reporting', 'Dashboard Creation']
-  }
-];
+interface APIModuleInfo {
+  name: string;
+  description: string;
+  category: string;
+  class_name: string;
+}
 
-const categories = Array.from(new Set(osintModules.map(m => m.category)));
+const extractErrorMessage = (error: unknown): string => {
+  if (!error) {
+    return 'Failed to load modules';
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  const normalized = error as NormalizedError;
+  if (normalized && typeof normalized.message === 'string') {
+    return normalized.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Failed to load modules';
+};
+
+const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  domain: GlobeAltIcon,
+  network: ServerIcon,
+  web: DocumentMagnifyingGlassIcon,
+  social: UserGroupIcon,
+  breach: ShieldCheckIcon,
+  business: BuildingOfficeIcon,
+  email: EnvelopeIcon,
+  aviation: PaperAirplaneIcon,
+  crypto: CurrencyDollarIcon,
+  code: DocumentMagnifyingGlassIcon,
+  general: CogIcon,
+  geospatial: MapIcon,
+  financial: CurrencyDollarIcon,
+  document: DocumentMagnifyingGlassIcon,
+  darkweb: LockClosedIcon,
+  iot: ServerIcon,
+  malware: ShieldCheckIcon,
+  forensics: EyeIcon,
+  security: ShieldCheckIcon,
+  monitoring: EyeIcon,
+  reporting: ChartBarIcon,
+  analysis: DocumentMagnifyingGlassIcon,
+  investigation: UserGroupIcon,
+  orchestration: CogIcon,
+  academic: DocumentMagnifyingGlassIcon,
+  patent: DocumentMagnifyingGlassIcon
+};
+
+const statusByCategory: Partial<Record<string, OSINTModule['status']>> = {
+  analysis: 'premium',
+  forensics: 'beta',
+  monitoring: 'beta',
+  orchestration: 'premium',
+  investigation: 'premium',
+  financial: 'premium',
+  crypto: 'premium',
+  security: 'beta'
+};
 
 const statusColors = {
   active: 'bg-green-100 text-green-800',
@@ -169,12 +115,98 @@ interface OSINTModuleGridProps {
 const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selectedModule }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [modules, setModules] = useState<OSINTModule[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredModules = osintModules.filter(module => {
+  const formatCategory = useCallback((category: string) => {
+    return category
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }, []);
+
+  const deriveFeatures = useCallback((description: string, className: string) => {
+    const fragments = description
+      .split(/[,;\.]+/)
+      .map(fragment => fragment.trim())
+      .filter(Boolean);
+
+    if (fragments.length === 0) {
+      return [className];
+    }
+
+    return Array.from(new Set(fragments));
+  }, []);
+
+  const deriveStatus = useCallback(
+    (module: APIModuleInfo): OSINTModule['status'] => {
+      return statusByCategory[module.category] ?? 'active';
+    },
+    []
+  );
+
+  const buildModule = useCallback(
+    (module: APIModuleInfo): OSINTModule => {
+      const Icon = categoryIcons[module.category] ?? CogIcon;
+      const displayName = module.name
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      const categoryLabel = formatCategory(module.category);
+
+      return {
+        moduleName: module.name,
+        displayName,
+        description: module.description,
+        icon: Icon,
+        category: module.category,
+        categoryLabel,
+        status: deriveStatus(module),
+        className: module.class_name,
+        features: deriveFeatures(module.description, module.class_name)
+      };
+    },
+    [deriveFeatures, deriveStatus, formatCategory]
+  );
+
+  const loadModules = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.get<APIModuleInfo[]>('/api/modules');
+      const moduleList = Array.isArray(response) ? response : [];
+      const transformed = moduleList.map(buildModule).sort((a, b) => a.displayName.localeCompare(b.displayName));
+      setModules(transformed);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+      setModules([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [buildModule]);
+
+  useEffect(() => {
+    loadModules();
+  }, [loadModules]);
+
+  const categories = useMemo(() => {
+    const unique = new Map<string, string>();
+    modules.forEach(module => {
+      if (!unique.has(module.category)) {
+        unique.set(module.category, module.categoryLabel);
+      }
+    });
+    return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+  }, [modules]);
+
+  const filteredModules = modules.filter(module => {
     const matchesCategory = selectedCategory === 'all' || module.category === selectedCategory;
-    const matchesSearch = module.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         module.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         module.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch =
+      module.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      module.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      module.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -213,27 +245,43 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
             </Button>
             {categories.map(category => (
               <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
+                key={category.value}
+                variant={selectedCategory === category.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setSelectedCategory(category.value)}
               >
-                {category}
+                {category.label}
               </Button>
             ))}
           </div>
         </div>
       </div>
 
+      {loading && (
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20 text-center">
+          <p className="text-gray-600">Loading modules...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
+          <p className="font-medium">Failed to load modules</p>
+          <p className="text-sm mb-3">{error}</p>
+          <Button size="sm" variant="outline" onClick={loadModules}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Module Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredModules.map((module, index) => {
           const Icon = module.icon;
-          const isSelected = selectedModule?.id === module.id;
-          
+          const isSelected = selectedModule?.moduleName === module.moduleName;
+
           return (
             <motion.div
-              key={module.id}
+              key={module.moduleName}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
@@ -248,8 +296,8 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{module.name}</h3>
-                    <p className="text-sm text-gray-600">{module.category}</p>
+                    <h3 className="font-semibold text-gray-900">{module.displayName}</h3>
+                    <p className="text-sm text-gray-600">{module.categoryLabel}</p>
                   </div>
                 </div>
                 <Badge className={statusColors[module.status]}>
@@ -281,8 +329,8 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="sm"
                   variant={isSelected ? 'default' : 'outline'}
                 >
@@ -294,7 +342,7 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
         })}
       </div>
 
-      {filteredModules.length === 0 && (
+      {!loading && !error && filteredModules.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">No modules found</h3>
