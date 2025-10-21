@@ -21,14 +21,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Ruff
-        run: pip install ruff==0.7.2
+      - name: Install pre-commit & Ruff
+        run: |
+          pip install pre-commit ruff==0.7.2
 
-      - name: Run Ruff Check
-        run: ruff check .
-
-      - name: Run Ruff Format Check
-        run: ruff format --check .
+      - name: Run pre-commit hooks (check & auto-fix)
+        run: |
+          pre-commit run --all-files
 
   typecheck:
     name: Type Checking (Mypy)
