@@ -513,10 +513,7 @@ class InvestigationManager:
                     target,
                     exc,
                 )
-                result[target] = {
-                    "status": "error",
-                    "error": str(exc),
-                }
+                raise
             finally:
                 task.progress = min(0.9, 0.2 + increment * index)
 
