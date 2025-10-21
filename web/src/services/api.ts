@@ -1,11 +1,13 @@
 import axios, { AxiosInstance } from 'axios';
-import { 
-  Investigation, 
+import {
+  Investigation,
   InvestigationProgress,
   CreateInvestigationRequest,
   ListInvestigationsRequest,
   AIAnalysisResult
 } from '../types/investigation';
+
+export const AUTH_TOKEN_KEY = 'auth_token';
 
 class APIClient {
   public client: AxiosInstance;
@@ -21,7 +23,7 @@ class APIClient {
 
     // Request interceptor for authentication
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -34,7 +36,7 @@ class APIClient {
       (error) => {
         if (error.response?.status === 401) {
           // Handle unauthorized access
-          localStorage.removeItem('auth_token');
+          localStorage.removeItem(AUTH_TOKEN_KEY);
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -44,15 +46,31 @@ class APIClient {
 
   // Authentication
   async login(credentials: { username: string; password: string }) {
-    const response = await this.client.post('/api/auth/login', credentials);
-    const { access_token } = response.data;
-    localStorage.setItem('auth_token', access_token);
+    let response;
+    try {
+      response = await this.client.post('/auth/login', credentials);
+    } catch (error: any) {
+      // If the endpoint does not exist, try the old path
+      if (error.response && (error.response.status === 404 || error.response.status === 405)) {
+        response = await this.client.post('/api/auth/login', credentials);
+      } else {
+        throw error;
+      }
+    }
+    const { access_token } = response.data ?? {};
+    if (!access_token) {
+      throw new Error('Authentication response did not include an access token');
+    }
+    localStorage.setItem(AUTH_TOKEN_KEY, access_token);
     return response.data;
   }
 
   async logout() {
-    localStorage.removeItem('auth_token');
-    await this.client.post('/api/auth/logout');
+    try {
+      await this.client.post('/auth/logout');
+    } finally {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
   }
 
   // Investigations

@@ -4,13 +4,17 @@ Chat History Manager
 Manages storage and retrieval of AI chat conversations and investigation reports
 """
 
+from __future__ import annotations
+
 import json
 import logging
+import sqlite3
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
-import sqlite3
+from typing import Any, Dict, List, Optional
+
+from core.storage_config import resolve_path
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +50,12 @@ class ChatHistoryManager:
     Supports investigation-linked conversations
     """
 
-    def __init__(self, storage_path: str = "./chat_history"):
+    def __init__(self, storage_path: Optional[str] = None):
         """Initialize chat history manager"""
-        self.storage_path = Path(storage_path)
-        self.storage_path.mkdir(exist_ok=True)
+        base_path = Path(storage_path) if storage_path else resolve_path("chat_history")
+        base_path.mkdir(exist_ok=True, parents=True)
 
+        self.storage_path = base_path
         self.db_path = self.storage_path / "chat_history.db"
         self._init_database()
 

@@ -170,7 +170,7 @@ this.client.interceptors.response.use(
     
     if (error.response?.status === 401) {
       toast.error('Authentication required');
-      localStorage.removeItem('osint_auth_token');
+      localStorage.removeItem('auth_token');
     } else if (error.response?.status === 403) {
       toast.error('Access denied');
     } else if (error.response?.status >= 500) {
