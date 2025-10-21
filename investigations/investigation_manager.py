@@ -6,6 +6,7 @@ Advanced workflow orchestration and data organization for complex OSINT investig
 """
 
 import asyncio
+import inspect
 import json
 import logging
 import uuid
@@ -467,6 +468,33 @@ class InvestigationManager:
         "passive_search": {"module": "passive_search", "method": "analyze_target"},
     }
 
+    def _build_module_instance(self, module_class: type[Any]) -> Any:
+        """Instantiate a module, injecting the secrets manager when supported."""
+
+        try:
+            signature = inspect.signature(module_class)
+        except (TypeError, ValueError):  # pragma: no cover - defensive guard
+            signature = None
+
+        if signature:
+            parameters = signature.parameters
+            if "secrets_manager" in parameters:
+                return module_class(self.secrets_manager)
+
+            allows_no_args = all(
+                parameter.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+                or parameter.default is not inspect._empty
+                for parameter in parameters.values()
+            )
+
+            if allows_no_args:
+                return module_class()
+
+        try:
+            return module_class(self.secrets_manager)
+        except TypeError:
+            return module_class()
+
     async def _dispatch_task(self, task: InvestigationTask) -> Dict[str, Any]:
         """Dispatch task to the appropriate OSINT module using canonical entry points."""
         task_type = task.task_type.lower()
@@ -483,7 +511,7 @@ class InvestigationManager:
             raise ValueError(f"Module '{module_name}' is not available in MODULE_REGISTRY")
 
         module_class = module_info["class"]
-        module_instance = module_class(self.secrets_manager)
+        module_instance = self._build_module_instance(module_class)
 
         targets = task.targets
         parameters = task.parameters

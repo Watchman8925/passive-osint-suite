@@ -210,7 +210,7 @@ def test_execute_task_persists_results(
         class _StubModule(module_class):
             pass
         monkeypatch.setattr(_StubModule, method_name, _stub_method)
-        monkeypatch.setattr(module_info, "class", _StubModule)
+        monkeypatch.setitem(module_info, "class", _StubModule)
         investigation_id = "investigation-1"
         task = _build_task(
             investigation_id=investigation_id,
