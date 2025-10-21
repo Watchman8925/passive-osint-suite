@@ -93,8 +93,11 @@ class APIClient {
     await this.client.post(`/api/investigations/${investigationId}/start`);
   }
 
-  async archiveInvestigation(investigationId: string): Promise<void> {
-    await this.client.post(`/api/investigations/${investigationId}/archive`);
+  async archiveInvestigation(
+    investigationId: string
+  ): Promise<{ status: string; investigation_id: string; archived_at?: string; message?: string }> {
+    const response = await this.client.post(`/api/investigations/${investigationId}/archive`);
+    return response.data;
   }
 
   async getInvestigationProgress(investigationId: string): Promise<InvestigationProgress> {

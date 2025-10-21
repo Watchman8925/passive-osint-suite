@@ -58,6 +58,7 @@ class SimpleStatus(str, Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    archived = "archived"
 
 
 @dataclass
@@ -79,11 +80,18 @@ class SimpleInvestigation:
     completed_at: Optional[datetime]
     ai_analysis: Dict[str, Any]
     archived: bool
+    archived_at: Optional[datetime]
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         # Serialize datetimes
-        for key in ["scheduled_start", "created_at", "started_at", "completed_at"]:
+        for key in [
+            "scheduled_start",
+            "created_at",
+            "started_at",
+            "completed_at",
+            "archived_at",
+        ]:
             val = d.get(key)
             if isinstance(val, datetime):
                 d[key] = val.isoformat()
@@ -117,6 +125,7 @@ class SimpleInvestigation:
             completed_at=parse_dt(data.get("completed_at")),
             ai_analysis=data.get("ai_analysis", {}),
             archived=data.get("archived", False),
+            archived_at=parse_dt(data.get("archived_at")),
         )
 
 
@@ -206,6 +215,7 @@ class PersistentInvestigationStore:
                 completed_at=None,
                 ai_analysis={},
                 archived=False,
+                archived_at=None,
             )
             # Bridge: create advanced investigation if manager attached
             if self.advanced_manager:
@@ -566,16 +576,36 @@ class PersistentInvestigationStore:
     # ------------------------------------------------------------------
     # Soft delete / archive
     # ------------------------------------------------------------------
-    async def archive(self, investigation_id: str, owner_id: str) -> bool:
+    async def archive(
+        self, investigation_id: str, owner_id: str
+    ) -> Optional[Dict[str, Any]]:
         async with self._lock:
             inv = self._items.get(investigation_id)
             if not inv or inv.owner_id != owner_id:
-                return False
+                return None
+
+            if inv.archived:
+                return inv.to_dict()
+
             inv.archived = True
-            if inv.status == SimpleStatus.running:
-                inv.status = SimpleStatus.completed
+            inv.status = SimpleStatus.archived
+            # Only set completed_at if investigation is not already completed
+            if inv.completed_at is None and inv.status not in (SimpleStatus.completed, SimpleStatus.failed):
+                inv.completed_at = datetime.now(timezone.utc)
+            inv.archived_at = datetime.now(timezone.utc)
+
+            result = inv.to_dict()
+
         await self._flush()  # Moved outside lock
-        return True
+        return result
+
+    async def archive_investigation(
+        self, investigation_id: str, owner_id: str
+    ) -> Dict[str, Any]:
+        result = await self.archive(investigation_id, owner_id)
+        if not result:
+            raise ValueError("Investigation not found or unauthorized")
+        return result
 
     # ------------------------------------------------------------------
     # Demo Helpers (no-advanced-manager synthetic tasks)

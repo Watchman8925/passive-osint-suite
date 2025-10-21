@@ -2,14 +2,15 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   PlayIcon, 
-  PauseIcon, 
+  PauseIcon,
   EyeIcon,
   TrashIcon,
   ClockIcon,
   UserIcon,
   TagIcon,
   CalendarIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ArchiveBoxArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -26,6 +27,7 @@ interface InvestigationCardProps {
   onStart: () => void;
   onPause: () => void;
   onDelete: () => void;
+  onArchive: () => void;
   isLoading?: boolean;
 }
 
@@ -56,13 +58,14 @@ const statusIcons = {
   [InvestigationStatus.ARCHIVED]: ClockIcon
 };
 
-export default function InvestigationCard({ 
-  investigation, 
-  onView, 
-  onStart, 
-  onPause, 
+export default function InvestigationCard({
+  investigation,
+  onView,
+  onStart,
+  onPause,
   onDelete,
-  isLoading = false 
+  onArchive,
+  isLoading = false
 }: InvestigationCardProps) {
   
   // Fetch progress data for active investigations
@@ -75,9 +78,10 @@ export default function InvestigationCard({
 
   const StatusIcon = statusIcons[investigation.status];
   
-  const canStart = investigation.status === InvestigationStatus.CREATED || 
+  const canStart = investigation.status === InvestigationStatus.CREATED ||
                    investigation.status === InvestigationStatus.PAUSED;
   const canPause = investigation.status === InvestigationStatus.ACTIVE;
+  const canArchive = investigation.status !== InvestigationStatus.ARCHIVED;
   
   const getTimeInfo = () => {
     if (investigation.completed_at) {
@@ -255,7 +259,7 @@ export default function InvestigationCard({
                 Start
               </Button>
             )}
-            
+
             {canPause && (
               <Button
                 size="sm"
@@ -267,7 +271,20 @@ export default function InvestigationCard({
                 Pause
               </Button>
             )}
-            
+
+            {canArchive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onArchive}
+                disabled={isLoading}
+                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+              >
+                <ArchiveBoxArrowDownIcon className="h-4 w-4 mr-1" />
+                Archive
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
