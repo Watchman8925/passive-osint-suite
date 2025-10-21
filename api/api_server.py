@@ -21,7 +21,7 @@ except ImportError:
     pass  # dotenv is optional
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Literal, TYPE_CHECKING, cast
+from typing import Any, Dict, List, Optional, Literal, TYPE_CHECKING, cast, Tuple
 import time
 
 # Core OSINT modules and dependencies
@@ -991,6 +991,61 @@ async def detailed_health_check(request: Request):
     return health_status
 
 
+def _tor_control_command(
+    action: Literal["enable", "disable", "new_identity"]
+) -> Tuple[bool, str, Dict[str, Any], int]:
+    """Execute a Tor control port command and return status details.
+
+    Returns a tuple of (success flag, human-readable message, tor status dict, HTTP status code).
+    """
+
+    status = get_tor_status()
+    if not status.get("active"):
+        return (
+            False,
+            "Tor control port is not reachable. Ensure Tor is running and the control port is enabled.",
+            status,
+            503,
+        )
+
+    try:
+        from stem import Signal  # type: ignore
+        from stem.control import Controller  # type: ignore
+    except ImportError:
+        return (
+            False,
+            "Tor control commands require the 'stem' package. Install it to manage Tor from the UI.",
+            status,
+            501,
+        )
+
+    try:
+        with Controller.from_port(port=9051) as controller:
+            controller.authenticate()
+            if action == "enable":
+                controller.set_conf("DisableNetwork", "0")
+                message = "Tor network enabled; new circuits will build shortly."
+            elif action == "disable":
+                controller.set_conf("DisableNetwork", "1")
+                message = "Tor network disabled via control port."
+            else:  # action == "new_identity"
+                controller.signal(Signal.NEWNYM)
+                message = "Requested a new Tor identity (NEWNYM signal sent)."
+
+    except Exception as exc:  # pragma: no cover - depends on local Tor configuration
+        logging.exception("Tor control command '%s' failed", action)
+        refreshed_status = get_tor_status()
+        return (
+            False,
+            f"Unable to {action.replace('_', ' ')} due to an internal error.",
+            refreshed_status,
+            500,
+        )
+
+    refreshed_status = get_tor_status()
+    return True, message, refreshed_status, 200
+
+
 @app.get("/tor/status")
 async def tor_status():
     """Expose Tor proxy status (no external network calls)."""
@@ -1018,6 +1073,36 @@ async def health_fallback(request: Request):
 async def anonymity_tor_status():
     """Alias for /tor/status under /api/anonymity path."""
     return await tor_status()
+
+
+@app.post("/api/anonymity/tor/enable")
+async def anonymity_tor_enable():
+    """Enable Tor networking via the control port."""
+
+    success, message, status, status_code = _tor_control_command("enable")
+    return JSONResponse(
+        {"success": success, "message": message, "status": status}, status_code=status_code
+    )
+
+
+@app.post("/api/anonymity/tor/disable")
+async def anonymity_tor_disable():
+    """Disable Tor networking via the control port."""
+
+    success, message, status, status_code = _tor_control_command("disable")
+    return JSONResponse(
+        {"success": success, "message": message, "status": status}, status_code=status_code
+    )
+
+
+@app.post("/api/anonymity/tor/new-identity")
+async def anonymity_tor_new_identity():
+    """Request a new Tor identity using the NEWNYM signal."""
+
+    success, message, status, status_code = _tor_control_command("new_identity")
+    return JSONResponse(
+        {"success": success, "message": message, "status": status}, status_code=status_code
+    )
 
 
 @app.get("/api/capabilities", response_model=List[CapabilityModel])

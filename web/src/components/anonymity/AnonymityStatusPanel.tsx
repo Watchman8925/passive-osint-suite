@@ -45,6 +45,21 @@ const AnonymityStatusPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const applyTorStatus = (torStatus?: Record<string, any>) => {
+    if (!torStatus) return;
+    const hasActive = typeof torStatus.active === 'boolean';
+    setStatus(prev => ({
+      ...prev,
+      tor: {
+        ...prev.tor,
+        active: hasActive ? Boolean(torStatus.active) : prev.tor.active,
+        exitNode: torStatus.exitNode ?? prev.tor.exitNode,
+        country: torStatus.country ?? prev.tor.country,
+        circuitBuilt: hasActive ? Boolean(torStatus.active) : prev.tor.circuitBuilt
+      }
+    }));
+  };
+
   const fetchStatus = async () => {
     try {
       setRefreshing(true);
@@ -88,22 +103,36 @@ const AnonymityStatusPanel: React.FC = () => {
 
   const handleTorToggle = async () => {
     if (status.tor.active) {
-      const success = await osintAPI.disableTor();
-      if (success) {
-        setStatus(prev => ({ ...prev, tor: { ...prev.tor, active: false } }));
+      const result = await osintAPI.disableTor();
+      if (result.success) {
+        toast.success(result.message || 'Tor network disabled');
+        applyTorStatus(result.status);
+        await fetchStatus();
+      } else {
+        applyTorStatus(result.status);
+        toast.error(result.message || 'Failed to disable Tor network');
       }
     } else {
-      const success = await osintAPI.enableTor();
-      if (success) {
-        setStatus(prev => ({ ...prev, tor: { ...prev.tor, active: true } }));
+      const result = await osintAPI.enableTor();
+      if (result.success) {
+        toast.success(result.message || 'Tor network enabled');
+        applyTorStatus(result.status);
+        await fetchStatus();
+      } else {
+        applyTorStatus(result.status);
+        toast.error(result.message || 'Failed to enable Tor network');
       }
     }
   };
 
   const handleNewTorIdentity = async () => {
-    const success = await osintAPI.newTorIdentity();
-    if (success) {
+    const result = await osintAPI.newTorIdentity();
+    if (result.success) {
+      toast.success(result.message || 'New Tor identity acquired');
       await fetchStatus();
+    } else {
+      applyTorStatus(result.status);
+      toast.error(result.message || 'Failed to acquire new Tor identity');
     }
   };
 
