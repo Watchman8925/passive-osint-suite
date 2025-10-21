@@ -67,6 +67,7 @@ class OSINTAIEngine:
         self.enable_autopivot = enable_autopivot
         self.client = None
         self._graph = get_default_graph()
+        self._fallback_autopivot_engine = None
 
         # Initialize AI client when credentials/provider available
         if initialize_clients and self.api_key:
@@ -800,8 +801,22 @@ class OSINTAIEngine:
 
         investigation_id = investigation_data.get("id")
         if not investigation_id:
-            logger.error("Investigation data missing identifier for autopivot scoring")
-            return []
+            logger.warning(
+                "Investigation data missing identifier for autopivot scoring; "
+                "falling back to heuristic autopivot engine"
+            )
+            fallback_engine = self._get_fallback_autopivot_engine()
+            if fallback_engine is None:
+                return []
+            try:
+                return await fallback_engine.suggest_autopivots(
+                    investigation_data, max_pivots
+                )
+            except Exception as fallback_error:
+                logger.error(
+                    "Fallback autopivot engine failed: %s", fallback_error
+                )
+                return []
 
         try:
             if not self._should_rescore_pivots(investigation_data):
@@ -837,6 +852,23 @@ class OSINTAIEngine:
         except Exception as e:
             logger.error(f"Autopivot suggestion failed: {e}")
             return []
+
+    def _get_fallback_autopivot_engine(self):
+        if self._fallback_autopivot_engine is False:
+            return None
+        if self._fallback_autopivot_engine is None:
+            try:
+                from core.autopivot_fallback import (
+                    DeterministicAutopivotEngine,
+                )
+
+                self._fallback_autopivot_engine = DeterministicAutopivotEngine()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.error(
+                    "Unable to initialize fallback autopivot engine: %s", exc
+                )
+                self._fallback_autopivot_engine = False
+        return self._fallback_autopivot_engine or None
 
     def _should_rescore_pivots(self, investigation_data: Dict[str, Any]) -> bool:
         if investigation_data.get("pending_pivot_rescore"):
