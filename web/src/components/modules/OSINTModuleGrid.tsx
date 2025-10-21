@@ -186,7 +186,7 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
 
   useEffect(() => {
     loadModules();
-  }, [loadModules]);
+  }, []);
 
   const categories = useMemo(() => {
     const unique = new Map<string, string>();
