@@ -37,9 +37,13 @@ from utils.transport import get_tor_status
 from pydantic import BaseModel, Field  # type: ignore
 
 try:
-    from investigations.investigation_manager import InvestigationManager  # type: ignore
+    from investigations.investigation_manager import (  # type: ignore
+        InvestigationManager,
+        InvestigationStatus,
+    )
 except Exception:  # pragma: no cover - optional advanced manager
     InvestigationManager = None
+    InvestigationStatus = None  # type: ignore
 from database.graph_database import GraphDatabaseAdapter
 
 # OSINT Module Registry
@@ -1480,141 +1484,180 @@ async def start_investigation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/investigations/{investigation_id}/archive")
-async def archive_investigation_endpoint(
-    investigation_id: str, user_id: Optional[str] = Depends(verify_token)
+@app.post("/api/investigations/{investigation_id}/pause")
+async def pause_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
 ):
-    """Archive an investigation for the authenticated owner."""
+    """Pause an active investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
 
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
 
-    store = app.state.investigation_manager
-    if store is None:
-        raise HTTPException(
-            status_code=503, detail="Investigation manager unavailable"
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
         )
-
-    investigation_name: Optional[str] = None
-    advanced_id: Optional[str] = None
-    archived_at: Optional[str] = None
-
-    try:
-        if isinstance(store, PersistentInvestigationStore):
-            investigation = await store.get_investigation(
-                investigation_id, owner_id=user_id
+        if status_value != active_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not active and cannot be paused",
             )
-            if not investigation:
-                raise HTTPException(status_code=404, detail="Investigation not found")
 
-            investigation_name = investigation.get("name")
-            advanced_id = investigation.get("advanced_id")
-
-            if investigation.get("archived") or investigation.get("status") == "archived":
-                archived_at = investigation.get("archived_at")
-                return {
-                    "status": "archived",
-                    "investigation_id": investigation_id,
-                    "archived_at": archived_at,
-                    "message": "Investigation already archived",
-                }
-
-            result = await store.archive_investigation(investigation_id, owner_id=user_id)
-            archived_at = result.get("archived_at")
-            advanced_id = result.get("advanced_id") or advanced_id
-        else:
-            archive_callable = getattr(store, "archive_investigation", None) or getattr(
-                store, "archive", None
+        paused = await manager.pause_investigation(investigation_id)
+        if not paused:
+            raise HTTPException(
+                status_code=500, detail="Unable to pause investigation"
             )
-            if not archive_callable:
-                raise HTTPException(
-                    status_code=400, detail="Archiving not supported for this store"
-                )
 
-            archive_result = await archive_callable(investigation_id)
-            if isinstance(archive_result, dict):
-                archived_at = archive_result.get("archived_at")
-            try:
-                investigation_obj = await store.get_investigation(investigation_id)  # type: ignore[arg-type]
-                if investigation_obj is None:
-                    raise HTTPException(
-                        status_code=404, detail="Investigation not found"
-                    )
-                investigation_name = getattr(investigation_obj, "name", None)
-            except TypeError:
-                # Some implementations may require owner id; fall back to None
-                investigation_name = None
-    except HTTPException:
-        raise
-    except ValueError:
-        raise HTTPException(status_code=404, detail="Investigation not found")
-    except Exception as e:
-        logging.error(f"Failed to archive investigation {investigation_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to archive investigation")
-
-    # If an advanced manager is attached, archive the mirrored investigation as well
-    if isinstance(store, PersistentInvestigationStore):
-        advanced_manager = getattr(store, "advanced_manager", None)
-        if advanced_manager and advanced_id:
-            try:
-                adv_result = await advanced_manager.archive_investigation(advanced_id)
-                if isinstance(adv_result, dict) and not archived_at:
-                    archived_at = adv_result.get("archived_at")
-            except Exception as e:  # pragma: no cover - best-effort archival
-                logging.warning(
-                    "Advanced investigation archive failed for %s: %s",
-                    advanced_id,
-                    e,
-                )
-
-    if archived_at is None:
-        archived_at = datetime.now(timezone.utc).isoformat()
-
-    # Log audit trail entry for archival
-    try:
-        audit_trail.log_operation(
-            operation="investigation_archived",
-            actor=user_id,
-            target=investigation_id,
-            metadata={
-                "name": investigation_name,
-                "archived_at": archived_at,
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_paused",
+                "status": "paused",
+                "message": "Investigation paused",
+                "investigation_id": investigation_id,
             },
         )
-    except Exception as e:  # pragma: no cover - logging should not fail request
-        logging.warning(f"Audit logging failed for investigation archive: {e}")
 
-    # Broadcast WebSocket notification about archived status
-    if getattr(app.state, "ws_manager", None):
-        try:
-            await app.state.ws_manager.broadcast_investigation_update(
-                investigation_id=investigation_id,
-                data={
-                    "type": "investigation_archived",
-                    "status": "archived",
-                    "message": "Investigation archived",
-                    "investigation_id": investigation_id,
-                    "archived_at": archived_at,
-                    "investigation_name": investigation_name,
-                    "updates": {
-                        "status": "archived",
-                        "archived_at": archived_at,
-                    },
-                },
-            )
-        except Exception as e:  # pragma: no cover - notification best effort
-            logging.warning(
-                "WebSocket broadcast failed for investigation %s archive: %s",
-                investigation_id,
-                e,
+        return {
+            "status": "paused",
+            "investigation_id": investigation_id,
+            "message": "Investigation paused successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to pause investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/resume")
+async def resume_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Resume a paused investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
             )
 
-    return {
-        "status": "archived",
-        "investigation_id": investigation_id,
-        "archived_at": archived_at,
-        "message": "Investigation archived successfully",
-    }
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value != paused_value:
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not paused and cannot be resumed",
+            )
+
+        resumed = await manager.resume_investigation(investigation_id)
+        if not resumed:
+            raise HTTPException(
+                status_code=500, detail="Unable to resume investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_resumed",
+                "status": "active",
+                "message": "Investigation resumed",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "active",
+            "investigation_id": investigation_id,
+            "message": "Investigation resumed successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to resume investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/investigations/{investigation_id}/stop")
+async def stop_investigation(
+    investigation_id: str,
+    user_id: Optional[str] = Depends(rate_limit(limit=30, window_seconds=300)),
+):
+    """Hard stop an investigation"""
+    try:
+        manager = getattr(app.state, "investigation_manager", None)
+        if not manager:
+            raise HTTPException(
+                status_code=503, detail="Investigation manager unavailable"
+            )
+
+        investigation = await manager.get_investigation(investigation_id)
+        if not investigation:
+            raise HTTPException(status_code=404, detail="Investigation not found")
+
+        status_value = getattr(investigation.status, "value", investigation.status)
+        active_value = (
+            InvestigationStatus.ACTIVE.value
+            if InvestigationStatus is not None
+            else "active"
+        )
+        paused_value = (
+            InvestigationStatus.PAUSED.value
+            if InvestigationStatus is not None
+            else "paused"
+        )
+        if status_value not in (active_value, paused_value):
+            raise HTTPException(
+                status_code=409,
+                detail="Investigation is not running or paused and cannot be stopped",
+            )
+
+        stopped = await manager.stop_investigation(investigation_id)
+        if not stopped:
+            raise HTTPException(
+                status_code=500, detail="Unable to stop investigation"
+            )
+
+        await app.state.ws_manager.broadcast_investigation_update(
+            investigation_id=investigation_id,
+            data={
+                "type": "investigation_stopped",
+                "status": "archived",
+                "message": "Investigation stopped",
+                "investigation_id": investigation_id,
+            },
+        )
+
+        return {
+            "status": "archived",
+            "investigation_id": investigation_id,
+            "message": "Investigation stopped successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/investigations/{investigation_id}/tasks")
@@ -3108,6 +3151,41 @@ class AutonomousInvestigationRequest(BaseModel):
     max_pivots_per_level: int = Field(3, description="Maximum pivots per level")
 
 
+_autopivot_fallback_lock = asyncio.Lock()
+
+
+async def _get_autopivot_engine() -> Any:
+    """Return the active AI engine or a deterministic offline fallback."""
+
+    engine = getattr(app.state, "ai_engine", None)
+    if engine is not None:
+        return engine
+
+    fallback = getattr(app.state, "_autopivot_engine", None)
+    if fallback is not None:
+        return fallback
+
+    async with _autopivot_fallback_lock:
+        fallback = getattr(app.state, "_autopivot_engine", None)
+        if fallback is None:
+            try:
+                from core.autopivot_fallback import DeterministicAutopivotEngine
+
+                fallback = DeterministicAutopivotEngine()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                fallback = None
+            setattr(app.state, "_autopivot_engine", fallback)
+
+    if fallback is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Autopivot engine unavailable",
+        )
+
+    return fallback
+
+
 @app.post("/api/autopivot/suggest")
 async def suggest_autopivots(
     request: AutopivotRequest,
@@ -3123,8 +3201,10 @@ async def suggest_autopivots(
         if not investigation:
             raise HTTPException(status_code=404, detail="Investigation not found")
 
-        # Get autopivot suggestions from AI engine
-        pivots = await app.state.ai_engine.suggest_autopivots(
+        engine = await _get_autopivot_engine()
+
+        # Get autopivot suggestions from AI engine or deterministic fallback
+        pivots = await engine.suggest_autopivots(
             investigation_data=investigation, max_pivots=request.max_pivots
         )
 
@@ -3135,6 +3215,8 @@ async def suggest_autopivots(
             "generated_at": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autopivot suggestion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -3147,8 +3229,10 @@ async def start_autonomous_investigation(
 ):
     """Start fully autonomous investigation with automatic pivoting"""
     try:
+        engine = await _get_autopivot_engine()
+
         # Execute autonomous investigation
-        result = await app.state.ai_engine.execute_autonomous_investigation(
+        result = await engine.execute_autonomous_investigation(
             initial_target=request.target,
             target_type=request.target_type,
             max_depth=request.max_depth,
@@ -3165,6 +3249,8 @@ async def start_autonomous_investigation(
             "completed_at": result["completed_at"],
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Autonomous investigation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

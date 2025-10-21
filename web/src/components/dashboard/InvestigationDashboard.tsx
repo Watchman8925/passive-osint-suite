@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { Investigation, InvestigationStatus, Priority } from '../../types/investigation';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { investigationApi } from '../../services/api';
+import { osintAPI } from '../../services/osintAPI';
 import { generatedClient } from '../../services/apiClientGenerated';
 import InvestigationCard from './InvestigationCard';
 import CreateInvestigationModal from './CreateInvestigationModal';
@@ -199,11 +200,14 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
         case 'start':
           await startInvestigationMutation.mutateAsync(investigationId);
           break;
+        case 'resume':
+          await resumeInvestigationMutation.mutateAsync(investigationId);
+          break;
         case 'pause':
           await pauseInvestigationMutation.mutateAsync(investigationId);
           break;
         case 'delete':
-          await deleteInvestigationMutation.mutateAsync(investigationId);
+          await stopInvestigationMutation.mutateAsync(investigationId);
           break;
         case 'archive':
           await archiveInvestigationMutation.mutateAsync(investigationId);
@@ -432,7 +436,14 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
                   <InvestigationCard
                     investigation={investigation}
                     onView={() => setSelectedInvestigation(investigation.id)}
-                    onStart={() => handleInvestigationAction(investigation.id, 'start')}
+                    onStart={() =>
+                      handleInvestigationAction(
+                        investigation.id,
+                        investigation.status === InvestigationStatus.PAUSED
+                          ? 'resume'
+                          : 'start'
+                      )
+                    }
                     onPause={() => handleInvestigationAction(investigation.id, 'pause')}
                     onDelete={() => handleInvestigationAction(investigation.id, 'delete')}
                     onArchive={() => handleInvestigationAction(investigation.id, 'archive')}
