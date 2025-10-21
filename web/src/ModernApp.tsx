@@ -1122,7 +1122,7 @@ const ModernApp = () => {
                             </div>
                             <div className="flex items-center space-x-2">
                               <div className={`w-2 h-2 rounded-full ${
-                                api.status === 'configured' ? 'bg-[var(--glass-surface)]0' : 'bg-red-500'
+                                api.status === 'configured' ? 'bg-[var(--accent-seafoam)]' : 'bg-red-500'
                               }`}></div>
                               <button className="text-[var(--accent-blue)] hover:text-[var(--accent-blue)] text-sm font-medium">
                                 {api.status === 'configured' ? 'Update' : 'Configure'}
