@@ -237,25 +237,33 @@ class OSINTAPIClient {
     }
   }
 
-  async pauseInvestigation(id: string): Promise<boolean> {
+  async pauseInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      await this.client.post(`/api/investigations/${id}/pause`);
-      toast.success('⏸️ Investigation paused');
-      return true;
-    } catch (error) {
-      toast.error('Failed to pause investigation');
-      return false;
+      const response = await this.client.post(`/api/investigations/${id}/pause`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to pause investigation';
+      return { success: false, error: message };
     }
   }
 
-  async stopInvestigation(id: string): Promise<boolean> {
+  async resumeInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      await this.client.post(`/api/investigations/${id}/stop`);
-      toast.success('⏹️ Investigation stopped');
-      return true;
-    } catch (error) {
-      toast.error('Failed to stop investigation');
-      return false;
+      const response = await this.client.post(`/api/investigations/${id}/resume`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to resume investigation';
+      return { success: false, error: message };
+    }
+  }
+
+  async stopInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await this.client.post(`/api/investigations/${id}/stop`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to stop investigation';
+      return { success: false, error: message };
     }
   }
 
