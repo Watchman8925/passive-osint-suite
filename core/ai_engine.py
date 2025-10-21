@@ -53,7 +53,7 @@ class OSINTAIEngine:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str,
         model_url: str = "https://api.openai.com/v1",
         model_name: str = "gpt-4",
         provider: str = "openai",
