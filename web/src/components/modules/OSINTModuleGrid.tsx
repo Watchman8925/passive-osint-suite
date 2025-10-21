@@ -132,11 +132,8 @@ const OSINTModuleGrid: React.FC<OSINTModuleGridProps> = ({ onModuleSelect, selec
       .map(fragment => fragment.trim())
       .filter(Boolean);
 
-    if (fragments.length === 0) {
-      return [className];
-    }
-
-    return Array.from(new Set(fragments));
+    // Always include className in the features array, deduplicated
+    return Array.from(new Set([...fragments, className]));
   }, []);
 
   const deriveStatus = useCallback(
