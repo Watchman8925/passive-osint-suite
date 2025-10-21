@@ -1480,6 +1480,143 @@ async def start_investigation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/investigations/{investigation_id}/archive")
+async def archive_investigation_endpoint(
+    investigation_id: str, user_id: Optional[str] = Depends(verify_token)
+):
+    """Archive an investigation for the authenticated owner."""
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    store = app.state.investigation_manager
+    if store is None:
+        raise HTTPException(
+            status_code=503, detail="Investigation manager unavailable"
+        )
+
+    investigation_name: Optional[str] = None
+    advanced_id: Optional[str] = None
+    archived_at: Optional[str] = None
+
+    try:
+        if isinstance(store, PersistentInvestigationStore):
+            investigation = await store.get_investigation(
+                investigation_id, owner_id=user_id
+            )
+            if not investigation:
+                raise HTTPException(status_code=404, detail="Investigation not found")
+
+            investigation_name = investigation.get("name")
+            advanced_id = investigation.get("advanced_id")
+
+            if investigation.get("archived") or investigation.get("status") == "archived":
+                archived_at = investigation.get("archived_at")
+                return {
+                    "status": "archived",
+                    "investigation_id": investigation_id,
+                    "archived_at": archived_at,
+                    "message": "Investigation already archived",
+                }
+
+            result = await store.archive_investigation(investigation_id, owner_id=user_id)
+            archived_at = result.get("archived_at")
+            advanced_id = result.get("advanced_id") or advanced_id
+        else:
+            archive_callable = getattr(store, "archive_investigation", None) or getattr(
+                store, "archive", None
+            )
+            if not archive_callable:
+                raise HTTPException(
+                    status_code=400, detail="Archiving not supported for this store"
+                )
+
+            archive_result = await archive_callable(investigation_id)
+            if isinstance(archive_result, dict):
+                archived_at = archive_result.get("archived_at")
+            try:
+                investigation_obj = await store.get_investigation(investigation_id)  # type: ignore[arg-type]
+                if investigation_obj is None:
+                    raise HTTPException(
+                        status_code=404, detail="Investigation not found"
+                    )
+                investigation_name = getattr(investigation_obj, "name", None)
+            except TypeError:
+                # Some implementations may require owner id; fall back to None
+                investigation_name = None
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    except Exception as e:
+        logging.error(f"Failed to archive investigation {investigation_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to archive investigation")
+
+    # If an advanced manager is attached, archive the mirrored investigation as well
+    if isinstance(store, PersistentInvestigationStore):
+        advanced_manager = getattr(store, "advanced_manager", None)
+        if advanced_manager and advanced_id:
+            try:
+                adv_result = await advanced_manager.archive_investigation(advanced_id)
+                if isinstance(adv_result, dict) and not archived_at:
+                    archived_at = adv_result.get("archived_at")
+            except Exception as e:  # pragma: no cover - best-effort archival
+                logging.warning(
+                    "Advanced investigation archive failed for %s: %s",
+                    advanced_id,
+                    e,
+                )
+
+    if archived_at is None:
+        archived_at = datetime.now(timezone.utc).isoformat()
+
+    # Log audit trail entry for archival
+    try:
+        audit_trail.log_operation(
+            operation="investigation_archived",
+            actor=user_id,
+            target=investigation_id,
+            metadata={
+                "name": investigation_name,
+                "archived_at": archived_at,
+            },
+        )
+    except Exception as e:  # pragma: no cover - logging should not fail request
+        logging.warning(f"Audit logging failed for investigation archive: {e}")
+
+    # Broadcast WebSocket notification about archived status
+    if getattr(app.state, "ws_manager", None):
+        try:
+            await app.state.ws_manager.broadcast_investigation_update(
+                investigation_id=investigation_id,
+                data={
+                    "type": "investigation_archived",
+                    "status": "archived",
+                    "message": "Investigation archived",
+                    "investigation_id": investigation_id,
+                    "archived_at": archived_at,
+                    "investigation_name": investigation_name,
+                    "updates": {
+                        "status": "archived",
+                        "archived_at": archived_at,
+                    },
+                },
+            )
+        except Exception as e:  # pragma: no cover - notification best effort
+            logging.warning(
+                "WebSocket broadcast failed for investigation %s archive: %s",
+                investigation_id,
+                e,
+            )
+
+    return {
+        "status": "archived",
+        "investigation_id": investigation_id,
+        "archived_at": archived_at,
+        "message": "Investigation archived successfully",
+    }
+
+
 @app.get("/api/investigations/{investigation_id}/tasks")
 async def investigation_tasks(
     investigation_id: str,
