@@ -431,7 +431,15 @@ class ExportService {
       rows.forEach((row, rowIndex) => {
         xml += `    <row r="${rowIndex + 2}">\n`;
         headers.forEach((header, columnIndex) => {
-          const value = row[header];
+          let value: unknown = undefined;
+          if (
+            row !== null &&
+            typeof row === 'object' &&
+            !Array.isArray(row) &&
+            Object.prototype.hasOwnProperty.call(row, header)
+          ) {
+            value = (row as Record<string, unknown>)[header];
+          }
           if (value === null || value === undefined || value === '') {
             return;
           }
