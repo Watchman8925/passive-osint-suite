@@ -4,16 +4,18 @@ Generate comprehensive intelligence reports with PDF generation, executive summa
 automated scheduling, and professional formatting.
 """
 
+import json
 import os
 import smtplib
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from pathlib import Path
+from statistics import mean
 from typing import Any, Dict, List, Optional
 
 try:
@@ -63,6 +65,9 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+from core.investigation_tracker import InvestigationTracker
+from graph.adapter import GraphAdapter, get_default_graph
+
 
 @dataclass
 class ReportTemplate:
@@ -97,12 +102,17 @@ class EnhancedReportingEngine:
         ai_engine=None,
         template_dir: str = "templates/reports",
         output_dir: str = "output/reports",
+        tracker: Optional[InvestigationTracker] = None,
+        graph: Optional[GraphAdapter] = None,
     ):
         self.ai_engine = ai_engine
         self.template_dir = Path(template_dir)
         self.output_dir = Path(output_dir)
         self.templates: Dict[str, ReportTemplate] = {}
         self.schedules: Dict[str, ReportSchedule] = {}
+
+        self.tracker = tracker or InvestigationTracker()
+        self.graph = graph or get_default_graph()
 
         # Create directories
         self.template_dir.mkdir(parents=True, exist_ok=True)
@@ -190,6 +200,28 @@ class EnhancedReportingEngine:
             "threat_intelligence": threat_template,
         }
 
+    def build_dataset(self, investigation_id: str) -> Dict[str, Any]:
+        """Assemble a reporting dataset from tracker and graph state."""
+
+        summary = self.tracker.get_investigation_summary(investigation_id)
+        if not summary:
+            return {}
+
+        findings = [asdict(finding) for finding in self.tracker.get_all_findings(investigation_id)]
+        leads = [asdict(lead) for lead in self.tracker.get_all_leads(investigation_id)]
+
+        dataset = {
+            "investigation_id": investigation_id,
+            "name": summary.get("name", investigation_id),
+            "summary": summary,
+            "findings": findings,
+            "leads": leads,
+            "statistics": self._compute_statistics(findings, leads),
+            "graph": self.graph.export_snapshot(),
+        }
+
+        return dataset
+
     def generate_executive_summary(
         self, investigation_data: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -208,6 +240,74 @@ class EnhancedReportingEngine:
         }
 
         return summary
+
+    def _compute_statistics(
+        self, findings: List[Dict[str, Any]], leads: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        findings_by_type: Dict[str, Dict[str, Any]] = {}
+        module_usage: Dict[str, int] = {}
+        latest_observation: Optional[datetime] = None
+
+        for finding in findings:
+            ftype = finding.get("finding_type", "unknown")
+            entry = findings_by_type.setdefault(
+                ftype,
+                {
+                    "count": 0,
+                    "total_confidence": 0.0,
+                    "sources": set(),
+                    "latest": None,
+                },
+            )
+            entry["count"] += 1
+            entry["total_confidence"] += float(finding.get("confidence", 0.0))
+            entry["sources"].add(finding.get("source_module", "unknown"))
+
+            timestamp = finding.get("discovered_at")
+            dt: Optional[datetime] = None
+            if timestamp:
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    else:
+                        dt = dt.astimezone(timezone.utc)
+                except Exception:
+                    dt = None
+
+            if dt and (entry["latest"] is None or dt > entry["latest"]):
+                entry["latest"] = dt
+            if dt and (latest_observation is None or dt > latest_observation):
+                latest_observation = dt
+
+            module = finding.get("source_module", "unknown")
+            module_usage[module] = module_usage.get(module, 0) + 1
+
+        for entry in findings_by_type.values():
+            count = max(entry["count"], 1)
+            entry["avg_confidence"] = round(entry["total_confidence"] / count, 2)
+            entry["sources"] = sorted(entry["sources"])
+            entry["latest"] = (
+                entry["latest"].isoformat() if isinstance(entry["latest"], datetime) else None
+            )
+            del entry["total_confidence"]
+
+        prioritized_leads = sorted(
+            leads,
+            key=lambda l: ("critical", "high", "medium", "low").index(l.get("priority", "low"))
+            if l.get("priority") in {"critical", "high", "medium", "low"}
+            else 4,
+        )
+
+        return {
+            "findings_by_type": findings_by_type,
+            "modules": module_usage,
+            "latest_observation": latest_observation.isoformat()
+            if latest_observation
+            else None,
+            "lead_count": len(leads),
+            "high_priority_leads": [lead.get("id") for lead in prioritized_leads[:5]],
+        }
 
     def generate_technical_report(
         self, investigation_data: Dict[str, Any]
@@ -461,399 +561,338 @@ class EnhancedReportingEngine:
 
     def _extract_key_findings(self, data: Dict[str, Any]) -> List[str]:
         """Extract key findings from investigation data"""
-        findings = []
 
-        # Analyze different data sources
-        if "domain_data" in data:
-            domain_findings = self._analyze_domain_findings(data["domain_data"])
-            findings.extend(domain_findings)
+        stats = data.get("statistics", {}).get("findings_by_type", {})
+        if not stats:
+            return ["No findings have been recorded for this investigation yet."]
 
-        if "ip_data" in data:
-            ip_findings = self._analyze_ip_findings(data["ip_data"])
-            findings.extend(ip_findings)
+        sorted_types = sorted(
+            stats.items(), key=lambda item: item[1]["count"], reverse=True
+        )
 
-        if "social_data" in data:
-            social_findings = self._analyze_social_findings(data["social_data"])
-            findings.extend(social_findings)
-
-        if "breach_data" in data:
-            breach_findings = self._analyze_breach_findings(data["breach_data"])
-            findings.extend(breach_findings)
-
-        return findings[:10]  # Limit to top 10 findings
-
-    def _analyze_domain_findings(self, domain_data: Dict[str, Any]) -> List[str]:
-        """Analyze domain-related findings"""
-        findings = []
-
-        if domain_data.get("subdomains_found", 0) > 10:
-            findings.append(
-                f"Discovered {domain_data['subdomains_found']} subdomains, indicating extensive infrastructure"
+        findings: List[str] = []
+        for ftype, meta in sorted_types[:5]:
+            message = (
+                f"{meta['count']} {ftype} finding(s) with average confidence "
+                f"{meta['avg_confidence']:.2f}."
             )
+            if meta.get("latest"):
+                message += f" Most recent observation on {meta['latest']}."
+            if meta.get("sources"):
+                message += f" Sources: {', '.join(meta['sources'])}."
+            findings.append(message)
 
-        if domain_data.get("recent_registrations", False):
+        leads = data.get("leads", [])
+        high_priority = [
+            lead for lead in leads if lead.get("priority") in {"critical", "high"}
+        ]
+        if high_priority:
+            lead_targets = ", ".join(lead["target"] for lead in high_priority[:3])
             findings.append(
-                "Recent domain registrations detected, possible new campaign infrastructure"
-            )
-
-        if domain_data.get("suspicious_patterns", []):
-            findings.append(
-                f"Identified {len(domain_data['suspicious_patterns'])} suspicious domain patterns"
-            )
-
-        return findings
-
-    def _analyze_ip_findings(self, ip_data: Dict[str, Any]) -> List[str]:
-        """Analyze IP-related findings"""
-        findings = []
-
-        if ip_data.get("blacklisted_ips", 0) > 0:
-            findings.append(
-                f"{ip_data['blacklisted_ips']} IP addresses found on security blacklists"
-            )
-
-        if ip_data.get("cloud_providers", []):
-            findings.append(
-                f"Infrastructure hosted on {', '.join(ip_data['cloud_providers'])}"
-            )
-
-        if ip_data.get("geographic_distribution", {}):
-            countries = list(ip_data["geographic_distribution"].keys())
-            if len(countries) > 3:
-                findings.append(
-                    f"Global infrastructure spanning {len(countries)} countries"
-                )
-
-        return findings
-
-    def _analyze_social_findings(self, social_data: Dict[str, Any]) -> List[str]:
-        """Analyze social media findings"""
-        findings = []
-
-        if social_data.get("total_profiles", 0) > 5:
-            findings.append(
-                f"Found {social_data['total_profiles']} social media profiles across platforms"
-            )
-
-        if social_data.get("recent_activity", []):
-            findings.append(
-                "Recent social media activity detected, indicating active operations"
-            )
-
-        if social_data.get("connections_found", 0) > 10:
-            findings.append(
-                f"Identified {social_data['connections_found']} social connections and relationships"
-            )
-
-        return findings
-
-    def _analyze_breach_findings(self, breach_data: Dict[str, Any]) -> List[str]:
-        """Analyze breach-related findings"""
-        findings = []
-
-        if breach_data.get("total_breaches", 0) > 0:
-            findings.append(
-                f"Target appears in {breach_data['total_breaches']} data breaches"
-            )
-
-        if breach_data.get("sensitive_data_exposed", False):
-            findings.append(
-                "Sensitive personal or financial data found in breach databases"
-            )
-
-        if breach_data.get("recent_breaches", []):
-            findings.append(
-                "Recent breach activity detected, indicating ongoing exposure risk"
+                f"{len(high_priority)} high-priority lead(s) awaiting action: {lead_targets}."
             )
 
         return findings
 
     def _calculate_risk_score(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate overall risk score"""
-        risk_score = 0
-        risk_factors = []
 
-        # Domain risk factors
-        if data.get("domain_data", {}).get("suspicious_patterns", []):
-            risk_score += 20
-            risk_factors.append("Suspicious domain patterns detected")
+        leads = data.get("leads", [])
+        findings = data.get("findings", [])
 
-        # IP risk factors
-        if data.get("ip_data", {}).get("blacklisted_ips", 0) > 0:
-            risk_score += 25
-            risk_factors.append("IP addresses on security blacklists")
+        priority_weight = {"critical": 25, "high": 20, "medium": 10, "low": 5}
+        score = 0
+        drivers: List[str] = []
 
-        # Breach risk factors
-        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
-            risk_score += 15
-            risk_factors.append("Data found in breach databases")
+        for lead in leads:
+            priority = lead.get("priority", "low")
+            score += priority_weight.get(priority, 5)
+            drivers.append(f"Lead {lead.get('target')} ({priority})")
 
-        # Social risk factors
-        social_count = data.get("social_data", {}).get("total_profiles", 0)
-        if social_count > 10:
-            risk_score += 10
-            risk_factors.append("Extensive social media presence")
+        exposure_findings = [
+            f
+            for f in findings
+            if f.get("finding_type") in {"breach", "vulnerability", "threat_indicator"}
+        ]
+        if exposure_findings:
+            score += len(exposure_findings) * 5
+            drivers.append(
+                f"{len(exposure_findings)} exposure indicator(s) detected"
+            )
 
-        # Determine risk level
-        if risk_score >= 50:
-            level = "Critical"
-            color = "red"
-        elif risk_score >= 30:
-            level = "High"
-            color = "orange"
-        elif risk_score >= 15:
-            level = "Medium"
-            color = "yellow"
+        score = min(score, 100)
+
+        if score >= 70:
+            level = "critical"
+        elif score >= 50:
+            level = "high"
+        elif score >= 30:
+            level = "medium"
         else:
-            level = "Low"
-            color = "green"
+            level = "low"
 
-        return {
-            "score": risk_score,
-            "level": level,
-            "color": color,
-            "description": f"Overall risk assessment: {level.lower()}",
-            "factors": risk_factors,
-        }
+        return {"score": score, "level": level, "drivers": drivers[:6]}
 
     def _generate_prioritized_recommendations(self, data: Dict[str, Any]) -> List[str]:
         """Generate prioritized recommendations"""
-        recommendations = []
 
-        risk_score = self._calculate_risk_score(data)["score"]
+        recommendations: List[str] = []
+        risk = self._calculate_risk_score(data)
 
-        if risk_score >= 50:
-            recommendations.extend(
-                [
-                    "URGENT: Implement immediate containment measures",
-                    "Conduct comprehensive security audit",
-                    "Notify relevant authorities if criminal activity suspected",
-                    "Isolate affected systems and accounts",
-                ]
-            )
-        elif risk_score >= 30:
-            recommendations.extend(
-                [
-                    "Increase monitoring of identified assets",
-                    "Implement additional security controls",
-                    "Conduct targeted security assessment",
-                    "Review and update access controls",
-                ]
-            )
-        elif risk_score >= 15:
-            recommendations.extend(
-                [
-                    "Monitor identified assets regularly",
-                    "Implement basic security hygiene",
-                    "Conduct periodic security reviews",
-                    "Maintain situational awareness",
-                ]
-            )
+        if risk["level"] in {"critical", "high"}:
+            recommendations.append("Escalate investigation to incident response immediately.")
+            recommendations.append("Task dedicated owners for each high-priority lead.")
+        elif risk["level"] == "medium":
+            recommendations.append("Schedule targeted follow-up collection on active leads.")
         else:
-            recommendations.extend(
-                [
-                    "Continue standard security practices",
-                    "Maintain regular monitoring",
-                    "Stay informed about emerging threats",
-                ]
-            )
+            recommendations.append("Maintain routine monitoring cadence.")
 
-        # Add specific recommendations based on findings
-        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
+        leads = data.get("leads", [])
+        sorted_leads = sorted(
+            leads,
+            key=lambda l: ("critical", "high", "medium", "low").index(l.get("priority", "low"))
+            if l.get("priority") in {"critical", "high", "medium", "low"}
+            else 4,
+        )
+
+        for lead in sorted_leads[:5]:
+            modules = ", ".join(lead.get("suggested_modules", [])) or "core modules"
             recommendations.append(
-                "Change passwords for all affected accounts immediately"
+                f"Investigate {lead['target']} ({lead['priority']}) using {modules}."
             )
 
-        if data.get("domain_data", {}).get("subdomains_found", 0) > 20:
-            recommendations.append("Conduct comprehensive infrastructure mapping")
+        coverage = data.get("statistics", {}).get("findings_by_type", {})
+        if "domain" not in coverage and "subdomain" not in coverage:
+            recommendations.append("Collect domain intelligence to map external surface.")
+        if "breach" not in coverage:
+            recommendations.append("Query breach repositories for credential exposure.")
 
         return recommendations
 
     def _create_executive_timeline(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Create executive timeline of key events"""
-        timeline = []
+        timeline: List[Dict[str, Any]] = []
 
-        # Extract timeline events from various data sources
-        if "domain_data" in data and "registration_date" in data["domain_data"]:
-            timeline.append(
-                {
-                    "date": data["domain_data"]["registration_date"],
-                    "event": "Domain registration",
-                    "type": "domain",
-                }
+        summary = data.get("summary", {})
+        stored_timeline = summary.get("timeline")
+        if stored_timeline:
+            try:
+                parsed = json.loads(stored_timeline)
+                if isinstance(parsed, list):
+                    for entry in parsed:
+                        timeline.append(
+                            {
+                                "timestamp": entry.get("timestamp"),
+                                "event": entry.get("event") or entry.get("description"),
+                                "impact": entry.get("impact", "medium"),
+                            }
+                        )
+            except Exception:
+                pass
+
+        if not timeline:
+            sorted_findings = sorted(
+                data.get("findings", []),
+                key=lambda f: f.get("discovered_at", ""),
+                reverse=True,
             )
-
-        if "breach_data" in data and "breaches" in data["breach_data"]:
-            for breach in data["breach_data"]["breaches"]:
+            for finding in sorted_findings[:10]:
                 timeline.append(
                     {
-                        "date": breach.get("date", "Unknown"),
-                        "event": f"Data breach: {breach.get('source', 'Unknown')}",
-                        "type": "breach",
+                        "timestamp": finding.get("discovered_at"),
+                        "event": f"Finding recorded: {finding.get('finding_type')} {finding.get('value')}",
+                        "impact": "high" if finding.get("confidence", 0) >= 0.8 else "medium",
                     }
                 )
 
-        # Sort by date
-        timeline.sort(
-            key=lambda x: x["date"] if x["date"] != "Unknown" else "1900-01-01",
-            reverse=True,
-        )
+        if not timeline:
+            timeline.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "event": "Investigation initiated",
+                    "impact": "low",
+                }
+            )
 
-        return timeline[:10]  # Return most recent 10 events
+        return timeline[:10]
 
     def _calculate_confidence_score(self, data: Dict[str, Any]) -> float:
         """Calculate confidence score for the investigation"""
-        confidence = 0.5  # Base confidence
 
-        # Increase confidence based on data sources
-        data_sources = [
-            "domain_data",
-            "ip_data",
-            "social_data",
-            "breach_data",
-            "email_data",
+        confidences = [
+            float(f.get("confidence", 0.0))
+            for f in data.get("findings", [])
+            if f.get("confidence") is not None
         ]
-        sources_found = sum(
-            1 for source in data_sources if source in data and data[source]
-        )
 
-        confidence += (sources_found / len(data_sources)) * 0.3
+        if not confidences:
+            return 0.3
 
-        # Increase confidence based on data quality
-        if data.get("domain_data", {}).get("whois_complete", False):
-            confidence += 0.1
-
-        if data.get("ip_data", {}).get("geolocation_complete", False):
-            confidence += 0.1
-
-        return min(confidence, 1.0)
+        avg = sum(confidences) / len(confidences)
+        return round(min(max(avg, 0.1), 1.0), 2)
 
     def _generate_methodology_section(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate methodology section for technical reports"""
+        modules = data.get("statistics", {}).get("modules", {})
         return {
-            "data_sources": list(data.keys()),
-            "collection_methods": ["passive_intelligence", "osint_techniques"],
+            "data_sources": sorted(modules.keys()),
+            "collection_count": sum(modules.values()),
+            "collection_methods": ["passive_intelligence", "open_source"],
             "analysis_framework": "intelligence_cycle",
-            "tools_used": ["osint_suite", "custom_modules"],
+            "tools_used": sorted(modules.keys()) or ["osint_suite"],
         }
 
     def _extract_technical_findings(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract technical findings from investigation data"""
-        findings = []
+        findings: List[Dict[str, Any]] = []
+        stats = data.get("statistics", {}).get("findings_by_type", {})
 
-        # Add technical details from various sources
-        if "domain_data" in data:
-            findings.append(
-                {
-                    "category": "domain",
-                    "findings": self._analyze_domain_findings(data["domain_data"]),
-                    "severity": "medium",
-                }
-            )
-
-        if "ip_data" in data:
-            findings.append(
-                {
-                    "category": "network",
-                    "findings": self._analyze_ip_findings(data["ip_data"]),
-                    "severity": "high",
-                }
-            )
+        for category in ["domain", "subdomain", "ip", "email", "profile", "company"]:
+            if category in stats:
+                meta = stats[category]
+                findings.append(
+                    {
+                        "category": category,
+                        "findings": [
+                            f"{meta['count']} artifacts with average confidence {meta['avg_confidence']:.2f}"
+                        ],
+                        "severity": "high"
+                        if category in {"domain", "ip"}
+                        else "medium",
+                    }
+                )
 
         return findings
 
     def _analyze_infrastructure(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze infrastructure from investigation data"""
+        stats = data.get("statistics", {}).get("findings_by_type", {})
+        providers = {
+            finding.get("metadata", {}).get("org")
+            for finding in data.get("findings", [])
+            if finding.get("finding_type") == "service_provider"
+            and finding.get("metadata", {}).get("org")
+        }
+
         return {
-            "domains": data.get("domain_data", {}),
-            "ip_addresses": data.get("ip_data", {}),
-            "services": data.get("service_data", {}),
-            "geographic_distribution": data.get("geo_data", {}),
+            "domain_count": stats.get("domain", {}).get("count", 0)
+            + stats.get("subdomain", {}).get("count", 0),
+            "ip_count": stats.get("ip", {}).get("count", 0),
+            "service_providers": sorted(providers),
+            "latest_observation": data.get("statistics", {}).get("latest_observation"),
         }
 
     def _assess_vulnerabilities(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Assess vulnerabilities from investigation data"""
-        vulnerabilities = []
-
-        # Check for common vulnerabilities
-        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
-            vulnerabilities.append(
-                {
-                    "type": "data_breach",
-                    "severity": "high",
-                    "description": "Data found in breach databases",
-                }
-            )
-
+        vulnerabilities: List[Dict[str, Any]] = []
+        for finding in data.get("findings", []):
+            ftype = finding.get("finding_type")
+            if ftype in {"breach", "vulnerability"}:
+                vulnerabilities.append(
+                    {
+                        "type": ftype,
+                        "severity": "high" if finding.get("confidence", 0) >= 0.7 else "medium",
+                        "description": finding.get("value"),
+                    }
+                )
         return vulnerabilities
 
     def _generate_technical_recommendations(self, data: Dict[str, Any]) -> List[str]:
         """Generate technical recommendations"""
-        recommendations = []
+        recommendations: List[str] = []
+        coverage = data.get("statistics", {}).get("findings_by_type", {})
 
-        if data.get("domain_data", {}).get("subdomains_found", 0) > 10:
-            recommendations.append("Implement comprehensive subdomain monitoring")
+        if coverage.get("subdomain", {}).get("count", 0) > 0:
+            recommendations.append("Deploy continuous subdomain discovery to track infrastructure growth.")
+        if coverage.get("ip", {}).get("count", 0) > 0:
+            recommendations.append("Baseline discovered IP assets and monitor for reputation changes.")
 
-        if data.get("ip_data", {}).get("blacklisted_ips", 0) > 0:
-            recommendations.append("Review and remediate blacklisted IP addresses")
+        if "breach" not in coverage:
+            recommendations.append("Integrate credential breach monitoring to detect exposure early.")
 
         return recommendations
 
     def _identify_threat_actors(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Identify potential threat actors"""
-        actors = []
-
-        # Basic threat actor identification logic
-        if data.get("breach_data", {}).get("total_breaches", 0) > 0:
-            actors.append(
-                {
-                    "type": "cyber_criminal",
-                    "confidence": 0.7,
-                    "indicators": ["data_breach_activity"],
-                }
-            )
-
+        actors: List[Dict[str, Any]] = []
+        for lead in data.get("leads", []):
+            if lead.get("target_type") in {"profile", "company"}:
+                actors.append(
+                    {
+                        "type": lead.get("target_type"),
+                        "name": lead.get("target"),
+                        "confidence": 0.6 if lead.get("priority") == "medium" else 0.8,
+                        "indicators": lead.get("suggested_modules", []),
+                    }
+                )
         return actors
 
     def _analyze_attack_vectors(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Analyze potential attack vectors"""
-        vectors = []
-
-        if data.get("social_data", {}).get("total_profiles", 0) > 0:
+        vectors: List[Dict[str, Any]] = []
+        findings = data.get("findings", [])
+        if any(f.get("finding_type") == "email" for f in findings):
+            vectors.append(
+                {
+                    "type": "phishing",
+                    "likelihood": "high",
+                    "description": "Discovered email addresses enable phishing attempts.",
+                }
+            )
+        if any(f.get("finding_type") == "profile" for f in findings):
             vectors.append(
                 {
                     "type": "social_engineering",
                     "likelihood": "medium",
-                    "description": "Social media presence enables targeted attacks",
+                    "description": "Public profiles support impersonation and trust scams.",
                 }
             )
-
+        if any(f.get("finding_type") == "ip" for f in findings):
+            vectors.append(
+                {
+                    "type": "network_intrusion",
+                    "likelihood": "medium",
+                    "description": "Observed infrastructure may be targeted for direct intrusion.",
+                }
+            )
         return vectors
 
     def _extract_threat_indicators(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract threat indicators"""
-        indicators = []
-
-        if data.get("domain_data", {}).get("suspicious_patterns"):
-            indicators.append(
-                {
-                    "type": "domain",
-                    "value": "suspicious_domain_patterns",
-                    "confidence": 0.8,
-                }
-            )
-
+        indicators: List[Dict[str, Any]] = []
+        for finding in data.get("findings", []):
+            if finding.get("confidence", 0) >= 0.6:
+                indicators.append(
+                    {
+                        "type": finding.get("finding_type"),
+                        "value": finding.get("value"),
+                        "confidence": round(float(finding.get("confidence", 0)), 2),
+                        "source": finding.get("source_module"),
+                    }
+                )
         return indicators
 
     def _generate_mitigation_strategies(self, data: Dict[str, Any]) -> List[str]:
         """Generate mitigation strategies"""
-        strategies = []
+        strategies: List[str] = []
+        risk = self._calculate_risk_score(data)
 
-        risk_score = self._calculate_risk_score(data)["score"]
-
-        if risk_score > 30:
-            strategies.append("Implement enhanced monitoring and alerting")
-            strategies.append("Conduct regular security assessments")
+        if risk["level"] in {"critical", "high"}:
+            strategies.extend(
+                [
+                    "Deploy enhanced monitoring and alerting on flagged assets.",
+                    "Harden exposed infrastructure and rotate credentials immediately.",
+                ]
+            )
+        elif risk["level"] == "medium":
+            strategies.extend(
+                [
+                    "Increase log review frequency for identified assets.",
+                    "Validate third-party exposure remediation steps.",
+                ]
+            )
+        else:
+            strategies.append("Maintain baseline monitoring and revisit after new findings.")
 
         return strategies
 

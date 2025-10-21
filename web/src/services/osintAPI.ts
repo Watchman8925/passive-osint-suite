@@ -1,6 +1,7 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import toast from 'react-hot-toast';
 import { startProgress, finishProgress } from '../utils/progress';
+import { AUTH_TOKEN_KEY, authApi } from './api';
 
 interface TorProxyConfig {
   enabled: boolean;
@@ -56,7 +57,7 @@ class OSINTAPIClient {
         startProgress();
 
         // Add auth token if available
-        const token = localStorage.getItem('osint_auth_token');
+        const token = this.getToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -95,7 +96,7 @@ class OSINTAPIClient {
 
         if (error.response?.status === 401) {
           toast.error('Authentication required');
-          localStorage.removeItem('osint_auth_token');
+          this.clearToken();
         } else if (error.response?.status === 403) {
           toast.error('Access denied - check your permissions');
         } else if (error.response?.status >= 500) {
@@ -112,6 +113,14 @@ class OSINTAPIClient {
 
   private generateRequestId(): string {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getToken(): string | null {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  }
+
+  private clearToken(): void {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   }
 
   // Anonymity Control Methods
@@ -322,9 +331,12 @@ class OSINTAPIClient {
   // Authentication
   async authenticate(credentials: { username: string; password: string }): Promise<boolean> {
     try {
-      const response = await this.client.post('/api/auth/login', credentials);
-      const { token } = response.data;
-      localStorage.setItem('osint_auth_token', token);
+      const response = await authApi.login(credentials);
+      const { access_token } = response ?? {};
+      if (!access_token) {
+        toast.error('Authentication failed: missing access token');
+        return false;
+      }
       toast.success('🔐 Authentication successful');
       return true;
     } catch (error) {
@@ -335,11 +347,11 @@ class OSINTAPIClient {
 
   async logout(): Promise<void> {
     try {
-      await this.client.post('/api/auth/logout');
+      await authApi.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('osint_auth_token');
+      this.clearToken();
       toast.success('Logged out successfully');
     }
   }

@@ -13,27 +13,30 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from realtime.realtime_feeds import RealTimeIntelligenceFeed
 
 
-@pytest.mark.asyncio
-async def test_realtime_feeds():
+def test_realtime_feeds():
     """Test the real-time intelligence feeds functionality"""
-    print("🧪 Testing Real-Time Intelligence Feeds...")
 
-    # Initialize feeds with mock Redis URL (won't connect but won't fail)
-    feeds = RealTimeIntelligenceFeed("redis://localhost:6379")
+    async def _run_checks():
+        print("🧪 Testing Real-Time Intelligence Feeds...")
 
-    # Test feed status
-    status = await feeds.get_feeds_status()
-    print(f"✅ Feed status retrieved: {len(status)} feeds configured")
+        # Initialize feeds with mock Redis URL (won't connect but won't fail)
+        feeds = RealTimeIntelligenceFeed("redis://localhost:6379")
 
-    # Test alert retrieval
-    alerts = await feeds.get_recent_alerts(10)
-    print(f"✅ Recent alerts retrieved: {len(alerts)} alerts")
+        # Test feed status
+        status = await feeds.get_feeds_status()
+        print(f"✅ Feed status retrieved: {len(status)} feeds configured")
 
-    # Test feed sources
-    sources = await feeds.get_feed_sources()
-    print(f"✅ Feed sources retrieved: {len(sources)} sources")
+        # Test alert retrieval
+        alerts = await feeds.get_recent_alerts(10)
+        print(f"✅ Recent alerts retrieved: {len(alerts)} alerts")
 
-    print("✅ All real-time feeds tests passed!")
+        # Test feed sources
+        sources = await feeds.get_feed_sources()
+        print(f"✅ Feed sources retrieved: {len(sources)} sources")
+
+        print("✅ All real-time feeds tests passed!")
+
+    asyncio.run(_run_checks())
 
 
 if __name__ == "__main__":

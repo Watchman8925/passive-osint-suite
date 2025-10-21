@@ -5,14 +5,18 @@ Persistent tracking of investigation findings with progressive building
 Ensures no data loss and maintains complete investigation history
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sqlite3
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from collections import defaultdict
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+from core.storage_config import resolve_path
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +61,11 @@ class InvestigationTracker:
     Builds progressively without losing data.
     """
 
-    def __init__(self, storage_path: str = "./investigation_data"):
-        self.storage_path = Path(storage_path)
-        self.storage_path.mkdir(exist_ok=True, parents=True)
+    def __init__(self, storage_path: Optional[str] = None):
+        base_path = Path(storage_path) if storage_path else resolve_path("investigation")
+        base_path.mkdir(exist_ok=True, parents=True)
 
+        self.storage_path = base_path
         self.db_path = self.storage_path / "investigation_tracker.db"
         self._init_database()
 
@@ -88,7 +93,8 @@ class InvestigationTracker:
         """)
 
         # Investigation leads table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS leads (
                 id TEXT PRIMARY KEY,
                 investigation_id TEXT NOT NULL,
@@ -100,9 +106,20 @@ class InvestigationTracker:
                 created_at TEXT NOT NULL,
                 status TEXT DEFAULT 'pending',
                 findings_count INTEGER DEFAULT 0,
-                estimated_value TEXT NOT NULL
+                estimated_value TEXT NOT NULL,
+                updated_at TEXT,
+                score REAL
             )
-        """)
+            """
+        )
+
+        # Backfill columns for installations created before score/updated_at existed
+        cursor.execute("PRAGMA table_info(leads)")
+        lead_columns = {row[1] for row in cursor.fetchall()}
+        if "updated_at" not in lead_columns:
+            cursor.execute("ALTER TABLE leads ADD COLUMN updated_at TEXT")
+        if "score" not in lead_columns:
+            cursor.execute("ALTER TABLE leads ADD COLUMN score REAL")
 
         # Investigation summary table
         cursor.execute("""
@@ -224,31 +241,71 @@ class InvestigationTracker:
         finally:
             conn.close()
 
-    def add_lead(
+    def upsert_lead(
         self,
         investigation_id: str,
         target: str,
         target_type: str,
         reason: str,
+        *,
         priority: str = "medium",
         suggested_modules: Optional[List[str]] = None,
         estimated_value: str = "medium",
+        score: Optional[float] = None,
+        findings_count: int = 0,
     ) -> str:
-        """Add a new investigation lead"""
-        lead_id = f"lead_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        """Insert a new lead or update the existing record if the target already exists."""
+
         now = datetime.now().isoformat()
+        suggested_modules_json = json.dumps(suggested_modules or [])
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        try:
+        cursor.execute(
+            "SELECT id, priority, findings_count FROM leads WHERE investigation_id = ? AND target = ? AND target_type = ?",
+            (investigation_id, target, target_type),
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            lead_id = existing[0]
+            new_priority = priority
+            if existing[1] == "critical" or priority == "critical":
+                new_priority = "critical"
+            elif existing[1] == "high" or priority == "high":
+                new_priority = "high"
+
+            current_count = existing[2] if isinstance(existing[2], (int, float)) else 0
+            cursor.execute(
+                """
+                UPDATE leads
+                SET reason = ?, priority = ?, suggested_modules = ?,
+                    findings_count = ?, estimated_value = ?, updated_at = ?,
+                    score = COALESCE(?, score)
+                WHERE id = ?
+                """,
+                (
+                    reason,
+                    new_priority,
+                    suggested_modules_json,
+                    max(findings_count, current_count),
+                    estimated_value,
+                    now,
+                    score,
+                    lead_id,
+                ),
+            )
+        else:
+            lead_id = f"lead_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
             cursor.execute(
                 """
                 INSERT INTO leads (
                     id, investigation_id, target, target_type, reason,
-                    priority, suggested_modules, created_at, estimated_value
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+                    priority, suggested_modules, created_at, estimated_value,
+                    findings_count, score, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 (
                     lead_id,
                     investigation_id,
@@ -256,29 +313,30 @@ class InvestigationTracker:
                     target_type,
                     reason,
                     priority,
-                    json.dumps(suggested_modules or []),
+                    suggested_modules_json,
                     now,
                     estimated_value,
+                    findings_count,
+                    score,
+                    now,
                 ),
             )
 
-            # Update investigation summary
             cursor.execute(
                 """
                 UPDATE investigation_summary
                 SET total_leads = total_leads + 1,
                     updated_at = ?
                 WHERE investigation_id = ?
-            """,
+                """,
                 (now, investigation_id),
             )
 
-            conn.commit()
-            logger.info(f"Added lead: {target_type} - {target}")
-            return lead_id
+        conn.commit()
+        conn.close()
 
-        finally:
-            conn.close()
+        logger.info(f"Registered lead {target_type}:{target} for {investigation_id}")
+        return lead_id
 
     def get_all_findings(
         self,
