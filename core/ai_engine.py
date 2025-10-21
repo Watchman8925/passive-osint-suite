@@ -868,7 +868,7 @@ class OSINTAIEngine:
                     "Unable to initialize fallback autopivot engine: %s", exc
                 )
                 self._fallback_autopivot_engine = False
-        return self._fallback_autopivot_engine or None
+        return self._fallback_autopivot_engine
 
     def _should_rescore_pivots(self, investigation_data: Dict[str, Any]) -> bool:
         if investigation_data.get("pending_pivot_rescore"):
