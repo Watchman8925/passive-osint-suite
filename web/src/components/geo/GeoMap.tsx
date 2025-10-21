@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { apiClient } from '../../services/apiClient';
 
 interface IPPoint {
   ip: string;
@@ -8,21 +9,40 @@ interface IPPoint {
   lon: number;
   asn?: string;
   label?: string;
+  seen_at?: string;
+}
+
+interface GeoEndpoint {
+  lat: number;
+  lon: number;
+  label?: string;
+  city?: string;
+  ip?: string;
+  asn?: string;
 }
 
 interface FlightRoute {
   flight: string;
-  from: { icao: string; lat: number; lon: number; city?: string };
-  to: { icao: string; lat: number; lon: number; city?: string };
+  from?: GeoEndpoint;
+  to?: GeoEndpoint;
   path: [number, number][];
   status?: string;
+}
+
+interface InfrastructureLink {
+  id: string;
+  from: GeoEndpoint;
+  to: GeoEndpoint;
+  relationship?: string;
 }
 
 interface GeoSnapshot {
   generated_at: string;
   ip_points: IPPoint[];
   flight_routes: FlightRoute[];
+  infrastructure_links?: InfrastructureLink[];
   ttl: number;
+  next_refresh?: string;
 }
 
 const defaultCenter: [number, number] = [20, 0];
@@ -30,30 +50,78 @@ const defaultCenter: [number, number] = [20, 0];
 const GeoMap: React.FC = () => {
   const [data, setData] = useState<GeoSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const refreshHandle = useRef<number | null>(null);
+  const lastTtlRef = useRef<number>(60);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchData() {
       try {
-        const res = await fetch('http://localhost:8000/api/geo');
-        if (!res.ok) throw new Error('Failed to fetch geo data');
-        const json = await res.json();
-        if (!cancelled) setData(json);
+        const json = await apiClient.get<GeoSnapshot>('/api/geo');
+        if (!cancelled) {
+          setData(json);
+          setError(null);
+          const ttlSeconds = Math.max(15, json.ttl || 60);
+          lastTtlRef.current = ttlSeconds;
+          if (refreshHandle.current) window.clearTimeout(refreshHandle.current);
+          refreshHandle.current = window.setTimeout(fetchData, ttlSeconds * 1000);
+        }
       } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Geo fetch failed');
+        if (!cancelled) {
+          setError(e?.message || 'Geo fetch failed');
+          const fallbackTtl = lastTtlRef.current || 60;
+          if (refreshHandle.current) window.clearTimeout(refreshHandle.current);
+          refreshHandle.current = window.setTimeout(fetchData, fallbackTtl * 1000);
+        }
       }
     }
 
     fetchData();
-    const id = setInterval(fetchData, 60000); // refresh each minute
-    return () => { cancelled = true; clearInterval(id); };
+    return () => {
+      cancelled = true;
+      if (refreshHandle.current) {
+        window.clearTimeout(refreshHandle.current);
+      }
+    };
   }, []);
+
+  const infrastructureMarkers = useMemo(() => {
+    if (!data?.infrastructure_links?.length) return [];
+    const seen = new Set(
+      (data.ip_points || []).map(point => `${point.lat}:${point.lon}:${point.label ?? ''}`)
+    );
+    const markers: (GeoEndpoint & { id: string })[] = [];
+    data.infrastructure_links.forEach(link => {
+      const endpoints: Array<{ node?: GeoEndpoint; key: string }> = [
+        { node: link.from, key: `${link.id}:from` },
+        { node: link.to, key: `${link.id}:to` },
+      ];
+      endpoints.forEach(({ node, key }) => {
+        if (!node) return;
+        const dedupeKey = `${node.lat}:${node.lon}:${node.label ?? node.city ?? ''}`;
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        markers.push({ ...node, id: `${link.id}-${key}` });
+      });
+    });
+    return markers;
+  }, [data]);
+
+  const hasData = Boolean(
+    data?.ip_points?.length || data?.flight_routes?.length || data?.infrastructure_links?.length
+  );
 
   return (
     <div className="w-full h-[600px] rounded-xl overflow-hidden border border-slate-700/50 shadow-lg bg-slate-900/40 backdrop-blur">
       {error && (
         <div className="p-4 text-sm text-red-400">{error}</div>
+      )}
+      {!error && !hasData && (
+        <div className="absolute inset-x-0 top-4 mx-auto max-w-md rounded-md bg-slate-900/80 px-4 py-2 text-center text-sm text-slate-300">
+          No recent geospatial activity detected. The map will update automatically when new data
+          arrives.
+        </div>
       )}
       <MapContainer center={defaultCenter} zoom={2} style={{ height: '100%', width: '100%' }} preferCanvas>
         <TileLayer
@@ -67,6 +135,9 @@ const GeoMap: React.FC = () => {
                 <div className="font-semibold">{p.label || p.ip}</div>
                 <div>{p.ip}</div>
                 {p.asn && <div className="text-xs text-slate-500">{p.asn}</div>}
+                {p.seen_at && (
+                  <div className="text-xs text-slate-500">Seen: {new Date(p.seen_at).toLocaleString()}</div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -85,6 +156,27 @@ const GeoMap: React.FC = () => {
               </Popup>
             </Marker>
           </React.Fragment>
+        ))}
+        {data?.infrastructure_links?.map(link => (
+          <Polyline
+            key={link.id}
+            positions={[
+              [link.from.lat, link.from.lon],
+              [link.to.lat, link.to.lon],
+            ]}
+            pathOptions={{ color: '#22d3ee', weight: 2, opacity: 0.6, dashArray: '6 4' }}
+          />
+        ))}
+        {infrastructureMarkers.map(point => (
+          <Marker key={point.id} position={[point.lat, point.lon]}>
+            <Popup>
+              <div className="text-sm">
+                <div className="font-semibold">{point.label || point.city || 'Infrastructure Node'}</div>
+                {point.ip && <div>{point.ip}</div>}
+                {point.asn && <div className="text-xs text-slate-500">{point.asn}</div>}
+              </div>
+            </Popup>
+          </Marker>
         ))}
       </MapContainer>
     </div>
