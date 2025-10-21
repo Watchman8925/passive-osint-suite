@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { 
+import {
   XMarkIcon,
   PlayIcon,
   PauseIcon,
@@ -9,8 +9,10 @@ import {
   DocumentTextIcon,
   ChatBubbleLeftRightIcon,
   ClockIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ArchiveBoxArrowDownIcon
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 import { Investigation, InvestigationProgress } from '../../types/investigation';
 import { investigationApi, aiApi } from '../../services/api';
@@ -35,6 +37,7 @@ export default function InvestigationDetailsModal({
   onClose 
 }: InvestigationDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'results' | 'ai' | 'reports' | 'capabilities' | 'plan' | 'provenance'>('overview');
+  const queryClient = useQueryClient();
   
   // Fetch investigation details
   const { data: investigation, isLoading: loadingInvestigation } = useQuery({
@@ -49,6 +52,20 @@ export default function InvestigationDetailsModal({
     queryFn: () => investigationApi.getInvestigationProgress(investigationId),
     enabled: isOpen && !!investigationId && investigation?.status === 'active',
     refetchInterval: 5000
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: investigationApi.archiveInvestigation,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['investigations'] });
+      queryClient.invalidateQueries({ queryKey: ['investigation', investigationId] });
+      queryClient.invalidateQueries({ queryKey: ['investigation-progress', investigationId] });
+      toast.success(data?.message ?? 'Investigation archived successfully');
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail ?? error?.message ?? 'Unknown error';
+      toast.error(`Failed to archive investigation: ${detail}`);
+    }
   });
 
   // WebSocket for real-time updates
@@ -115,6 +132,18 @@ export default function InvestigationDetailsModal({
             <Badge className={getStatusColor(investigation.status)}>
               {investigation.status}
             </Badge>
+            {investigation.status !== 'archived' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => archiveMutation.mutate(investigationId)}
+                loading={archiveMutation.isPending}
+                className="flex items-center space-x-1"
+              >
+                <ArchiveBoxArrowDownIcon className="h-4 w-4" />
+                <span>{archiveMutation.isPending ? 'Archiving...' : 'Archive'}</span>
+              </Button>
+            )}
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"

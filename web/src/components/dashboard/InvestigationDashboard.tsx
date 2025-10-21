@@ -127,62 +127,23 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
     }
   });
 
-  const resumeInvestigationMutation = useMutation({
-    mutationFn: async (investigationId: string) => {
-      const result = await osintAPI.resumeInvestigation(investigationId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to resume investigation');
-      }
-      return result.data;
-    },
-    onSuccess: (_, investigationId) => {
+  const archiveInvestigationMutation = useMutation({
+    mutationFn: investigationApi.archiveInvestigation,
+    onSuccess: (data, investigationId) => {
       queryClient.invalidateQueries({ queryKey: ['investigations'] });
+      queryClient.invalidateQueries({ queryKey: ['investigation', investigationId] });
       queryClient.invalidateQueries({ queryKey: ['investigation-progress', investigationId] });
-      toast.success('Investigation resumed successfully');
+      toast.success(data?.message ?? 'Investigation archived successfully');
     },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to resume investigation';
-      toast.error(message);
-    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail ?? error?.message ?? 'Unknown error';
+      toast.error(`Failed to archive investigation: ${detail}`);
+    }
   });
 
-  const pauseInvestigationMutation = useMutation({
-    mutationFn: async (investigationId: string) => {
-      const result = await osintAPI.pauseInvestigation(investigationId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to pause investigation');
-      }
-      return result.data;
-    },
-    onSuccess: (_, investigationId) => {
-      queryClient.invalidateQueries({ queryKey: ['investigations'] });
-      queryClient.invalidateQueries({ queryKey: ['investigation-progress', investigationId] });
-      toast.success('Investigation paused successfully');
-    },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to pause investigation';
-      toast.error(message);
-    },
-  });
-
-  const stopInvestigationMutation = useMutation({
-    mutationFn: async (investigationId: string) => {
-      const result = await osintAPI.stopInvestigation(investigationId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to stop investigation');
-      }
-      return result.data;
-    },
-    onSuccess: (_, investigationId) => {
-      queryClient.invalidateQueries({ queryKey: ['investigations'] });
-      queryClient.invalidateQueries({ queryKey: ['investigation-progress', investigationId] });
-      toast.success('Investigation stopped successfully');
-    },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Failed to stop investigation';
-      toast.error(message);
-    },
-  });
+  // pause/delete not supported in backend currently
+  const pauseInvestigationMutation = { isPending: false, mutateAsync: async (_: string) => { toast.error('Pause not implemented'); } } as any;
+  const deleteInvestigationMutation = { isPending: false, mutateAsync: async (_: string) => { toast.error('Delete not implemented'); } } as any;
 
   // Filter and sort investigations
   const filteredInvestigations = investigations
@@ -232,7 +193,7 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
 
   const handleInvestigationAction = async (
     investigationId: string,
-    action: 'start' | 'pause' | 'resume' | 'delete'
+    action: 'start' | 'pause' | 'delete' | 'archive'
   ) => {
     try {
       switch (action) {
@@ -247,6 +208,9 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
           break;
         case 'delete':
           await stopInvestigationMutation.mutateAsync(investigationId);
+          break;
+        case 'archive':
+          await archiveInvestigationMutation.mutateAsync(investigationId);
           break;
       }
     } catch (error) {
@@ -482,11 +446,12 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
                     }
                     onPause={() => handleInvestigationAction(investigation.id, 'pause')}
                     onDelete={() => handleInvestigationAction(investigation.id, 'delete')}
+                    onArchive={() => handleInvestigationAction(investigation.id, 'archive')}
                     isLoading={
                       startInvestigationMutation.isPending ||
                       pauseInvestigationMutation.isPending ||
-                      resumeInvestigationMutation.isPending ||
-                      stopInvestigationMutation.isPending
+                      deleteInvestigationMutation.isPending ||
+                      archiveInvestigationMutation.isPending
                     }
                   />
                 </motion.div>

@@ -59,14 +59,14 @@ const ModernApp = () => {
   }, []);
 
   const navigation = [
-    { id: 'dashboard', name: 'Dashboard', icon: Home, color: 'text-blue-600' },
-    { id: 'modules', name: 'OSINT Modules', icon: Layers3, color: 'text-purple-600' },
-    { id: 'intelligence', name: 'Intelligence', icon: Target, color: 'text-green-600' },
-    { id: 'analysis', name: 'Analysis', icon: Brain, color: 'text-yellow-600' },
-    { id: 'investigations', name: 'Investigations', icon: FileSearch, color: 'text-red-600' },
-    { id: 'assistant', name: 'AI Assistant', icon: MessageSquare, color: 'text-cyan-600' },
-    { id: 'reports', name: 'Reports', icon: BarChart3, color: 'text-indigo-600' },
-    { id: 'settings', name: 'Settings', icon: Settings, color: 'text-gray-600' }
+    { id: 'dashboard', name: 'Dashboard', icon: Home, color: 'text-[var(--accent-blue)]' },
+    { id: 'modules', name: 'OSINT Modules', icon: Layers3, color: 'text-[var(--accent-seafoam)]' },
+    { id: 'intelligence', name: 'Intelligence', icon: Target, color: 'text-[var(--accent-gold)]' },
+    { id: 'analysis', name: 'Analysis', icon: Brain, color: 'text-[var(--accent-magenta)]' },
+    { id: 'investigations', name: 'Investigations', icon: FileSearch, color: 'text-[var(--accent-silver)]' },
+    { id: 'assistant', name: 'AI Assistant', icon: MessageSquare, color: 'text-[var(--accent-seafoam)]' },
+    { id: 'reports', name: 'Reports', icon: BarChart3, color: 'text-[var(--accent-gold)]' },
+    { id: 'settings', name: 'Settings', icon: Settings, color: 'text-[var(--accent-silver)]' }
   ];
 
   const modules = [
@@ -145,10 +145,10 @@ const ModernApp = () => {
   ];
 
   const stats = [
-    { label: 'Active Investigations', value: '12', icon: Target, trend: '+2', color: 'text-blue-600' },
-    { label: 'Data Points Collected', value: '45.2K', icon: Database, trend: '+12%', color: 'text-green-600' },
-    { label: 'Success Rate', value: '94.8%', icon: CheckCircle, trend: '+1.2%', color: 'text-emerald-600' },
-    { label: 'System Uptime', value: '99.9%', icon: Activity, trend: 'stable', color: 'text-purple-600' }
+    { label: 'Active Investigations', value: '12', icon: Target, trend: '+2', color: 'text-[var(--accent-blue)]' },
+    { label: 'Data Points Collected', value: '45.2K', icon: Database, trend: '+12%', color: 'text-[var(--accent-seafoam)]' },
+    { label: 'Success Rate', value: '94.8%', icon: CheckCircle, trend: '+1.2%', color: 'text-[var(--accent-gold)]' },
+    { label: 'System Uptime', value: '99.9%', icon: Activity, trend: 'stable', color: 'text-[var(--accent-silver)]' }
   ];
 
   const handleModuleRun = async (moduleId) => {
@@ -188,19 +188,19 @@ const ModernApp = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen text-[var(--text-primary)]">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className="glass border-b border-[var(--glass-border)]/80 bg-[var(--glass-elevated)] shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Title */}
             <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg shadow-md">
-                <Shield className="w-6 h-6 text-white" />
+              <div className="p-2 rounded-xl shadow-[0_0_25px_rgba(56,189,248,0.4)] bg-gradient-to-br from-[var(--accent-blue)] via-[var(--accent-seafoam)] to-[var(--accent-magenta)]">
+                <Shield className="w-6 h-6 text-[var(--text-inverse)]" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">OSINT Suite</h1>
-                <p className="text-sm text-gray-500">Professional Intelligence Platform</p>
+                <h1 className="text-xl font-bold text-[var(--text-primary)]">OSINT Suite</h1>
+                <p className="text-sm text-[var(--text-muted)]">Professional Intelligence Platform</p>
               </div>
             </div>
 
@@ -212,12 +212,12 @@ const ModernApp = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search intelligence data..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full pl-12 pr-20 py-3 rounded-2xl bg-[var(--glass-surface)] border border-[var(--glass-border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:border-[var(--accent-seafoam)] backdrop-blur-xl"
                 />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-3 w-4 h-4 text-[var(--accent-seafoam)]" />
                 <button
                   onClick={handleSearch}
-                  className="absolute right-2 top-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                  className="absolute right-2 top-1 px-4 py-1.5 text-sm font-medium rounded-xl bg-[var(--accent-blue)] text-[var(--text-inverse)] hover:bg-[var(--accent-seafoam)] transition-colors shadow-[0_0_18px_rgba(56,189,248,0.45)]"
                 >
                   Search
                 </button>
@@ -226,42 +226,50 @@ const ModernApp = () => {
 
             {/* Status and Actions */}
             <div className="flex items-center space-x-4">
-              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                apiStatus === 'online'
-                  ? 'api-status-online'
-                  : 'api-status-offline'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-[#2E8B57]' : 'bg-[#C0C0C0]'}`}></div>
-                <span className="font-medium">{apiStatus === 'online' ? 'API Online' : 'API Offline'}</span>
+              <div
+                className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm glass bg-[var(--glass-surface)]/90 border border-[var(--glass-border)]/70 shadow-[0_0_12px_rgba(45,212,191,0.25)] ${
+                  apiStatus === 'online' ? 'text-[var(--accent-seafoam)]' : 'text-[var(--accent-silver)]'
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.55)] ${
+                    apiStatus === 'online'
+                      ? 'bg-[var(--accent-seafoam)]'
+                      : 'bg-[var(--accent-silver)]'
+                  }`}
+                ></div>
+                <span className="font-medium tracking-wide">
+                  {apiStatus === 'online' ? 'API Online' : 'API Offline'}
+                </span>
               </div>
 
               {user ? (
                 <>
-                  <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                  <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-xl glass bg-[var(--glass-surface)] border border-[var(--glass-border)]/60 text-[var(--accent-gold)]">
                     <User className="w-4 h-4" />
                     <span className="font-medium">{user.username}</span>
                   </div>
-                  <button 
+                  <button
                     onClick={handleLogout}
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 rounded-xl text-[var(--accent-silver)] hover:text-[var(--accent-gold)] hover:bg-[var(--glass-hover)] transition-colors"
                     title="Logout"
                   >
                     <LogOut className="w-5 h-5" />
                   </button>
                 </>
               ) : (
-                <button 
+                <button
                   onClick={() => setIsLoginModalOpen(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-seafoam)] text-[var(--text-inverse)] shadow-[0_0_20px_rgba(56,189,248,0.45)] hover:from-[var(--accent-seafoam)] hover:to-[var(--accent-blue)] transition-all"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>Login</span>
                 </button>
               )}
 
-              <button 
+              <button
                 onClick={() => setIsSettingsModalOpen(true)}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-xl text-[var(--accent-silver)] hover:text-[var(--accent-blue)] hover:bg-[var(--glass-hover)] transition-colors"
                 title="Settings"
               >
                 <Settings className="w-5 h-5" />
@@ -269,7 +277,7 @@ const ModernApp = () => {
 
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+                className="p-2 rounded-xl text-[var(--accent-silver)] hover:text-[var(--accent-blue)] hover:bg-[var(--glass-hover)] transition-colors lg:hidden"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -280,15 +288,18 @@ const ModernApp = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 shadow-lg transform ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 w-64 glass border-r border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_30px_80px_rgba(2,6,23,0.65)] transform ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+        >
           <div className="flex flex-col h-full pt-16 lg:pt-0">
             {/* Navigation */}
             <nav className="flex-1 px-4 py-6">
               <div className="space-y-2">
                 {navigation.map((item) => {
                   const Icon = item.icon;
+                  const isActive = activeTab === item.id;
                   return (
                     <button
                       key={item.id}
@@ -296,20 +307,18 @@ const ModernApp = () => {
                         setActiveTab(item.id);
                         setSidebarOpen(false);
                       }}
-                      className={`relative w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                        activeTab === item.id
-                          ? 'bg-[rgba(46,139,87,0.15)] text-white shadow-sm'
-                          : 'text-gray-300 hover:bg-[rgba(0,150,255,0.12)] hover:text-white'
+                      className={`group relative w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        isActive
+                          ? 'bg-[var(--glass-hover)] text-[var(--text-primary)] shadow-[0_0_25px_rgba(56,189,248,0.25)]'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--text-primary)]'
                       }`}
                     >
-                      {activeTab === item.id && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#0096ff] to-[#2E8B57] rounded-r-full shadow-[0_0_8px_rgba(0,150,255,0.7)]" />
+                      {isActive && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 rounded-r-full bg-gradient-to-b from-[var(--accent-blue)] via-[var(--accent-seafoam)] to-[var(--accent-gold)] shadow-[0_0_12px_rgba(56,189,248,0.45)]" />
                       )}
-                      <Icon className={`w-5 h-5 transition-colors ${activeTab === item.id ? 'text-[#2E8B57]' : 'text-gray-400'}`} />
-                      <span className="font-medium">{item.name}</span>
-                      {activeTab === item.id && (
-                        <ChevronRight className="w-4 h-4 ml-auto text-[#0096ff]" />
-                      )}
+                      <Icon className={`w-5 h-5 transition-colors ${isActive ? item.color : 'text-[var(--accent-silver)] group-hover:text-[var(--accent-blue)]'}`} />
+                      <span className="font-medium tracking-wide">{item.name}</span>
+                      {isActive && <ChevronRight className="w-4 h-4 ml-auto text-[var(--accent-gold)]" />}
                     </button>
                   );
                 })}
@@ -318,20 +327,20 @@ const ModernApp = () => {
 
             {/* Quick Stats */}
             <div className="px-4 pb-6">
-              <div className="rounded-lg p-4 border border-[rgba(192,192,192,0.25)] bg-[rgba(0,0,0,0.55)]">
-                <h3 className="text-sm font-semibold mb-3">System Status</h3>
-                <div className="space-y-2 text-xs">
+              <div className="glass rounded-xl p-4 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] text-[var(--text-primary)]">
+                <h3 className="text-sm font-semibold mb-3 text-[var(--accent-silver)] uppercase tracking-wider">System Status</h3>
+                <div className="space-y-2 text-xs text-[var(--text-secondary)]">
                   <div className="flex justify-between">
-                    <span className="opacity-80">Active Modules</span>
-                    <span className="font-medium">18</span>
+                    <span className="opacity-70">Active Modules</span>
+                    <span className="font-semibold text-[var(--accent-seafoam)]">18</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="opacity-80">Data Sources</span>
-                    <span className="font-medium">50+</span>
+                    <span className="opacity-70">Data Sources</span>
+                    <span className="font-semibold text-[var(--accent-blue)]">50+</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="opacity-80">Queries Today</span>
-                    <span className="font-medium">247</span>
+                    <span className="opacity-70">Queries Today</span>
+                    <span className="font-semibold text-[var(--accent-gold)]">247</span>
                   </div>
                 </div>
               </div>
@@ -360,14 +369,15 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   {/* Welcome Section */}
-                  <div className="bg-gradient-to-r from-[#0096ff] to-[#2E8B57] rounded-xl p-8 text-white">
-                    <div className="flex items-center justify-between">
+                  <div className="relative overflow-hidden glass rounded-2xl p-8 border border-[var(--glass-border)]/60 bg-[var(--glass-elevated)]">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent-blue)]/30 via-[var(--accent-seafoam)]/20 to-transparent" />
+                    <div className="relative flex items-center justify-between">
                       <div>
-                        <h2 className="text-3xl font-bold mb-2">Welcome to OSINT Suite</h2>
-                        <p className="text-white/80 text-lg">Professional intelligence gathering and analysis platform</p>
+                        <h2 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">Welcome to OSINT Suite</h2>
+                        <p className="text-lg text-[var(--text-secondary)]">Professional intelligence gathering and analysis platform</p>
                       </div>
                       <div className="hidden md:block">
-                        <Shield className="w-16 h-16 text-white/70" />
+                        <Shield className="w-16 h-16 text-[var(--accent-seafoam)]/70" />
                       </div>
                     </div>
                   </div>
@@ -384,14 +394,14 @@ const ModernApp = () => {
                           interactive
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 rounded-lg bg-[rgba(0,150,255,0.12)] border border-[rgba(192,192,192,0.25)]">
-                              <Icon className="w-6 h-6 text-[#0096ff]" />
+                            <div className="p-3 rounded-xl glass bg-[var(--glass-surface)]/70 border border-[var(--glass-border)]/60">
+                              <Icon className={`w-6 h-6 ${stat.color}`} />
                             </div>
-                            <span className={`text-sm font-medium ${stat.color}`}>{stat.trend}</span>
+                            <span className={`text-sm font-semibold ${stat.color}`}>{stat.trend}</span>
                           </div>
                           <div>
-                            <p className="text-2xl font-bold mb-1">{stat.value}</p>
-                            <p className="text-sm opacity-90">{stat.label}</p>
+                            <p className="text-2xl font-bold mb-1 text-[var(--text-primary)]">{stat.value}</p>
+                            <p className="text-sm text-[var(--text-secondary)]/80">{stat.label}</p>
                           </div>
                         </Card>
                       );
@@ -403,11 +413,11 @@ const ModernApp = () => {
                     {/* Recent Activity */}
                     <Card className="p-6" elevation="base">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold flex items-center">
-                          <Activity className="w-5 h-5 mr-2 text-[#0096ff]" />
+                        <h3 className="text-lg font-semibold flex items-center text-[var(--text-primary)]">
+                          <Activity className="w-5 h-5 mr-2 text-[var(--accent-blue)]" />
                           Recent Activity
                         </h3>
-                        <button className="text-[#0096ff] hover:text-white text-sm font-medium btn-modern">
+                        <button className="text-[var(--accent-blue)] hover:text-[var(--accent-seafoam)] text-sm font-medium transition-colors">
                           View All
                         </button>
                       </div>
@@ -418,52 +428,62 @@ const ModernApp = () => {
                           { action: 'Email verification', target: 'user@domain.com', time: '1 hour ago', status: 'warning' },
                           { action: 'Patent search', target: 'AI algorithms', time: '2 hours ago', status: 'success' }
                         ].map((activity, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 rounded-lg border border-[rgba(192,192,192,0.2)] bg-[rgba(0,0,0,0.5)]">
-                            <div className={`w-3 h-3 rounded-full ${
-                              activity.status === 'success' ? 'bg-[#2E8B57]' :
-                              activity.status === 'warning' ? 'bg-[#0096ff]' : 'bg-[#C0C0C0]'
-                            }`}></div>
+                          <div key={index} className="flex items-center space-x-4 p-4 rounded-xl glass border border-[var(--glass-border)]/60 bg-[var(--glass-surface)]/80">
+                            <div
+                              className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.45)] ${
+                                activity.status === 'success'
+                                  ? 'bg-[var(--accent-seafoam)]'
+                                  : activity.status === 'warning'
+                                  ? 'bg-[var(--accent-gold)]'
+                                  : 'bg-[var(--accent-silver)]'
+                              }`}
+                            ></div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium">{activity.action}</p>
-                              <p className="text-xs opacity-80">{activity.target}</p>
+                              <p className="text-sm font-medium text-[var(--text-primary)]">{activity.action}</p>
+                              <p className="text-xs text-[var(--text-secondary)]/80">{activity.target}</p>
                             </div>
-                            <span className="text-xs opacity-70">{activity.time}</span>
+                            <span className="text-xs text-[var(--text-secondary)]/70">{activity.time}</span>
                           </div>
                         ))}
                       </div>
                     </Card>
 
                     {/* Quick Actions */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <Card className="p-6" elevation="hover">
                       <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <Lightning className="w-5 h-5 mr-2 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center">
+                          <Lightning className="w-5 h-5 mr-2 text-[var(--accent-magenta)]" />
                           Quick Actions
                         </h3>
-                        <button className="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                        <button className="text-[var(--accent-seafoam)] hover:text-[var(--accent-blue)] text-sm font-medium transition-colors">
                           Customize
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         {[
-                          { name: 'Domain Lookup', icon: Globe, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
-                          { name: 'Email Check', icon: Mail, color: 'bg-green-50 text-green-700 hover:bg-green-100' },
-                          { name: 'Social Scan', icon: Users, color: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
-                          { name: 'IP Analysis', icon: Server, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' }
+                          { name: 'Domain Lookup', icon: Globe, accent: 'from-[var(--accent-blue)] to-[var(--accent-seafoam)]' },
+                          { name: 'Email Check', icon: Mail, accent: 'from-[var(--accent-seafoam)] to-[var(--accent-blue)]' },
+                          { name: 'Social Scan', icon: Users, accent: 'from-[var(--accent-magenta)] to-[var(--accent-blue)]' },
+                          { name: 'IP Analysis', icon: Server, accent: 'from-[var(--accent-gold)] to-[var(--accent-seafoam)]' }
                         ].map((action, index) => {
                           const Icon = action.icon;
                           return (
                             <button
                               key={index}
-                              className={`p-4 rounded-lg border border-gray-200 transition-colors ${action.color}`}
+                              className={`group relative overflow-hidden p-4 rounded-xl glass border border-[var(--glass-border)]/60 text-[var(--text-secondary)] transition-all hover:-translate-y-[2px]`}
                             >
-                              <Icon className="w-6 h-6 mx-auto mb-2" />
-                              <span className="text-sm font-medium">{action.name}</span>
+                              <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${action.accent}`} />
+                              <div className="relative">
+                                <Icon className="w-6 h-6 mx-auto mb-2 text-[var(--accent-silver)] group-hover:text-[var(--text-inverse)] transition-colors" />
+                                <span className="text-sm font-medium group-hover:text-[var(--text-inverse)] transition-colors">
+                                  {action.name}
+                                </span>
+                              </div>
                             </button>
                           );
                         })}
                       </div>
-                    </div>
+                    </Card>
                   </div>
                 </motion.div>
               )}
@@ -479,11 +499,11 @@ const ModernApp = () => {
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-3xl font-bold text-gray-900">OSINT Modules</h2>
-                      <p className="text-gray-600 mt-1">Choose and run intelligence gathering tools</p>
+                      <h2 className="text-3xl font-bold text-[var(--text-primary)]">OSINT Modules</h2>
+                      <p className="text-[var(--text-secondary)]/80 mt-1">Choose and run intelligence gathering tools</p>
                     </div>
                     <div className="mt-4 sm:mt-0 flex space-x-3">
-                      <select className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                      <select className="glass bg-[var(--glass-surface)] border border-[var(--glass-border)]/70 text-[var(--text-primary)] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)]">
                         <option>All Categories</option>
                         <option>Network</option>
                         <option>Social</option>
@@ -491,7 +511,7 @@ const ModernApp = () => {
                         <option>Code</option>
                         <option>Business</option>
                       </select>
-                      <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                      <button className="px-6 py-2 rounded-xl bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-seafoam)] text-[var(--text-inverse)] shadow-[0_0_18px_rgba(56,189,248,0.35)] hover:from-[var(--accent-seafoam)] hover:to-[var(--accent-blue)] transition-all flex items-center space-x-2">
                         <Filter className="w-4 h-4" />
                         <span>Filter</span>
                       </button>
@@ -508,33 +528,37 @@ const ModernApp = () => {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 * index }}
-                          className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 hover:border-blue-300"
+                          className="glass rounded-2xl p-6 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_20px_45px_rgba(2,6,23,0.45)] hover:-translate-y-[4px] transition-all duration-300 hover:bg-[var(--glass-hover)]"
                         >
                           <div className="flex items-start justify-between mb-4">
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                              <Icon className="w-6 h-6 text-blue-600" />
+                            <div className="p-3 rounded-xl bg-[var(--glass-elevated)]/60 border border-[var(--glass-border)]/60 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                              <Icon className="w-6 h-6 text-[var(--accent-blue)]" />
                             </div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              module.status === 'active'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
+                            <div
+                              className={`px-2 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
+                                module.status === 'active'
+                                  ? 'bg-[var(--glass-surface)] text-[var(--accent-seafoam)] border border-[var(--glass-border)]/50'
+                                  : 'bg-[var(--glass-surface)] text-[var(--accent-silver)] border border-[var(--glass-border)]/50'
+                              }`}
+                            >
                               {module.status}
                             </div>
                           </div>
 
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{module.name}</h3>
-                          <p className="text-gray-600 text-sm mb-4">{module.description}</p>
+                          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{module.name}</h3>
+                          <p className="text-[var(--text-secondary)] text-sm mb-4">{module.description}</p>
 
-                          <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                            <span className="bg-gray-100 px-2 py-1 rounded">{module.category}</span>
+                          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]/80 mb-4">
+                            <span className="px-2 py-1 rounded bg-[var(--glass-surface)] border border-[var(--glass-border)]/50">
+                              {module.category}
+                            </span>
                             <span>{module.lastUsed}</span>
                           </div>
 
                           <button
                             onClick={() => handleModuleRun(module.id)}
                             disabled={isLoading && selectedModule === module.id}
-                            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-seafoam)] text-[var(--text-inverse)] hover:from-[var(--accent-seafoam)] hover:to-[var(--accent-blue)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-2"
                           >
                             {isLoading && selectedModule === module.id ? (
                               <>
@@ -564,24 +588,24 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Intelligence Center</h2>
-                    <p className="text-gray-600 mt-1">Real-time intelligence gathering and monitoring</p>
+                    <h2 className="text-3xl font-bold text-[var(--text-primary)]">Intelligence Center</h2>
+                    <p className="text-[var(--text-secondary)]/80 mt-1">Real-time intelligence gathering and monitoring</p>
                   </div>
 
                   {/* Intelligence Input Form */}
-                  <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                  <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                     <div className="mb-6">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">New Intelligence Query</h3>
-                      <p className="text-gray-600">Configure your intelligence gathering parameters</p>
+                      <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">New Intelligence Query</h3>
+                      <p className="text-[var(--text-secondary)]/80">Configure your intelligence gathering parameters</p>
                     </div>
 
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Target Type
                           </label>
-                          <select className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                          <select className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]">
                             <option>Domain</option>
                             <option>Email</option>
                             <option>Username</option>
@@ -591,10 +615,10 @@ const ModernApp = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Priority Level
                           </label>
-                          <select className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                          <select className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]">
                             <option>Low</option>
                             <option>Medium</option>
                             <option>High</option>
@@ -604,37 +628,37 @@ const ModernApp = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                           Query Details
                         </label>
                         <textarea
                           rows={4}
                           placeholder="Enter your intelligence query details..."
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                          className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                         />
                       </div>
 
                       <div className="flex flex-wrap gap-4">
                         <label className="flex items-center space-x-2">
-                          <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                          <span className="text-sm text-gray-700">Include passive sources</span>
+                          <input type="checkbox" className="rounded border-[var(--glass-border)]/60 text-[var(--accent-blue)] focus:ring-[var(--accent-blue)]" />
+                          <span className="text-sm text-[var(--text-secondary)]">Include passive sources</span>
                         </label>
                         <label className="flex items-center space-x-2">
-                          <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                          <span className="text-sm text-gray-700">Real-time monitoring</span>
+                          <input type="checkbox" className="rounded border-[var(--glass-border)]/60 text-[var(--accent-blue)] focus:ring-[var(--accent-blue)]" />
+                          <span className="text-sm text-[var(--text-secondary)]">Real-time monitoring</span>
                         </label>
                         <label className="flex items-center space-x-2">
-                          <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                          <span className="text-sm text-gray-700">Advanced analysis</span>
+                          <input type="checkbox" className="rounded border-[var(--glass-border)]/60 text-[var(--accent-blue)] focus:ring-[var(--accent-blue)]" />
+                          <span className="text-sm text-[var(--text-secondary)]">Advanced analysis</span>
                         </label>
                       </div>
 
                       <div className="flex space-x-4">
-                        <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                        <button className="bg-[var(--accent-blue)] text-[var(--text-inverse)] px-8 py-3 rounded-lg hover:bg-[var(--accent-seafoam)] transition-colors flex items-center space-x-2">
                           <Search className="w-4 h-4" />
                           <span>Start Intelligence Gathering</span>
                         </button>
-                        <button className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <button className="glass border border-[var(--glass-border)]/70 text-[var(--text-secondary)] px-6 py-3 rounded-xl hover:bg-[var(--glass-hover)] hover:text-[var(--accent-blue)] transition-colors">
                           Save Query
                         </button>
                       </div>
@@ -642,37 +666,39 @@ const ModernApp = () => {
                   </div>
 
                   {/* Active Intelligence Operations */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                  <div className="glass rounded-2xl p-6 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_24px_60px_rgba(2,6,23,0.5)]">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">Active Operations</h3>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">Active Operations</h3>
+                      <button className="text-[var(--accent-blue)] hover:text-[var(--accent-blue)] text-sm font-medium">
                         View All
                       </button>
                     </div>
                     <div className="space-y-4">
-                      {[
-                        { id: 'op-001', target: 'example.com', type: 'Domain Analysis', progress: 75, status: 'running' },
+                      {[{ id: 'op-001', target: 'example.com', type: 'Domain Analysis', progress: 75, status: 'running' },
                         { id: 'op-002', target: 'john.doe@email.com', type: 'Email Intelligence', progress: 45, status: 'running' },
-                        { id: 'op-003', target: 'techcorp.com', type: 'Corporate Intel', progress: 100, status: 'completed' }
-                      ].map((op) => (
-                        <div key={op.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                          <div className={`w-3 h-3 rounded-full ${
-                            op.status === 'running' ? 'bg-blue-500' : 'bg-green-500'
-                          }`}></div>
+                        { id: 'op-003', target: 'techcorp.com', type: 'Corporate Intel', progress: 100, status: 'completed' }].map((op) => (
+                        <div key={op.id} className="flex items-center space-x-4 p-4 glass rounded-2xl border border-[var(--glass-border)]/60 bg-[var(--glass-surface)]/85">
+                          <div
+                            className={`w-3 h-3 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.4)] ${
+                              op.status === 'completed'
+                                ? 'bg-[var(--accent-gold)]'
+                                : 'bg-[var(--accent-blue)]'
+                            }`}
+                          ></div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-gray-900">{op.type}</span>
-                              <span className="text-sm text-gray-600">{op.progress}%</span>
+                              <span className="font-medium text-[var(--text-primary)]">{op.type}</span>
+                              <span className="text-sm text-[var(--text-secondary)]/80">{op.progress}%</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                            <div className="w-full bg-[var(--glass-surface)] rounded-full h-2 mb-2">
                               <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                className="bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-seafoam)] h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${op.progress}%` }}
                               ></div>
                             </div>
-                            <span className="text-sm text-gray-600">{op.target}</span>
+                            <span className="text-sm text-[var(--text-secondary)]/80">{op.target}</span>
                           </div>
-                          <button className="text-gray-500 hover:text-gray-700">
+                          <button className="text-[var(--text-secondary)]/70 hover:text-[var(--accent-magenta)]">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -691,24 +717,24 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">AI Analysis Center</h2>
-                    <p className="text-gray-600 mt-1">Advanced AI-powered intelligence analysis</p>
+                    <h2 className="text-3xl font-bold text-[var(--text-primary)]">AI Analysis Center</h2>
+                    <p className="text-[var(--text-secondary)]/80 mt-1">Advanced AI-powered intelligence analysis</p>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Analysis Input */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Intelligence Analysis</h3>
-                        <p className="text-gray-600">Upload data for AI-powered analysis</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Intelligence Analysis</h3>
+                        <p className="text-[var(--text-secondary)]/80">Upload data for AI-powered analysis</p>
                       </div>
 
                       <div className="space-y-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Analysis Type
                           </label>
-                          <select className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                          <select className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]">
                             <option>Pattern Recognition</option>
                             <option>Risk Assessment</option>
                             <option>Correlation Analysis</option>
@@ -718,22 +744,22 @@ const ModernApp = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Data Input
                           </label>
                           <textarea
                             rows={6}
                             placeholder="Paste intelligence data for analysis..."
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                           />
                         </div>
 
                         <div className="flex space-x-4">
-                          <button className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2">
+                          <button className="bg-purple-600 text-[var(--text-inverse)] px-8 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2">
                             <Brain className="w-4 h-4" />
                             <span>Analyze</span>
                           </button>
-                          <button className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2">
+                          <button className="glass border border-[var(--glass-border)]/70 text-[var(--text-secondary)] px-6 py-3 rounded-xl hover:bg-[var(--glass-hover)] hover:text-[var(--accent-blue)] transition-colors flex items-center space-x-2">
                             <Upload className="w-4 h-4" />
                             <span>Upload File</span>
                           </button>
@@ -742,19 +768,19 @@ const ModernApp = () => {
                     </div>
 
                     {/* Analysis Results */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Analysis Results</h3>
-                        <p className="text-gray-600">AI-generated insights and findings</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Analysis Results</h3>
+                        <p className="text-[var(--text-secondary)]/80">AI-generated insights and findings</p>
                       </div>
 
                       <div className="space-y-6">
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="p-4 bg-[var(--glass-surface)] border border-green-200 rounded-lg">
                           <div className="flex items-center space-x-2 mb-3">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <CheckCircle className="w-5 h-5 text-[var(--accent-seafoam)]" />
                             <span className="font-medium text-green-800">High Confidence Match</span>
                           </div>
-                          <p className="text-sm text-green-700">
+                          <p className="text-sm text-[var(--accent-seafoam)]">
                             Pattern detected: Social engineering indicators present in communication patterns.
                           </p>
                         </div>
@@ -769,12 +795,12 @@ const ModernApp = () => {
                           </p>
                         </div>
 
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="p-4 bg-[var(--glass-surface)] border border-blue-200 rounded-lg">
                           <div className="flex items-center space-x-2 mb-3">
-                            <Radar className="w-5 h-5 text-blue-600" />
+                            <Radar className="w-5 h-5 text-[var(--accent-blue)]" />
                             <span className="font-medium text-blue-800">Intelligence Insight</span>
                           </div>
-                          <p className="text-sm text-blue-700">
+                          <p className="text-sm text-[var(--accent-blue)]">
                             Cross-referenced data shows connections to known threat actors.
                           </p>
                         </div>
@@ -794,10 +820,10 @@ const ModernApp = () => {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-3xl font-bold text-gray-900">Investigations</h2>
-                      <p className="text-gray-600 mt-1">Manage and track intelligence investigations</p>
+                      <h2 className="text-3xl font-bold text-[var(--text-primary)]">Investigations</h2>
+                      <p className="text-[var(--text-secondary)]/80 mt-1">Manage and track intelligence investigations</p>
                     </div>
-                    <button className="mt-4 sm:mt-0 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                    <button className="mt-4 sm:mt-0 bg-[var(--accent-blue)] text-[var(--text-inverse)] px-6 py-3 rounded-lg hover:bg-[var(--accent-seafoam)] transition-colors flex items-center space-x-2">
                       <Plus className="w-4 h-4" />
                       <span>New Investigation</span>
                     </button>
@@ -805,31 +831,31 @@ const ModernApp = () => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Investigation Stats */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-6">Investigation Stats</h3>
+                    <div className="glass rounded-2xl p-6 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_24px_60px_rgba(2,6,23,0.5)]">
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-6">Investigation Stats</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Active Cases</span>
-                          <span className="font-bold text-gray-900">8</span>
+                          <span className="text-[var(--text-secondary)]/80">Active Cases</span>
+                          <span className="font-bold text-[var(--text-primary)]">8</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Completed</span>
-                          <span className="font-bold text-green-600">24</span>
+                          <span className="text-[var(--text-secondary)]/80">Completed</span>
+                          <span className="font-bold text-[var(--accent-seafoam)]">24</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">High Priority</span>
-                          <span className="font-bold text-red-600">3</span>
+                          <span className="text-[var(--text-secondary)]/80">High Priority</span>
+                          <span className="font-bold text-[var(--accent-magenta)]">3</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">This Month</span>
-                          <span className="font-bold text-blue-600">12</span>
+                          <span className="text-[var(--text-secondary)]/80">This Month</span>
+                          <span className="font-bold text-[var(--accent-blue)]">12</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Recent Investigations */}
-                    <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Investigations</h3>
+                    <div className="lg:col-span-2 glass rounded-2xl p-6 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_24px_60px_rgba(2,6,23,0.5)]">
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-6">Recent Investigations</h3>
                       <div className="space-y-4">
                         {[
                           { id: 'INV-2025-001', title: 'Corporate Espionage Investigation', status: 'active', priority: 'high', progress: 75 },
@@ -837,33 +863,33 @@ const ModernApp = () => {
                           { id: 'INV-2025-003', title: 'Financial Fraud Analysis', status: 'completed', priority: 'high', progress: 100 },
                           { id: 'INV-2025-004', title: 'IP Theft Investigation', status: 'active', priority: 'medium', progress: 30 }
                         ].map((inv) => (
-                          <div key={inv.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div key={inv.id} className="flex items-center space-x-4 p-4 glass border border-[var(--glass-border)]/70 rounded-2xl hover:bg-[var(--glass-hover)] transition-colors">
                             <div className={`w-3 h-3 rounded-full ${
-                              inv.status === 'active' ? 'bg-blue-500' : 'bg-green-500'
+                              inv.status === 'active' ? 'bg-[var(--accent-blue)]' : 'bg-[var(--accent-seafoam)]'
                             }`}></div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium text-gray-900">{inv.title}</span>
+                                <span className="font-medium text-[var(--text-primary)]">{inv.title}</span>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   inv.priority === 'high' ? 'bg-red-100 text-red-700' :
                                   inv.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-green-100 text-green-700'
+                                  'bg-[var(--glass-surface)] text-[var(--accent-seafoam)]'
                                 }`}>
                                   {inv.priority}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between text-sm text-gray-600">
+                              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]/80">
                                 <span>{inv.id}</span>
                                 <span>{inv.progress}% complete</span>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                          <div className="w-full bg-[var(--glass-surface)] rounded-full h-2 mt-2">
                                 <div
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                  className="bg-[var(--accent-blue)] h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${inv.progress}%` }}
                                 ></div>
                               </div>
                             </div>
-                            <button className="text-gray-500 hover:text-gray-700">
+                            <button className="text-[var(--text-secondary)]/70 hover:text-[var(--text-secondary)]">
                               <ChevronRight className="w-5 h-5" />
                             </button>
                           </div>
@@ -899,15 +925,15 @@ const ModernApp = () => {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-3xl font-bold text-gray-900">Reports & Analytics</h2>
-                      <p className="text-gray-600 mt-1">Generate and view intelligence reports</p>
+                      <h2 className="text-3xl font-bold text-[var(--text-primary)]">Reports & Analytics</h2>
+                      <p className="text-[var(--text-secondary)]/80 mt-1">Generate and view intelligence reports</p>
                     </div>
                     <div className="mt-4 sm:mt-0 flex space-x-3">
-                      <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2">
+                      <button className="glass border border-[var(--glass-border)]/70 text-[var(--text-secondary)] px-4 py-2 rounded-xl hover:bg-[var(--glass-hover)] hover:text-[var(--accent-blue)] transition-colors flex items-center space-x-2">
                         <Download className="w-4 h-4" />
                         <span>Export All</span>
                       </button>
-                      <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                      <button className="bg-[var(--accent-blue)] text-[var(--text-inverse)] px-6 py-3 rounded-lg hover:bg-[var(--accent-seafoam)] transition-colors flex items-center space-x-2">
                         <Plus className="w-4 h-4" />
                         <span>Generate Report</span>
                       </button>
@@ -916,18 +942,18 @@ const ModernApp = () => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Report Generation */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Generate New Report</h3>
-                        <p className="text-gray-600">Create comprehensive intelligence reports</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Generate New Report</h3>
+                        <p className="text-[var(--text-secondary)]/80">Create comprehensive intelligence reports</p>
                       </div>
 
                       <div className="space-y-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Report Type
                           </label>
-                          <select className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                          <select className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]">
                             <option>Executive Summary</option>
                             <option>Technical Analysis</option>
                             <option>Threat Assessment</option>
@@ -937,36 +963,36 @@ const ModernApp = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Date Range
                           </label>
                           <div className="grid grid-cols-2 gap-4">
                             <input
                               type="date"
-                              className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                              className="glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:border-[var(--accent-seafoam)]"
                             />
                             <input
                               type="date"
-                              className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                              className="glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:border-[var(--accent-seafoam)]"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-4">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-4">
                             Include Data Sources
                           </label>
                           <div className="space-y-3">
                             {['Domain Intelligence', 'Social Media', 'Email Analysis', 'Network Data', 'Academic Research'].map((source) => (
                               <label key={source} className="flex items-center space-x-3">
-                                <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                <span className="text-sm text-gray-700">{source}</span>
+                                <input type="checkbox" className="rounded border-[var(--glass-border)]/60 text-[var(--accent-blue)] focus:ring-[var(--accent-blue)]" />
+                                <span className="text-sm text-[var(--text-secondary)]">{source}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
-                        <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                        <button className="w-full bg-[var(--accent-blue)] text-[var(--text-inverse)] py-3 px-4 rounded-lg hover:bg-[var(--accent-seafoam)] transition-colors flex items-center justify-center space-x-2">
                           <FileSearch className="w-4 h-4" />
                           <span>Generate Report</span>
                         </button>
@@ -974,10 +1000,10 @@ const ModernApp = () => {
                     </div>
 
                     {/* Recent Reports */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Recent Reports</h3>
-                        <p className="text-gray-600">Access your generated intelligence reports</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Recent Reports</h3>
+                        <p className="text-[var(--text-secondary)]/80">Access your generated intelligence reports</p>
                       </div>
 
                       <div className="space-y-4">
@@ -987,19 +1013,19 @@ const ModernApp = () => {
                           { title: 'Network Security Assessment', date: '2025-09-10', type: 'Assessment', size: '3.1 MB' },
                           { title: 'Social Media Monitoring Report', date: '2025-09-08', type: 'Analytics', size: '956 KB' }
                         ].map((report, index) => (
-                          <div key={report.title + index} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                              <BarChart3 className="w-5 h-5 text-blue-600" />
+                        <div key={report.title + index} className="flex items-center space-x-4 p-4 glass border border-[var(--glass-border)]/70 rounded-2xl hover:bg-[var(--glass-hover)] transition-colors">
+                            <div className="bg-[var(--glass-surface)] p-3 rounded-lg">
+                              <BarChart3 className="w-5 h-5 text-[var(--accent-blue)]" />
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{report.title}</h4>
-                              <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                              <h4 className="font-medium text-[var(--text-primary)]">{report.title}</h4>
+                              <div className="flex items-center space-x-4 text-sm text-[var(--text-secondary)]/80 mt-1">
                                 <span>{report.date}</span>
                                 <span>{report.type}</span>
                                 <span>{report.size}</span>
                               </div>
                             </div>
-                            <button className="text-gray-500 hover:text-gray-700">
+                            <button className="text-[var(--text-secondary)]/70 hover:text-[var(--text-secondary)]">
                               <Download className="w-4 h-4" />
                             </button>
                           </div>
@@ -1019,67 +1045,67 @@ const ModernApp = () => {
                   className="space-y-8"
                 >
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Settings</h2>
-                    <p className="text-gray-600 mt-1">Configure your OSINT Suite preferences</p>
+                    <h2 className="text-3xl font-bold text-[var(--text-primary)]">Settings</h2>
+                    <p className="text-[var(--text-secondary)]/80 mt-1">Configure your OSINT Suite preferences</p>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* System Settings */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">System Configuration</h3>
-                        <p className="text-gray-600">Manage system-wide settings and preferences</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">System Configuration</h3>
+                        <p className="text-[var(--text-secondary)]/80">Manage system-wide settings and preferences</p>
                       </div>
 
                       <div className="space-y-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Max Concurrent Operations
                           </label>
                           <input
                             type="number"
                             defaultValue="5"
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Data Retention (days)
                           </label>
                           <input
                             type="number"
                             defaultValue="90"
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                             Report Storage Path
                           </label>
                           <input
                             type="text"
                             defaultValue="/opt/osint/reports"
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full glass border border-[var(--glass-border)]/60 rounded-2xl px-4 py-3 bg-[var(--glass-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                           />
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-700">Auto-save investigations</span>
+                          <span className="text-[var(--text-secondary)]">Auto-save investigations</span>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" className="sr-only peer" defaultChecked />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div className="w-11 h-6 bg-[var(--glass-surface)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--accent-blue)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-inverse)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent-seafoam)]"></div>
                           </label>
                         </div>
                       </div>
                     </div>
 
                     {/* API Configuration */}
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
+                    <div className="glass rounded-2xl p-8 border border-[var(--glass-border)]/70 bg-[var(--glass-surface)] shadow-[0_28px_70px_rgba(2,6,23,0.55)]">
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">API Configuration</h3>
-                        <p className="text-gray-600">Manage external API keys and integrations</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-2">API Configuration</h3>
+                        <p className="text-[var(--text-secondary)]/80">Manage external API keys and integrations</p>
                       </div>
 
                       <div className="space-y-4">
@@ -1089,16 +1115,16 @@ const ModernApp = () => {
                           { name: 'OpenAI API', status: 'configured', lastUsed: '30 mins ago' },
                           { name: 'VirusTotal API', status: 'not_configured', lastUsed: 'never' }
                         ].map((api, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                          <div key={index} className="flex items-center justify-between p-4 border border-[var(--glass-border)]/70 rounded-lg">
                             <div>
-                              <span className="font-medium text-gray-900">{api.name}</span>
-                              <p className="text-sm text-gray-600">{api.lastUsed}</p>
+                              <span className="font-medium text-[var(--text-primary)]">{api.name}</span>
+                              <p className="text-sm text-[var(--text-secondary)]/80">{api.lastUsed}</p>
                             </div>
                             <div className="flex items-center space-x-2">
                               <div className={`w-2 h-2 rounded-full ${
-                                api.status === 'configured' ? 'bg-green-500' : 'bg-red-500'
+                                api.status === 'configured' ? 'bg-[var(--accent-seafoam)]' : 'bg-red-500'
                               }`}></div>
-                              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                              <button className="text-[var(--accent-blue)] hover:text-[var(--accent-blue)] text-sm font-medium">
                                 {api.status === 'configured' ? 'Update' : 'Configure'}
                               </button>
                             </div>

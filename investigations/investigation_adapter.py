@@ -58,6 +58,7 @@ class SimpleStatus(str, Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    archived = "archived"
 
 
 @dataclass
@@ -222,6 +223,7 @@ class PersistentInvestigationStore:
                 completed_at=None,
                 ai_analysis={},
                 archived=False,
+                archived_at=None,
             )
             # Bridge: create advanced investigation if manager attached
             if self.advanced_manager:
@@ -645,16 +647,36 @@ class PersistentInvestigationStore:
     # ------------------------------------------------------------------
     # Soft delete / archive
     # ------------------------------------------------------------------
-    async def archive(self, investigation_id: str, owner_id: str) -> bool:
+    async def archive(
+        self, investigation_id: str, owner_id: str
+    ) -> Optional[Dict[str, Any]]:
         async with self._lock:
             inv = self._items.get(investigation_id)
             if not inv or inv.owner_id != owner_id:
-                return False
+                return None
+
+            if inv.archived:
+                return inv.to_dict()
+
             inv.archived = True
-            if inv.status == SimpleStatus.running:
-                inv.status = SimpleStatus.completed
+            inv.status = SimpleStatus.archived
+            # Only set completed_at if investigation is not already completed
+            if inv.completed_at is None and inv.status not in (SimpleStatus.completed, SimpleStatus.failed):
+                inv.completed_at = datetime.now(timezone.utc)
+            inv.archived_at = datetime.now(timezone.utc)
+
+            result = inv.to_dict()
+
         await self._flush()  # Moved outside lock
-        return True
+        return result
+
+    async def archive_investigation(
+        self, investigation_id: str, owner_id: str
+    ) -> Dict[str, Any]:
+        result = await self.archive(investigation_id, owner_id)
+        if not result:
+            raise ValueError("Investigation not found or unauthorized")
+        return result
 
     # ------------------------------------------------------------------
     # Demo Helpers (no-advanced-manager synthetic tasks)
