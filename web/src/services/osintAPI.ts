@@ -263,7 +263,7 @@ class OSINTAPIClient {
   async domainRecon(domain: string, options?: any): Promise<any> {
     try {
       toast.loading(`🔍 Analyzing domain: ${domain}`, { id: 'domain-recon' });
-      const response = await this.client.post('/api/modules/execute', { 
+      const response = await this.client.post('/api/modules/execute', {
         module_name: 'domain_analyzer',
         parameters: { 
           domain,
@@ -299,17 +299,36 @@ class OSINTAPIClient {
   async ipAnalysis(ip: string, options?: any): Promise<any> {
     try {
       toast.loading(`🌐 Analyzing IP: ${ip}`, { id: 'ip-analysis' });
-      const response = await this.client.post('/api/modules/execute', { 
+      const response = await this.client.post('/api/modules/execute', {
         module_name: 'ip_analyzer',
-        parameters: { 
+        parameters: {
           ip,
           ...options
-        } 
+        }
       });
       toast.success('IP analysis completed', { id: 'ip-analysis' });
       return response.data;
     } catch (error) {
       toast.error('IP analysis failed', { id: 'ip-analysis' });
+      throw error;
+    }
+  }
+
+  async executeModule(moduleName: string, parameters: Record<string, any>): Promise<any> {
+    const toastId = `module-exec-${moduleName}`;
+    try {
+      toast.loading(`🚀 Executing ${moduleName.replace(/[-_]/g, ' ')} module`, { id: toastId });
+      const response = await this.client.post('/api/modules/execute', {
+        module_name: moduleName,
+        parameters: {
+          ...parameters,
+          anonymity: this.anonymityConfig
+        }
+      });
+      toast.success('Module execution completed', { id: toastId });
+      return response.data;
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Module execution failed', { id: toastId });
       throw error;
     }
   }
