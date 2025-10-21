@@ -866,7 +866,11 @@ class OSINTAIEngine:
         degrees: Dict[Tuple[str, str], int] = defaultdict(int)
         for ent in snapshot.get("entities", []):
             props = ent.get("properties", {})
-            if props.get("investigation_id") != investigation_id:
+            inv_ids = props.get("investigation_ids")
+            if isinstance(inv_ids, (list, tuple, set)):
+                if investigation_id not in {str(i) for i in inv_ids}:
+                    continue
+            elif props.get("investigation_id") != investigation_id:
                 continue
             key = (ent.get("type"), ent.get("key"))
             if None in key:

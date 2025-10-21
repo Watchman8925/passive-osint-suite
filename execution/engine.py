@@ -150,7 +150,20 @@ class ExecutionEngine:
                     or str(hash(frozenset(ent.items())))
                 )
                 props = {k: v for k, v in ent.items() if k not in ("type", "value")}
-                props.setdefault("investigation_id", investigation_id)
+                existing = self.graph.get_entity(etype, key)
+                investigation_ids = []
+                if existing:
+                    existing_props = existing.properties or {}
+                    existing_ids = existing_props.get("investigation_ids")
+                    if isinstance(existing_ids, (list, tuple, set)):
+                        investigation_ids.extend(str(i) for i in existing_ids)
+                    else:
+                        legacy_id = existing_props.get("investigation_id")
+                        if legacy_id:
+                            investigation_ids.append(str(legacy_id))
+                if investigation_id not in investigation_ids:
+                    investigation_ids.append(investigation_id)
+                props["investigation_ids"] = sorted(set(investigation_ids))
                 self.graph.upsert_entity(etype, key, props)
                 if tracker:
                     value = ent.get("value") or ent.get("domain") or ent.get("subject")
