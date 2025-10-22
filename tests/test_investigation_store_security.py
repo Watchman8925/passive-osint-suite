@@ -37,7 +37,7 @@ async def test_investigation_store_encrypts_records_on_disk(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_investigation_store_uses_background_thread_when_aiofiles_missing(
-    monkeypatch, tmp_path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
     import investigations.investigation_adapter as adapter
 
