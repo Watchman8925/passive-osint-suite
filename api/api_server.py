@@ -9,8 +9,6 @@ import asyncio
 import inspect
 import logging
 import os
-import importlib
-import importlib.util
 from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 import ipaddress
@@ -82,21 +80,10 @@ _ = (
 # Optional external libraries: prefer real packages but provide lightweight fallbacks
 try:
     import jwt  # type: ignore
-except Exception:  # pragma: no cover - fallback for static analysis / dev
-
-    class _JWTStub:
-        class PyJWTError(Exception):
-            pass
-
-        @staticmethod
-        def encode(payload, key, algorithm="HS256"):
-            raise RuntimeError("jwt not available")
-
-        @staticmethod
-        def decode(token, key, algorithms=None):
-            raise RuntimeError("jwt not available")
-
-    jwt = _JWTStub  # type: ignore
+except ImportError as exc:  # pragma: no cover - enforced via tests
+    raise RuntimeError(
+        "PyJWT is required for API authentication. Install it with 'pip install pyjwt'."
+    ) from exc
 
 try:
     import redis.asyncio as redis  # type: ignore
@@ -114,148 +101,24 @@ except Exception:  # pragma: no cover - dev fallback
         async def close(self):
             pass
 
-# FastAPI/pydantic fallbacks to keep static analysis stable in environments without packages.
 
-# Use importlib to avoid a static "from fastapi import ..." that some editors/language servers
-# flag when the package isn't installed; fall back to lightweight stubs if fastapi is absent.
-_fastapi_spec = importlib.util.find_spec("fastapi")
-if _fastapi_spec is not None:
-    # fastapi is available at runtime; import the symbols we need.
-    _fastapi = importlib.import_module("fastapi")
-    Depends = getattr(_fastapi, "Depends")
-    FastAPI = getattr(_fastapi, "FastAPI")
-    HTTPException = getattr(_fastapi, "HTTPException")
-    Request = getattr(_fastapi, "Request")
-    WebSocket = getattr(_fastapi, "WebSocket")
-    WebSocketDisconnect = getattr(_fastapi, "WebSocketDisconnect")
-
-    # Try importing commonly used submodules; if any fail, provide minimal fallbacks.
-    try:
-        from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-    except Exception:
-        CORSMiddleware = None  # type: ignore
-
-    try:
-        from fastapi.middleware.gzip import GZipMiddleware  # type: ignore
-    except Exception:
-        GZipMiddleware = None  # type: ignore
-
-    try:
-        from fastapi.responses import JSONResponse, FileResponse  # type: ignore
-    except Exception:
-
-        def JSONResponse(content=None, status_code=200):
-            return {"status_code": status_code, "content": content}
-
-        class FileResponse:  # type: ignore
-            def __init__(self, *a, **k):
-                pass
-
-    try:
-        from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # type: ignore
-    except Exception:
-
-        class HTTPAuthorizationCredentials:  # type: ignore
-            credentials: str = ""
-
-        class HTTPBearer:  # type: ignore
-            def __init__(self, *a, **k):
-                pass
-else:
-    # fastapi is not available; provide minimal stubs to keep static analysis and tests happy.
-    def Depends(dependency=None):
-        return None
-
-    class HTTPBearer:
-        def __init__(self, *a, **k):
-            pass
-
-    class HTTPAuthorizationCredentials:  # type: ignore
-        credentials: str = ""
-
-    class FastAPI:  # type: ignore
-        def __init__(self, *a, **k):
-            # Create state object with all required attributes
-            class AppState:
-                def __init__(self):
-                    # Use broadly-typed attributes so static type checkers do not
-                    # infer these as None-only; these will be populated with various
-                    # runtime adapters (Redis client, ES client, Graph DB, etc.).
-                    self.redis: Any = None
-                    self.es: Any = None
-                    self.ai_engine: Any = None
-                    self.security_db: Any = None
-                    self.investigation_manager: Any = None
-                    self.reporting_engine: Any = None
-                    self.report_scheduler: Any = None
-                    self.graph_db: Any = None
-                    self.intelligence_feeds: Any = None
-                    self.ws_manager: Any = None
-                    self.execution_engine: Any = None
-
-            self.state = AppState()
-
-        def add_middleware(self, *a, **k):
-            pass
-
-        def exception_handler(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def get(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def post(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def delete(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def websocket(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-    class HTTPException(Exception):
-        def __init__(self, status_code=500, detail=None):
-            super().__init__(detail)
-            self.status_code = status_code
-            self.detail = detail
-
-    class Request:  # type: ignore
-        scope = {}
-        client = None
-
-    class WebSocket:  # type: ignore
-        async def accept(self):
-            pass
-
-        async def send_json(self, *a, **k):
-            pass
-
-        async def receive_json(self):
-            return {}
-
-    class WebSocketDisconnect(Exception):
-        pass
-
-    class CORSMiddleware:  # type: ignore
-        pass
-
-    class GZipMiddleware:  # type: ignore
-        pass
+try:
+    from fastapi import (
+        Depends,
+        FastAPI,
+        HTTPException,
+        Request,
+        WebSocket,
+        WebSocketDisconnect,
+    )
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.middleware.gzip import GZipMiddleware
+    from fastapi.responses import JSONResponse
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+except ImportError as exc:  # pragma: no cover - this should fail fast in tests
+    raise RuntimeError(
+        "FastAPI is required to run the API server. Install it with 'pip install fastapi uvicorn'."
+    ) from exc
 
 
 # Type-only aliases for static type checking (no runtime impact)
@@ -918,9 +781,14 @@ def rate_limit(limit: int, window_seconds: int):
 # ============================================================================
 
 
+# NOTE: The health check endpoint now requires authentication via JWT token.
+# This is a breaking change for monitoring systems and external health check tools.
+# Monitoring tools must provide a valid JWT token in the Authorization header to access this endpoint.
+# This change was made to prevent unauthenticated probing and potential abuse.
+# If your health checks start failing after deployment, ensure your monitoring configuration is updated accordingly.
 @app.get("/api/health")
 @limiter.limit("300/minute")  # Higher limit for health checks
-async def health_check(request: Request):
+async def health_check(request: Request, user_id: str = Depends(verify_token)):
     """Primary health check endpoint consumed by dashboard ribbon."""
     # Basic service status placeholders (assume connected if objects exist)
     redis_status = "connected" if getattr(app.state, "redis", None) else "unknown"
@@ -935,12 +803,13 @@ async def health_check(request: Request):
             "elasticsearch": es_status,
             "ai_engine": ai_status,
         },
+        "requested_by": user_id,
     }
 
 
 @app.get("/api/health/detailed")
 @limiter.limit("60/minute")
-async def detailed_health_check(request: Request):
+async def detailed_health_check(request: Request, user_id: str = Depends(verify_token)):
     """Detailed health check with service connectivity tests."""
     health_status = {
         "status": "healthy",
@@ -998,11 +867,12 @@ async def detailed_health_check(request: Request):
     except Exception:
         health_status["services"]["graph_db"] = {"status": "not_configured"}
 
+    health_status["requested_by"] = user_id
     return health_status
 
 
 def _tor_control_command(
-    action: Literal["enable", "disable", "new_identity"]
+    action: Literal["enable", "disable", "new_identity"],
 ) -> Tuple[bool, str, Dict[str, Any], int]:
     """Execute a Tor control port command and return status details.
 
@@ -1042,7 +912,7 @@ def _tor_control_command(
                 controller.signal(Signal.NEWNYM)
                 message = "Requested a new Tor identity (NEWNYM signal sent)."
 
-    except Exception as exc:  # pragma: no cover - depends on local Tor configuration
+    except Exception:  # pragma: no cover - depends on local Tor configuration
         logging.exception("Tor control command '%s' failed", action)
         refreshed_status = get_tor_status()
         return (
@@ -1067,16 +937,16 @@ async def tor_status():
 
 
 @app.get("/api/system/status")
-async def system_status_alias(request: Request):
+async def system_status_alias(request: Request, user_id: str = Depends(verify_token)):
     """Alias for /api/health to match frontend expectations."""
-    return await health_check(request)
+    return await health_check(request=request, user_id=user_id)
 
 
 @app.get("/health")
 @limiter.limit("300/minute")  # Higher limit for health checks
-async def health_fallback(request: Request):
+async def health_fallback(request: Request, user_id: str = Depends(verify_token)):
     """Fallback health endpoint without /api prefix for compatibility."""
-    return await health_check(request)
+    return await health_check(request=request, user_id=user_id)
 
 
 @app.get("/api/anonymity/tor/status")
@@ -1091,7 +961,8 @@ async def anonymity_tor_enable():
 
     success, message, status, status_code = _tor_control_command("enable")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1101,7 +972,8 @@ async def anonymity_tor_disable():
 
     success, message, status, status_code = _tor_control_command("disable")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1111,7 +983,8 @@ async def anonymity_tor_new_identity():
 
     success, message, status, status_code = _tor_control_command("new_identity")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1450,7 +1323,7 @@ def _dedupe_links(links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     seen: Set[Tuple[float, float, float, float, Optional[str]]] = set()
     for link in sorted(
         links,
-        key=lambda l: l.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
+        key=lambda item: item.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     ):
         origin = link.get("from") or {}
@@ -1475,7 +1348,9 @@ def _dedupe_links(links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return deduped
 
 
-def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
+def _collect_geo_artifacts(
+    records: List[Dict[str, Any]],
+) -> Tuple[
     List[Dict[str, Any]],
     List[Dict[str, Any]],
     List[Dict[str, Any]],
@@ -1504,7 +1379,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             point["_ts"] = timestamp
         raw_points.append(point)
 
-    def normalize_route(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+    def normalize_route(
+        candidate: Any, fallback_ts: Optional[datetime]
+    ) -> Optional[Dict[str, Any]]:
         if not isinstance(candidate, dict):
             return None
 
@@ -1524,7 +1401,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 path.append([lat, lon])
 
         origin = _normalize_endpoint(candidate.get("from") or candidate.get("origin"))
-        destination = _normalize_endpoint(candidate.get("to") or candidate.get("destination"))
+        destination = _normalize_endpoint(
+            candidate.get("to") or candidate.get("destination")
+        )
 
         if not path and origin and destination:
             path = [
@@ -1542,9 +1421,14 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             or candidate.get("call_sign")
         )
         if not flight_id and origin and destination:
-            flight_id = f"{origin.get('label', 'origin')}→{destination.get('label', 'dest')}"
+            flight_id = (
+                f"{origin.get('label', 'origin')}→{destination.get('label', 'dest')}"
+            )
 
-        route: Dict[str, Any] = {"flight": str(flight_id or f"route-{len(path)}"), "path": path}
+        route: Dict[str, Any] = {
+            "flight": str(flight_id or f"route-{len(path)}"),
+            "path": path,
+        }
         if origin:
             route["from"] = origin
         if destination:
@@ -1563,14 +1447,18 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             route["_ts"] = ts
         return route
 
-    def normalize_link(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+    def normalize_link(
+        candidate: Any, fallback_ts: Optional[datetime]
+    ) -> Optional[Dict[str, Any]]:
         if not isinstance(candidate, dict):
             return None
         origin = _normalize_endpoint(
             candidate.get("from") or candidate.get("source") or candidate.get("origin")
         )
         destination = _normalize_endpoint(
-            candidate.get("to") or candidate.get("target") or candidate.get("destination")
+            candidate.get("to")
+            or candidate.get("target")
+            or candidate.get("destination")
         )
         if not origin or not destination:
             return None
@@ -1584,7 +1472,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             )
 
         link: Dict[str, Any] = {"id": str(link_id), "from": origin, "to": destination}
-        relation = candidate.get("relationship") or candidate.get("type") or candidate.get("description")
+        relation = (
+            candidate.get("relationship")
+            or candidate.get("type")
+            or candidate.get("description")
+        )
         if relation:
             link["relationship"] = relation
 
@@ -1600,7 +1492,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
 
     def walk(node: Any, inherited_ts: Optional[datetime] = None) -> None:
         if isinstance(node, dict):
-            metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+            metadata = (
+                node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+            )
             current_ts = (
                 _parse_datetime(node.get("timestamp"))
                 or _parse_datetime(node.get("generated_at"))
@@ -1620,18 +1514,22 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 or node.get("asnName")
             )
             if ip_value and lat_value is not None and lon_value is not None:
-                add_point(ip_value, lat_value, lon_value, label_value, asn_value, current_ts)
+                add_point(
+                    ip_value, lat_value, lon_value, label_value, asn_value, current_ts
+                )
 
             for geo_key in ("geolocation", "geo", "ip_geolocation", "location"):
                 geo_value = node.get(geo_key)
                 if isinstance(geo_value, dict):
                     ip_candidate = _normalize_ip(
-                        geo_value.get("ip")
-                        or geo_value.get("ip_address")
-                        or ip_value
+                        geo_value.get("ip") or geo_value.get("ip_address") or ip_value
                     )
-                    lat_candidate = _coerce_float(geo_value.get("lat") or geo_value.get("latitude"))
-                    lon_candidate = _coerce_float(geo_value.get("lon") or geo_value.get("longitude"))
+                    lat_candidate = _coerce_float(
+                        geo_value.get("lat") or geo_value.get("latitude")
+                    )
+                    lon_candidate = _coerce_float(
+                        geo_value.get("lon") or geo_value.get("longitude")
+                    )
                     if lat_candidate is None or lon_candidate is None:
                         coords = geo_value.get("coordinates")
                         if isinstance(coords, (list, tuple)) and len(coords) >= 2:
@@ -1649,7 +1547,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                         or geo_value.get("autonomous_system_organization")
                         or asn_value
                     )
-                    if ip_candidate and lat_candidate is not None and lon_candidate is not None:
+                    if (
+                        ip_candidate
+                        and lat_candidate is not None
+                        and lon_candidate is not None
+                    ):
                         add_point(
                             ip_candidate,
                             lat_candidate,
@@ -1658,11 +1560,22 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                             asn_candidate,
                             current_ts,
                         )
-                elif isinstance(geo_value, (list, tuple)) and len(geo_value) >= 2 and ip_value:
+                elif (
+                    isinstance(geo_value, (list, tuple))
+                    and len(geo_value) >= 2
+                    and ip_value
+                ):
                     lat_candidate = _coerce_float(geo_value[0])
                     lon_candidate = _coerce_float(geo_value[1])
                     if lat_candidate is not None and lon_candidate is not None:
-                        add_point(ip_value, lat_candidate, lon_candidate, label_value, asn_value, current_ts)
+                        add_point(
+                            ip_value,
+                            lat_candidate,
+                            lon_candidate,
+                            label_value,
+                            asn_value,
+                            current_ts,
+                        )
 
             for map_key in ("geolocations", "locations", "ip_geolocations"):
                 geo_map = node.get(map_key)
@@ -1681,7 +1594,10 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                             )
                             if lat_candidate is None or lon_candidate is None:
                                 coords = geo_details.get("coordinates")
-                                if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                                if (
+                                    isinstance(coords, (list, tuple))
+                                    and len(coords) >= 2
+                                ):
                                     lat_candidate = _coerce_float(coords[0])
                                     lon_candidate = _coerce_float(coords[1])
                             label_candidate = (
@@ -1695,7 +1611,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                                 or geo_details.get("autonomous_system_organization")
                             )
                             resolved_ip = ip_override or normalized_ip
-                            if resolved_ip and lat_candidate is not None and lon_candidate is not None:
+                            if (
+                                resolved_ip
+                                and lat_candidate is not None
+                                and lon_candidate is not None
+                            ):
                                 add_point(
                                     resolved_ip,
                                     lat_candidate,
@@ -1714,9 +1634,7 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 or node.get("callsign")
                 or node.get("call_sign")
             ) and (
-                isinstance(node.get("path"), list)
-                or node.get("from")
-                or node.get("to")
+                isinstance(node.get("path"), list) or node.get("from") or node.get("to")
             ):
                 candidate_routes.append(node)
             for candidate in candidate_routes:
@@ -1734,7 +1652,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
 
             infra_container = node.get("infrastructure")
             if isinstance(infra_container, dict):
-                maybe_links = infra_container.get("links") or infra_container.get("connections")
+                maybe_links = infra_container.get("links") or infra_container.get(
+                    "connections"
+                )
                 if isinstance(maybe_links, list):
                     for entry in maybe_links:
                         link = normalize_link(entry, current_ts)
@@ -1827,9 +1747,9 @@ async def geo_snapshot(user_id: Optional[str] = Depends(verify_token)):
     payload = {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "ttl": GEO_CACHE_TTL_SECONDS,
-        "next_refresh": (
-            now + timedelta(seconds=GEO_CACHE_TTL_SECONDS)
-        ).isoformat().replace("+00:00", "Z"),
+        "next_refresh": (now + timedelta(seconds=GEO_CACHE_TTL_SECONDS))
+        .isoformat()
+        .replace("+00:00", "Z"),
         "ip_points": ip_points,
         "flight_routes": flight_routes,
         "infrastructure_links": infrastructure_links,
@@ -2015,9 +1935,7 @@ async def pause_investigation(
 
         paused = await manager.pause_investigation(investigation_id)
         if not paused:
-            raise HTTPException(
-                status_code=500, detail="Unable to pause investigation"
-            )
+            raise HTTPException(status_code=500, detail="Unable to pause investigation")
 
         await app.state.ws_manager.broadcast_investigation_update(
             investigation_id=investigation_id,
@@ -2134,9 +2052,7 @@ async def stop_investigation(
 
         stopped = await manager.stop_investigation(investigation_id)
         if not stopped:
-            raise HTTPException(
-                status_code=500, detail="Unable to stop investigation"
-            )
+            raise HTTPException(status_code=500, detail="Unable to stop investigation")
 
         await app.state.ws_manager.broadcast_investigation_update(
             investigation_id=investigation_id,
@@ -3673,7 +3589,9 @@ async def _get_autopivot_engine() -> Any:
 
                 fallback = DeterministicAutopivotEngine()
             except Exception as exc:  # pragma: no cover - defensive guard
-                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                logging.error(
+                    "Failed to initialize deterministic autopivot engine: %s", exc
+                )
                 fallback = None
             setattr(app.state, "_autopivot_engine", fallback)
 

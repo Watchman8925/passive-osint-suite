@@ -24,8 +24,10 @@ Future Extension:
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
+import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -42,6 +44,8 @@ except ImportError:
     logging.warning(
         "aiofiles not installed - using synchronous file I/O (not recommended)"
     )
+
+from cryptography.fernet import Fernet, InvalidToken
 
 from planner import Planner
 
@@ -141,18 +145,36 @@ class SimpleInvestigation:
 
 
 class PersistentInvestigationStore:
-    """File-backed lightweight investigation store.
+    """File-backed lightweight investigation store with encryption."""
 
-    Thread-safe (async) via an asyncio.Lock.
-    """
-
-    def __init__(self, storage_dir: str = "./investigation_store"):
+    def __init__(
+        self,
+        storage_dir: str = "./investigation_store",
+        *,
+        encryption_key: Optional[bytes] = None,
+        key_file: Optional[str] = None,
+    ):
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.index_file = self.storage_dir / "investigations.json"
+        self.key_file = Path(
+            key_file
+            or os.environ.get("INVESTIGATION_STORE_KEY_FILE", "")
+            or (self.storage_dir / "investigations.key")
+        )
         self._items: Dict[str, SimpleInvestigation] = {}
         self._lock = asyncio.Lock()
+        self._cipher = self._initialize_cipher(encryption_key)
+        self._legacy_plaintext_detected = False
         self._load()
+        if self._legacy_plaintext_detected:
+            try:
+                self._write_encrypted_snapshot()
+                logger.info(
+                    "Re-encrypted legacy investigation records at %s", self.index_file
+                )
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.error("Failed to re-encrypt legacy records: %s", exc)
         self.advanced_manager: "Optional[InvestigationManager]" = None  # type: ignore
         # Reverse lookup advanced_id -> simple_id for websocket mapping
         self._adv_index = {}
@@ -160,12 +182,113 @@ class PersistentInvestigationStore:
     # ------------------------------------------------------------------
     # Persistence helpers
     # ------------------------------------------------------------------
+    def _initialize_cipher(self, override: Optional[bytes]) -> Fernet:
+        """Load or create encryption cipher for the store."""
+
+        key_bytes: Optional[bytes]
+        if override is not None:
+            key_bytes = self._normalise_key_bytes(override)
+        elif os.environ.get("INVESTIGATION_STORE_KEY"):
+            key_bytes = self._normalise_key_bytes(
+                os.environ["INVESTIGATION_STORE_KEY"].encode("utf-8")
+            )
+        elif self.key_file.exists():
+            key_bytes = self._normalise_key_bytes(self.key_file.read_bytes())
+        else:
+            key_bytes = Fernet.generate_key()
+            self.key_file.parent.mkdir(parents=True, exist_ok=True)
+            self.key_file.write_bytes(key_bytes)
+            self._set_secure_permissions(self.key_file)
+
+        if key_bytes is None:
+            raise RuntimeError("No encryption key available for investigation store")
+
+        try:
+            cipher = Fernet(key_bytes)
+        except (ValueError, TypeError) as exc:  # pragma: no cover - validation
+            raise RuntimeError(
+                "Invalid encryption key provided for investigation store"
+            ) from exc
+
+
+
+
+
+        return cipher
+    @staticmethod
+    def _normalise_key_bytes(raw: bytes) -> bytes:
+        if not raw:
+            raise RuntimeError("Empty encryption key supplied for investigation store")
+
+        # Already urlsafe base64? try directly.
+        try:
+            Fernet(raw)
+            return raw
+        except Exception:
+            pass
+
+        stripped = raw.strip()
+        if stripped:
+            try:
+                Fernet(stripped)
+                return stripped
+            except Exception:
+                pass
+
+        # Accept raw 32-byte keys by base64 encoding them.
+        if len(raw) == 32:
+            encoded = base64.urlsafe_b64encode(raw)
+            Fernet(encoded)
+            return encoded
+
+        # Accept hex-encoded 32-byte keys.
+        decoded_hex = None
+        if len(stripped) == 64:
+            try:
+                stripped_text = stripped.decode("utf-8")
+                decoded_hex = bytes.fromhex(stripped_text)
+            except (UnicodeDecodeError, ValueError) as exc:
+                raise RuntimeError(
+                    "Could not decode hex-encoded encryption key"
+                ) from exc
+
+        if decoded_hex:
+            return PersistentInvestigationStore._normalise_key_bytes(decoded_hex)
+
+        raise RuntimeError("Unsupported encryption key format for investigation store")
+
+    @staticmethod
+    def _set_secure_permissions(path: Path) -> None:
+        try:
+            os.chmod(path, 0o600)
+        except OSError:  # pragma: no cover - platform specific
+            logger.debug("Could not adjust permissions for %s", path)
+
     def _load(self):
         """Load investigations from disk (synchronous - only called during init)"""
         if not self.index_file.exists():
             return
         try:
-            data = json.loads(self.index_file.read_text())
+            raw_bytes = self.index_file.read_bytes()
+            if not raw_bytes:
+                return
+            try:
+                decoded = self._cipher.decrypt(raw_bytes)
+            except InvalidToken:
+                try:
+                    decoded_text = raw_bytes.decode("utf-8")
+                    json.loads(decoded_text)
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Encrypted investigation store could not be decrypted"
+                    ) from exc
+                else:
+                    self._legacy_plaintext_detected = True
+                    logger.warning(
+                        "Detected unencrypted investigation store; it will be migrated to encrypted format",
+                    )
+                    decoded = raw_bytes
+            data = json.loads(decoded.decode("utf-8"))
             for item in data:
                 try:
                     inv = SimpleInvestigation.from_dict(item)
@@ -175,19 +298,29 @@ class PersistentInvestigationStore:
         except Exception as e:  # pragma: no cover
             logger.error(f"Failed to load investigations: {e}")
 
+    def _write_encrypted_snapshot(self) -> None:
+        serialized = [inv.to_dict() for inv in self._items.values()]
+        payload = json.dumps(serialized, indent=2).encode("utf-8")
+        encrypted = self._cipher.encrypt(payload)
+        self.index_file.write_bytes(encrypted)
+        self._set_secure_permissions(self.index_file)
+
     async def _flush(self):
         """Flush investigations to disk asynchronously"""
         try:
             serialized = [inv.to_dict() for inv in self._items.values()]
-            json_data = json.dumps(serialized, indent=2)
+            json_data = json.dumps(serialized, indent=2).encode("utf-8")
+            encrypted = self._cipher.encrypt(json_data)
 
             if AIOFILES_AVAILABLE:
                 # Async file write
-                async with aiofiles.open(self.index_file, "w") as f:
-                    await f.write(json_data)
+                async with aiofiles.open(self.index_file, "wb") as f:
+                    await f.write(encrypted)
             else:
-                # Fallback to sync write (blocking!)
-                self.index_file.write_text(json_data)
+                # Avoid blocking event loop when aiofiles unavailable
+                await asyncio.to_thread(self.index_file.write_bytes, encrypted)
+
+            await asyncio.to_thread(self._set_secure_permissions, self.index_file)
         except Exception as e:  # pragma: no cover
             logger.error(f"Failed to write investigations: {e}")
 
@@ -664,7 +797,10 @@ class PersistentInvestigationStore:
             inv.archived = True
             inv.status = SimpleStatus.archived
             # Only set completed_at if investigation is not already completed
-            if inv.completed_at is None and inv.status not in (SimpleStatus.completed, SimpleStatus.failed):
+            if inv.completed_at is None and inv.status not in (
+                SimpleStatus.completed,
+                SimpleStatus.failed,
+            ):
                 inv.completed_at = datetime.now(timezone.utc)
             inv.archived_at = datetime.now(timezone.utc)
 
