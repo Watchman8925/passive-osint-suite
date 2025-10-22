@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -82,6 +83,28 @@ class ExecutionEngine:
                 logger.error(f"Persist plan failed: {e}")
 
     # ---------------- Execution -----------------
+    @staticmethod
+    def _entity_identity(entity: Dict[str, Any]) -> str:
+        """Derive a stable graph key for an entity.
+
+        The helper documents the precedence order (value > domain > subject)
+        that was previously inlined so future adjustments remain localized.
+        """
+
+        for field in ("value", "domain", "subject"):
+            candidate = entity.get(field)
+            if candidate not in (None, ""):
+                return str(candidate)
+        # Fallback to a hash of the serialized entity for non-standard payloads
+        try:
+            serialized = json.dumps(entity, sort_keys=True, default=str)
+        except TypeError:
+            try:
+                serialized = repr(sorted(entity.items()))
+            except Exception:
+                serialized = repr(entity)
+        return str(hash(serialized))
+
     async def run_next_task(self, investigation_id: str) -> Optional[ExecutionResult]:
         plan = self._load_plan(investigation_id)
         # Find next runnable
@@ -143,12 +166,7 @@ class ExecutionEngine:
             tracker_finding_ids: List[str] = []
             for ent in result.produced_entities:
                 etype = ent.get("type") or "entity"
-                key = (
-                    ent.get("value")
-                    or ent.get("domain")
-                    or ent.get("subject")
-                    or str(hash(frozenset(ent.items())))
-                )
+                key = self._entity_identity(ent)
                 props = {k: v for k, v in ent.items() if k not in ("type", "value")}
                 existing = self.graph.get_entity(etype, key)
                 investigation_ids = []
@@ -188,7 +206,8 @@ class ExecutionEngine:
                         )
                         if fid:
                             tracker_finding_ids.append(fid)
-                    except Exception as tracker_error:  # pragma: no cover - tracker best-effort
+                    except Exception as tracker_error:  # pragma: no cover
+                        # tracker best-effort logging path
                         logger.debug(f"Tracker add finding failed: {tracker_error}")
             for rel in result.produced_relationships:
                 try:

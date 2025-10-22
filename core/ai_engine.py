@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover
     Anthropic = None  # type: ignore
 from jinja2 import Template
 
+from core.autopivot_fallback import DeterministicAutopivotEngine
 from graph import get_default_graph
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class OSINTAIEngine:
         self.enable_autopivot = enable_autopivot
         self.client = None
         self._graph = get_default_graph()
+        self._fallback_autopivot_engine = DeterministicAutopivotEngine()
 
         # Initialize AI client when credentials/provider available
         if initialize_clients and self.api_key:
@@ -798,10 +800,16 @@ class OSINTAIEngine:
             logger.warning("Autopivoting is disabled")
             return []
 
-        investigation_id = investigation_data.get("id")
+        investigation_id = investigation_data.get("id") or investigation_data.get(
+            "investigation_id"
+        )
         if not investigation_id:
-            logger.error("Investigation data missing identifier for autopivot scoring")
-            return []
+            logger.debug(
+                "Investigation data missing identifier; falling back to deterministic pivot heuristics"
+            )
+            return await self._fallback_autopivot_engine.suggest_autopivots(
+                investigation_data, max_pivots
+            )
 
         try:
             if not self._should_rescore_pivots(investigation_data):
@@ -923,17 +931,30 @@ class OSINTAIEngine:
             entry = aggregated[key]
             entry["finding_ids"].append(finding.id)
             entry["source_modules"].add(finding.source_module)
-            entry["confidence"].append(float(getattr(finding, "confidence", 0.6) if getattr(finding, "confidence", None) is not None else 0.6))
+            confidence_value = getattr(finding, "confidence", None)
+            if confidence_value is None:
+                confidence_value = 0.6
+            try:
+                entry["confidence"].append(float(confidence_value))
+            except (TypeError, ValueError):
+                entry["confidence"].append(0.6)
             entry["graph_degree"] = max(entry["graph_degree"], graph_degrees.get(key, 0))
 
         # include graph entities not already captured by findings
         for key, entity in graph_entities.items():
             if key not in aggregated:
+                confidence_raw = entity["properties"].get("confidence")
+                try:
+                    confidence_value = (
+                        float(confidence_raw) if confidence_raw not in (None, "") else 0.5
+                    )
+                except (TypeError, ValueError):
+                    confidence_value = 0.5
                 aggregated[key] = {
                     "score": 0.0,
                     "finding_ids": [],
                     "source_modules": set([entity["properties"].get("source_module", "graph")]),
-                    "confidence": [float(entity["properties"].get("confidence", 0.5) or 0.5)],
+                    "confidence": [confidence_value],
                     "graph_degree": graph_degrees.get(key, 0),
                 }
 

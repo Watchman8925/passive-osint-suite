@@ -689,6 +689,24 @@ class InvestigationTracker:
 _tracker_instance = None
 
 
+def set_tracker_instance(instance: "InvestigationTracker") -> None:
+    """Override the singleton instance used by helper accessors.
+
+    Primarily intended for tests that need an isolated tracker pointing at
+    temporary storage without mutating module globals directly.
+    """
+
+    global _tracker_instance
+    _tracker_instance = instance
+
+
+def clear_tracker_instance() -> None:
+    """Reset the singleton tracker instance."""
+
+    global _tracker_instance
+    _tracker_instance = None
+
+
 def get_investigation_tracker() -> InvestigationTracker:
     """Get or create singleton instance of investigation tracker"""
     global _tracker_instance

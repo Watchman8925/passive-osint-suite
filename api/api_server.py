@@ -3704,7 +3704,9 @@ async def suggest_autopivots(
 
         # Get autopivot suggestions from AI engine or deterministic fallback
         pivots = await engine.suggest_autopivots(
-            investigation_data=investigation, max_pivots=request.max_pivots
+            investigation_data=investigation,
+            max_pivots=request.max_pivots,
+            store=app.state.investigation_manager,
         )
 
         return {
