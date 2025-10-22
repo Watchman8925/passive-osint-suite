@@ -9,6 +9,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import { clearAuthToken, getAuthToken } from './authTokenStore';
 
 /**
  * Normalized error structure for consistent error handling
@@ -48,7 +49,7 @@ class APIClient {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         // Add authorization token if available
-        const token = localStorage.getItem('auth_token');
+        const token = getAuthToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -72,9 +73,8 @@ class APIClient {
       (error: AxiosError) => {
         // Handle 401 Unauthorized - clear token and redirect to login
         if (error.response?.status === 401) {
-          localStorage.removeItem('auth_token');
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes('/login')) {
+          clearAuthToken();
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
             window.location.href = '/login';
           }
         }

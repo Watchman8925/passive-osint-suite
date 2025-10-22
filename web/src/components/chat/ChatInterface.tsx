@@ -20,7 +20,8 @@ import {
 	RefreshCw,
 	MessageSquare
 } from 'lucide-react';
-import apiClient, { AUTH_TOKEN_KEY } from '../../services/api';
+import apiClient from '../../services/api';
+import { clearAuthToken, getAuthToken } from '../../services/authTokenStore';
 
 type ConversationSummary = {
 	id: string;
@@ -215,20 +216,20 @@ function buildHttpClient(apiUrl?: string): AxiosInstance {
         });
 
         instance.interceptors.request.use((config) => {
-                const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                const token = getAuthToken();
                 if (token) {
-									const headers = (config.headers ?? {}) as AxiosRequestHeaders;
-									headers.Authorization = `Bearer ${token}`;
-									config.headers = headers;
-		}
-		return config;
-	});
+                                                                        const headers = (config.headers ?? {}) as AxiosRequestHeaders;
+                                                                        headers.Authorization = `Bearer ${token}`;
+                                                                        config.headers = headers;
+                }
+                return config;
+        });
 
         instance.interceptors.response.use(
                 (response) => response,
                 (error) => {
                         if (axios.isAxiosError(error) && error.response?.status === 401) {
-                                localStorage.removeItem(AUTH_TOKEN_KEY);
+                                clearAuthToken();
                         }
                         return Promise.reject(error);
                 }

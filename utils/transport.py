@@ -1,100 +1,72 @@
-"""
-Transport utilities for OSINT Suite
-Tor proxy and network transport management
-"""
+"""Compatibility wrappers around the core transport helpers."""
+
+from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-import requests
+from transport import (
+    ProxiedTransport as _CoreProxiedTransport,
+    Transport as _CoreTransport,
+    get_tor_status as _get_tor_status,
+    sync_get as _sync_get,
+    transport as _shared_transport,
+)
+
+__all__ = [
+    "Transport",
+    "ProxiedTransport",
+    "get_tor_status",
+    "transport",
+    "sync_get",
+]
 
 
 def get_tor_status() -> Dict[str, Any]:
-    """Get Tor network status"""
-    try:
-        # Try to connect to Tor control port
-        import socket
+    """Expose the core Tor status helper for legacy imports."""
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex(("127.0.0.1", 9051))
-        sock.close()
-
-        if result == 0:
-            # Tor control port is open, try to get status
-            try:
-                import stem  # noqa: F401
-                from stem import Signal  # noqa: F401
-                from stem.control import Controller
-
-                with Controller.from_port(port=9051) as controller:
-                    controller.authenticate()
-                    circuits = list(controller.get_circuits())
-                    return {
-                        "active": True,
-                        "circuits": len(circuits),
-                        "bridges": [],  # Would need more complex stem queries
-                        "exit_nodes": len([c for c in circuits if c.status == "BUILT"]),
-                    }
-            except ImportError:
-                # stem not available, but Tor seems to be running
-                return {"active": True, "circuits": [], "bridges": [], "exit_nodes": []}
-            except Exception:
-                # Tor is running but we can't query it
-                return {"active": True, "circuits": [], "bridges": [], "exit_nodes": []}
-        else:
-            return {"active": False, "circuits": [], "bridges": [], "exit_nodes": []}
-    except Exception:
-        return {"active": False, "circuits": [], "bridges": [], "exit_nodes": []}
+    return _get_tor_status()
 
 
-class ProxiedTransport:
-    """Proxied transport for requests"""
+class ProxiedTransport(_CoreProxiedTransport):
+    """Thin shim that defaults to the shared proxy-aware transport."""
 
-    def __init__(self, proxy_url: str = "socks5h://127.0.0.1:9050"):
-        self.proxy_url = proxy_url
-        self.session = requests.Session()
-        self.session.proxies = {"http": proxy_url, "https": proxy_url}
-
-    def get(self, url: str, **kwargs) -> requests.Response:
-        """GET request through proxy"""
-        return self.session.get(url, **kwargs)
-
-    def post(self, url: str, **kwargs) -> requests.Response:
-        """POST request through proxy"""
-        return self.session.post(url, **kwargs)
-
-
-class Transport:
-    """Main transport class for requests"""
-
-    def __init__(self, proxy_url: Optional[str] = None):
-        if proxy_url:
-            self.transport = ProxiedTransport(proxy_url)
-        else:
-            self.transport = requests.Session()
-
-    def get(self, url: str, **kwargs) -> requests.Response:
-        """GET request"""
-        if isinstance(self.transport, ProxiedTransport):
-            return self.transport.get(url, **kwargs)
-        else:
-            return self.transport.get(url, **kwargs)
-
-    def post(self, url: str, **kwargs) -> requests.Response:
-        """POST request"""
-        if isinstance(self.transport, ProxiedTransport):
-            return self.transport.post(url, **kwargs)
-        else:
-            return self.transport.post(url, **kwargs)
+    def __init__(
+        self,
+        proxy_url: str = "socks5h://127.0.0.1:9050",
+        *,
+        require_proxy: Optional[bool] = None,
+        default_timeout: float = 15.0,
+        min_interval: float = 1.0,
+        retries: int = 3,
+    ) -> None:
+        super().__init__(
+            proxy_url=proxy_url,
+            require_proxy=require_proxy,
+            default_timeout=default_timeout,
+            min_interval=min_interval,
+            retries=retries,
+        )
 
 
-# Global transport instance with Tor proxy for anonymity
-_transport = Transport(proxy_url="socks5h://127.0.0.1:9050")
+class Transport(_CoreTransport):
+    """Backwards-compatible facade over the shared transport implementation."""
 
-# Export transport instance for DoH client compatibility
-transport = _transport
+    def __init__(
+        self,
+        proxy_url: Optional[str] = None,
+        *,
+        default_timeout: float = 15.0,
+        min_interval: float = 1.0,
+        retries: int = 3,
+    ) -> None:
+        super().__init__(
+            proxy_url=proxy_url,
+            default_timeout=default_timeout,
+            min_interval=min_interval,
+            retries=retries,
+        )
 
 
-def sync_get(url: str, **kwargs) -> requests.Response:
-    """Synchronous GET request using the global transport"""
-    return _transport.get(url, **kwargs)
+# Provide legacy module-level handles
+transport = _shared_transport
+sync_get = _sync_get

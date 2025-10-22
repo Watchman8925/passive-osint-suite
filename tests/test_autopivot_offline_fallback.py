@@ -14,6 +14,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 os.environ["OSINT_SECRET_KEY"] = "offline-test-secret-key-with-sufficient-length-123"
 os.environ.pop("SECRET_KEY", None)
 os.environ.pop("PERPLEXITY_API_KEY", None)
+os.environ.setdefault("DATABASE_URL", "postgresql://localhost/osint_db")
+os.environ.setdefault("ENVIRONMENT", "development")
 
 import api.api_server as api_server  # noqa: E402
 
@@ -108,7 +110,9 @@ def test_autopivot_suggest_offline_engine_returns_pivots(client):
     assert response.status_code == 200
     body = response.json()
     assert body["count"] >= 1
-    assert any(pivot["target"] == "support.example.com" for pivot in body["pivot_suggestions"])
+    assert any(
+        pivot["target"] == "support.example.com" for pivot in body["pivot_suggestions"]
+    )
     assert all("reason" in pivot for pivot in body["pivot_suggestions"])
 
 

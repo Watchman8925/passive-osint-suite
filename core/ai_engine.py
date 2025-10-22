@@ -25,7 +25,6 @@ except Exception:  # pragma: no cover
     Anthropic = None  # type: ignore
 from jinja2 import Template
 
-from core.autopivot_fallback import DeterministicAutopivotEngine
 from graph import get_default_graph
 
 logger = logging.getLogger(__name__)
@@ -819,9 +818,7 @@ class OSINTAIEngine:
                     investigation_data, max_pivots
                 )
             except Exception as fallback_error:
-                logger.error(
-                    "Fallback autopivot engine failed: %s", fallback_error
-                )
+                logger.error("Fallback autopivot engine failed: %s", fallback_error)
                 return []
 
         try:
@@ -838,7 +835,9 @@ class OSINTAIEngine:
             except Exception as tracker_error:
                 logger.debug(f"Investigation tracker unavailable: {tracker_error}")
 
-            graph_entities, graph_degrees = self._collect_graph_context(investigation_id)
+            graph_entities, graph_degrees = self._collect_graph_context(
+                investigation_id
+            )
             pivots, pivot_scores = self._score_pivots(
                 investigation_id,
                 findings,
@@ -849,7 +848,9 @@ class OSINTAIEngine:
 
             if store is not None and hasattr(store, "update_pivot_scores"):
                 try:
-                    await store.update_pivot_scores(investigation_id, pivot_scores, pivots)
+                    await store.update_pivot_scores(
+                        investigation_id, pivot_scores, pivots
+                    )
                 except Exception as store_error:
                     logger.error(f"Failed to persist pivot scores: {store_error}")
 
@@ -870,9 +871,7 @@ class OSINTAIEngine:
 
                 self._fallback_autopivot_engine = DeterministicAutopivotEngine()
             except Exception as exc:  # pragma: no cover - defensive guard
-                logger.error(
-                    "Unable to initialize fallback autopivot engine: %s", exc
-                )
+                logger.error("Unable to initialize fallback autopivot engine: %s", exc)
                 self._fallback_autopivot_engine = _FALLBACK_INIT_FAILED
         return self._fallback_autopivot_engine
 
@@ -885,7 +884,11 @@ class OSINTAIEngine:
             return True
         last_evidence = investigation_data.get("last_evidence_at")
         scored_info = investigation_data.get("pivot_scores", {})
-        scored_at = scored_info.get("_last_scored_at") if isinstance(scored_info, dict) else None
+        scored_at = (
+            scored_info.get("_last_scored_at")
+            if isinstance(scored_info, dict)
+            else None
+        )
         if last_evidence and scored_at:
             try:
                 evidence_dt = datetime.fromisoformat(str(last_evidence))
@@ -965,7 +968,9 @@ class OSINTAIEngine:
             if confidence_value is None:
                 confidence_value = 0.6
             entry["confidence"].append(float(confidence_value))
-            entry["graph_degree"] = max(entry["graph_degree"], graph_degrees.get(key, 0))
+            entry["graph_degree"] = max(
+                entry["graph_degree"], graph_degrees.get(key, 0)
+            )
 
         # include graph entities not already captured by findings
         for key, entity in graph_entities.items():
@@ -973,14 +978,18 @@ class OSINTAIEngine:
                 confidence_raw = entity["properties"].get("confidence")
                 try:
                     confidence_value = (
-                        float(confidence_raw) if confidence_raw not in (None, "") else 0.5
+                        float(confidence_raw)
+                        if confidence_raw not in (None, "")
+                        else 0.5
                     )
                 except (TypeError, ValueError):
                     confidence_value = 0.5
                 aggregated[key] = {
                     "score": 0.0,
                     "finding_ids": [],
-                    "source_modules": set([entity["properties"].get("source_module", "graph")]),
+                    "source_modules": set(
+                        [entity["properties"].get("source_module", "graph")]
+                    ),
                     "confidence": [confidence_value],
                     "graph_degree": graph_degrees.get(key, 0),
                 }
@@ -1004,7 +1013,9 @@ class OSINTAIEngine:
             score = max(0.1, min(1.0, base + 0.4 * avg_conf + graph_boost))
             reason_parts = []
             if data["finding_ids"]:
-                modules_txt = ", ".join(sorted(data["source_modules"])) or "unknown modules"
+                modules_txt = (
+                    ", ".join(sorted(data["source_modules"])) or "unknown modules"
+                )
                 reason_parts.append(
                     f"Observed by {modules_txt} with mean confidence {avg_conf:.2f}."
                 )
@@ -1015,7 +1026,9 @@ class OSINTAIEngine:
                     f"Connected to {data['graph_degree']} related entities in the knowledge graph."
                 )
             if value.lower() in initial_targets_set:
-                reason_parts.append("Matches an existing investigation target, consider deeper enrichment.")
+                reason_parts.append(
+                    "Matches an existing investigation target, consider deeper enrichment."
+                )
             reason = " ".join(reason_parts)
             modules = module_list(ftype)
             pivot_entry = {

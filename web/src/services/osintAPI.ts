@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import toast from 'react-hot-toast';
 import { startProgress, finishProgress } from '../utils/progress';
-import { AUTH_TOKEN_KEY, authApi } from './api';
+import { authApi } from './api';
+import { clearAuthToken, getAuthToken } from './authTokenStore';
 
 interface TorProxyConfig {
   enabled: boolean;
@@ -125,11 +126,11 @@ class OSINTAPIClient {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+    return getAuthToken();
   }
 
   private clearToken(): void {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearAuthToken();
   }
 
   // Anonymity Control Methods
