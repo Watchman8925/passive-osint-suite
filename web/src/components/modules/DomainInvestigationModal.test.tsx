@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DomainInvestigationModal } from './DomainInvestigationModal';
 import toast from 'react-hot-toast';
+import { resetAuthTokenStoreForTests, setAuthToken } from '../../services/authTokenStore';
+import { AuthProvider } from '../../contexts/AuthContext';
 
 // Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
@@ -28,8 +30,20 @@ describe('DomainInvestigationModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    resetAuthTokenStoreForTests();
+    setAuthToken('token-123');
   });
+
+  const renderModal = () =>
+    render(
+      <AuthProvider>
+        <DomainInvestigationModal
+          isOpen={true}
+          onClose={mockOnClose}
+          apiUrl="http://localhost:8000"
+        />
+      </AuthProvider>
+    );
 
   it('should call /api/modules/execute with correct payload', async () => {
     const mockResponse = {
@@ -47,13 +61,7 @@ describe('DomainInvestigationModal', () => {
       json: async () => mockResponse,
     });
 
-    render(
-      <DomainInvestigationModal
-        isOpen={true}
-        onClose={mockOnClose}
-        apiUrl="http://localhost:8000"
-      />
-    );
+    renderModal();
 
     // Enter a domain
     const input = screen.getByPlaceholderText('example.com');
@@ -95,13 +103,7 @@ describe('DomainInvestigationModal', () => {
       json: async () => ({ detail: 'Module not found' }),
     });
 
-    render(
-      <DomainInvestigationModal
-        isOpen={true}
-        onClose={mockOnClose}
-        apiUrl="http://localhost:8000"
-      />
-    );
+    renderModal();
 
     const input = screen.getByPlaceholderText('example.com');
     fireEvent.change(input, { target: { value: 'example.com' } });
@@ -115,13 +117,7 @@ describe('DomainInvestigationModal', () => {
   });
 
   it('should validate domain format before making API call', async () => {
-    render(
-      <DomainInvestigationModal
-        isOpen={true}
-        onClose={mockOnClose}
-        apiUrl="http://localhost:8000"
-      />
-    );
+    renderModal();
 
     const input = screen.getByPlaceholderText('example.com');
     fireEvent.change(input, { target: { value: 'invalid domain!' } });
@@ -151,13 +147,7 @@ describe('DomainInvestigationModal', () => {
       json: async () => mockErrorResponse,
     });
 
-    render(
-      <DomainInvestigationModal
-        isOpen={true}
-        onClose={mockOnClose}
-        apiUrl="http://localhost:8000"
-      />
-    );
+    renderModal();
 
     const input = screen.getByPlaceholderText('example.com');
     fireEvent.change(input, { target: { value: 'example.com' } });
@@ -168,5 +158,23 @@ describe('DomainInvestigationModal', () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Domain analysis failed');
     });
+  });
+
+  it('requires authentication before running an investigation', async () => {
+    resetAuthTokenStoreForTests();
+
+    renderModal();
+
+    const input = screen.getByPlaceholderText('example.com');
+    fireEvent.change(input, { target: { value: 'example.com' } });
+
+    const runButton = screen.getByRole('button', { name: /run investigation/i });
+    fireEvent.click(runButton);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('You need to sign in before running investigations.');
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

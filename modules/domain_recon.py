@@ -1,9 +1,11 @@
-"""
-Domain Reconnaissance Module
-Comprehensive passive domain analysis
-"""
+"""Domain Reconnaissance Module with rate limiting and caching."""
 
+from __future__ import annotations
+
+import threading
+import time
 from datetime import datetime
+from typing import Any, Callable, Dict, Iterable, List, Set, Tuple
 
 import dns.resolver
 import tldextract
@@ -12,12 +14,26 @@ import whois
 from utils.osint_utils import OSINTUtils
 
 
-class DomainRecon(OSINTUtils):
-    def __init__(self):
-        super().__init__()
-        self.results = {}
+CacheLoader = Callable[[], Iterable[str]]
 
-    def analyze_domain(self, domain):
+
+class DomainRecon(OSINTUtils):
+    """Perform passive domain intelligence with safe defaults."""
+
+    _CACHE_TTL_SECONDS = 300.0
+    _DNS_TIMEOUT_SECONDS = 5.0
+    _HTTP_TIMEOUT_SECONDS = 15.0
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.results: Dict[str, Any] = {}
+        self._cache: Dict[str, Tuple[float, Iterable[str]]] = {}
+        self._cache_lock = threading.Lock()
+        self._resolver = dns.resolver.Resolver()
+        self._resolver.lifetime = self._DNS_TIMEOUT_SECONDS
+        self._resolver.timeout = self._DNS_TIMEOUT_SECONDS
+
+    def analyze_domain(self, domain: str) -> Dict[str, Any]:
         """Comprehensive domain analysis"""
         self.logger.info(f"Starting domain analysis for: {domain}")
 
@@ -41,11 +57,26 @@ class DomainRecon(OSINTUtils):
 
             return {"status": "success", "data": self.results}
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - defensive logging
             self.logger.error(f"Domain analysis failed: {e}")
             return {"status": "error", "error": str(e)}
 
-    def get_whois_info(self, domain):
+    def _cached_iterable(self, cache_key: str, loader: CacheLoader) -> Set[str]:
+        """Return cached iterable values for ``cache_key`` or populate them."""
+
+        now = time.monotonic()
+        with self._cache_lock:
+            entry = self._cache.get(cache_key)
+            if entry and entry[0] > now:
+                return set(entry[1])
+
+        values = set(loader())
+        expires = now + self._CACHE_TTL_SECONDS
+        with self._cache_lock:
+            self._cache[cache_key] = (expires, tuple(values))
+        return values
+
+    def get_whois_info(self, domain: str) -> Dict[str, Any]:
         """Get WHOIS information (supports both python-whois and whois.query)."""
         try:
             self.logger.info(f"Getting WHOIS info for {domain}")
@@ -65,119 +96,138 @@ class DomainRecon(OSINTUtils):
             }
 
             return whois_data
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - network failures vary
             self.logger.error(f"WHOIS lookup failed: {e}")
             return {"error": str(e)}
 
-    def get_dns_records(self, domain):
+    def get_dns_records(self, domain: str) -> Dict[str, List[str]]:
         """Get DNS records (prefers secure DoH via Tor, falls back to system DNS)."""
-        dns_records = {}
-        record_types = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"]
+        dns_records: Dict[str, List[str]] = {}
+        record_types = ("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA")
 
         for record_type in record_types:
             try:
-                answers = dns.resolver.resolve(domain, record_type)
+                answers = self._resolver.resolve(
+                    domain, record_type, lifetime=self._DNS_TIMEOUT_SECONDS
+                )
                 dns_records[record_type] = [str(rdata) for rdata in answers]
-            except Exception:
+            except Exception as exc:
+                self.logger.debug(
+                    "DNS lookup for %s (%s) failed: %s", domain, record_type, exc
+                )
                 dns_records[record_type] = []
 
         return dns_records
 
-    def get_basic_dns_info(self, domain):
+    def get_basic_dns_info(self, domain: str) -> Dict[str, List[str]]:
         """Lightweight DNS summary for quick terminal checks (A/AAAA/MX/NS/TXT)."""
-        info = {}
+        info: Dict[str, List[str]] = {}
         for rtype in ("A", "AAAA", "MX", "NS", "TXT"):
             try:
                 vals = self.resolve_domain_secure(domain, rtype)
                 if not vals:
                     # fallback
-                    answers = dns.resolver.resolve(domain, rtype)
+                    answers = self._resolver.resolve(
+                        domain, rtype, lifetime=self._DNS_TIMEOUT_SECONDS
+                    )
                     vals = [str(a) for a in answers]
                 info[rtype] = [str(v) for v in (vals or [])][:10]
-            except Exception as e:
+            except Exception as e:  # pragma: no cover - defensive logging
                 self.logger.debug(f"Basic DNS {rtype} failed: {e}")
                 info[rtype] = []
         return info
 
-    def find_subdomains(self, domain):
+    def find_subdomains(self, domain: str) -> List[str]:
         """Find subdomains using various sources"""
-        subdomains = set()
+        subdomains: Set[str] = set()
 
-        # Using Certificate Transparency logs via crt.sh
         subdomains.update(self.get_subdomains_crtsh(domain))
-
-        # Using SecurityTrails API
         subdomains.update(self.get_subdomains_securitytrails(domain))
-
-        # Using VirusTotal API
         subdomains.update(self.get_subdomains_virustotal(domain))
 
-        return list(subdomains)
+        return sorted(subdomains)
 
-    def get_subdomains_crtsh(self, domain):
+    def get_subdomains_crtsh(self, domain: str) -> Set[str]:
         """Get subdomains from crt.sh"""
-        subdomains = set()
-        try:
-            url = f"https://crt.sh/?q=%.{domain}&output=json"
-            response = self.make_request(url)
-            if response:
-                data = response.json()
-                for cert in data:
-                    name_value = cert.get("name_value", "")
-                    for subdomain in name_value.split("\n"):
-                        subdomain = subdomain.strip()
-                        if subdomain and domain in subdomain:
-                            subdomains.add(subdomain)
-        except Exception as e:
-            self.logger.error(f"crt.sh lookup failed: {e}")
+        cache_key = f"crtsh:{domain}"
 
-        return subdomains
+        def loader() -> Iterable[str]:
+            subdomains: Set[str] = set()
+            try:
+                url = f"https://crt.sh/?q=%.{domain}&output=json"
+                response = self.make_request(url, timeout=self._HTTP_TIMEOUT_SECONDS)
+                if response:
+                    data = response.json()
+                    for cert in data:
+                        name_value = cert.get("name_value", "")
+                        for subdomain in name_value.split("\n"):
+                            subdomain = subdomain.strip()
+                            if subdomain and domain in subdomain:
+                                subdomains.add(subdomain)
+            except Exception as e:  # pragma: no cover - external service
+                self.logger.error(f"crt.sh lookup failed: {e}")
 
-    def get_subdomains_securitytrails(self, domain):
+            return subdomains
+
+        return self._cached_iterable(cache_key, loader)
+
+    def get_subdomains_securitytrails(self, domain: str) -> Set[str]:
         """Get subdomains from SecurityTrails"""
-        subdomains = set()
+        cache_key = f"securitytrails:{domain}"
         api_key = self.get_api_key("SECURITYTRAILS_API_KEY")
 
         if not api_key:
+            return set()
+
+        def loader() -> Iterable[str]:
+            subdomains: Set[str] = set()
+            try:
+                url = f"https://api.securitytrails.com/v1/domain/{domain}/subdomains"
+                headers = {"APIKEY": api_key}
+                response = self.make_request(
+                    url, headers=headers, timeout=self._HTTP_TIMEOUT_SECONDS
+                )
+
+                if response:
+                    data = response.json()
+                    for subdomain in data.get("subdomains", []):
+                        subdomains.add(f"{subdomain}.{domain}")
+
+            except Exception as e:  # pragma: no cover - external service
+                self.logger.error(f"SecurityTrails lookup failed: {e}")
+
             return subdomains
 
-        try:
-            url = f"https://api.securitytrails.com/v1/domain/{domain}/subdomains"
-            headers = {"APIKEY": api_key}
-            response = self.make_request(url, headers=headers)
+        return self._cached_iterable(cache_key, loader)
 
-            if response:
-                data = response.json()
-                for subdomain in data.get("subdomains", []):
-                    subdomains.add(f"{subdomain}.{domain}")
-
-        except Exception as e:
-            self.logger.error(f"SecurityTrails lookup failed: {e}")
-
-        return subdomains
-
-    def get_subdomains_virustotal(self, domain):
+    def get_subdomains_virustotal(self, domain: str) -> Set[str]:
         """Get subdomains from VirusTotal"""
-        subdomains = set()
+        cache_key = f"virustotal:{domain}"
         api_key = self.get_api_key("VIRUSTOTAL_API_KEY")
 
         if not api_key:
+            return set()
+
+        def loader() -> Iterable[str]:
+            subdomains: Set[str] = set()
+            try:
+                url = "https://www.virustotal.com/vtapi/v2/domain/report"
+                params = {"apikey": api_key, "domain": domain}
+                response = self.make_request(
+                    url, params=params, timeout=self._HTTP_TIMEOUT_SECONDS
+                )
+
+                if response:
+                    data = response.json()
+                    for subdomain in data.get("subdomains", []):
+                        subdomains.add(subdomain)
+
+            except Exception as e:  # pragma: no cover - external service
+                self.logger.error(f"VirusTotal lookup failed: {e}")
+
             return subdomains
 
-        try:
-            url = "https://www.virustotal.com/vtapi/v2/domain/report"
-            params = {"apikey": api_key, "domain": domain}
-            response = self.make_request(url, params=params)
-
-            if response:
-                data = response.json()
-                for subdomain in data.get("subdomains", []):
-                    subdomains.add(subdomain)
-
-        except Exception as e:
-            self.logger.error(f"VirusTotal lookup failed: {e}")
-
-        return subdomains
+        return self._cached_iterable(cache_key, loader)
 
     def get_security_info(self, domain):
         """Get security information"""

@@ -6,8 +6,7 @@ import {
   ListInvestigationsRequest,
   AIAnalysisResult
 } from '../types/investigation';
-
-export const AUTH_TOKEN_KEY = 'auth_token';
+import { clearAuthToken, getAuthToken, setAuthToken } from './authTokenStore';
 
 class APIClient {
   public client: AxiosInstance;
@@ -23,7 +22,7 @@ class APIClient {
 
     // Request interceptor for authentication
     this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const token = getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -35,9 +34,10 @@ class APIClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Handle unauthorized access
-          localStorage.removeItem(AUTH_TOKEN_KEY);
-          window.location.href = '/login';
+          clearAuthToken();
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(error);
       }
@@ -57,11 +57,11 @@ class APIClient {
         throw error;
       }
     }
-    const { access_token } = response.data ?? {};
-    if (!access_token) {
+    const { access_token: accessToken, expires_in: expiresIn } = response.data ?? {};
+    if (!accessToken) {
       throw new Error('Authentication response did not include an access token');
     }
-    localStorage.setItem(AUTH_TOKEN_KEY, access_token);
+    setAuthToken(accessToken, expiresIn ? { ttlMs: expiresIn * 1000 } : undefined);
     return response.data;
   }
 
@@ -69,7 +69,7 @@ class APIClient {
     try {
       await this.client.post('/auth/logout');
     } finally {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      clearAuthToken();
     }
   }
 

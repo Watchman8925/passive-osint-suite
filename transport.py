@@ -1,10 +1,51 @@
-"""
-Transport utilities for OSINT Suite
-Tor proxy and network transport management
-"""
+"""Transport helpers with rate limiting and safe defaults."""
+
+from __future__ import annotations
+
+import threading
+import time
+from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import requests
-from typing import Any, Dict, Optional, Union
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+class _RateLimiter:
+    """Simple per-host rate limiter to avoid overwhelming public APIs."""
+
+    def __init__(self, min_interval: float = 1.0) -> None:
+        self._min_interval = float(min_interval)
+        self._lock = threading.Lock()
+        self._last_seen: Dict[str, float] = {}
+
+    def wait(self, host: str) -> None:
+        """Block until it is safe to issue the next request for ``host``."""
+
+        if self._min_interval <= 0:
+            return
+
+        # Use a simple retry loop so we do not hold the lock while sleeping.
+        while True:
+            wait_for: float = 0.0
+            now = time.monotonic()
+            with self._lock:
+                last = self._last_seen.get(host)
+                if last is not None:
+                    elapsed = now - last
+                    remaining = self._min_interval - elapsed
+                    if remaining > 0:
+                        wait_for = remaining
+                    else:
+                        self._last_seen[host] = now
+                        return
+                else:
+                    self._last_seen[host] = now
+                    return
+
+            if wait_for > 0:
+                time.sleep(wait_for)
 
 
 def get_tor_status() -> Dict[str, Any]:
@@ -46,47 +87,65 @@ def get_tor_status() -> Dict[str, Any]:
         return {"active": False, "circuits": [], "bridges": [], "exit_nodes": []}
 
 
-class ProxiedTransport:
-    """Proxied transport for requests"""
-
-    def __init__(self, proxy_url: str = "socks5h://127.0.0.1:9050"):
-        self.proxy_url = proxy_url
-        self.session = requests.Session()
-        self.session.proxies = {"http": proxy_url, "https": proxy_url}
-
-    def get(self, url: str, **kwargs) -> requests.Response:
-        """GET request through proxy"""
-        return self.session.get(url, **kwargs)
-
-    def post(self, url: str, **kwargs) -> requests.Response:
-        """POST request through proxy"""
-        return self.session.post(url, **kwargs)
-
-
 class Transport:
     """Main transport class for requests"""
 
-    def __init__(self, proxy_url: Optional[str] = None):
+    def __init__(
+        self,
+        proxy_url: Optional[str] = None,
+        *,
+        default_timeout: float = 15.0,
+        min_interval: float = 1.0,
+        retries: int = 3,
+    ) -> None:
+        self.default_timeout = float(default_timeout)
+        self._rate_limiter = _RateLimiter(min_interval=min_interval)
+
+        session = requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
         if proxy_url:
-            self.transport: Union[ProxiedTransport, requests.Session] = (
-                ProxiedTransport(proxy_url)
-            )
-        else:
-            self.transport = requests.Session()
+            session.proxies = {"http": proxy_url, "https": proxy_url}
+
+        self.transport: requests.Session = session
 
     def get(self, url: str, **kwargs) -> requests.Response:
         """GET request"""
-        if isinstance(self.transport, ProxiedTransport):
-            return self.transport.get(url, **kwargs)
-        else:
-            return self.transport.get(url, **kwargs)
+        timeout = kwargs.pop("timeout", self.default_timeout)
+        host = urlparse(url).netloc or url
+        self._rate_limiter.wait(host)
+        return self.transport.get(url, timeout=timeout, **kwargs)
 
     def post(self, url: str, **kwargs) -> requests.Response:
         """POST request"""
-        if isinstance(self.transport, ProxiedTransport):
-            return self.transport.post(url, **kwargs)
-        else:
-            return self.transport.post(url, **kwargs)
+        timeout = kwargs.pop("timeout", self.default_timeout)
+        host = urlparse(url).netloc or url
+        self._rate_limiter.wait(host)
+        return self.transport.post(url, timeout=timeout, **kwargs)
+
+
+class ProxiedTransport:
+    """Backward-compatible proxy transport wrapper."""
+
+    def __init__(self, proxy_url: str = "socks5h://127.0.0.1:9050") -> None:
+        self._inner = Transport(proxy_url=proxy_url)
+        self.session = self._inner.transport
+
+    def get(self, url: str, **kwargs) -> requests.Response:
+        return self._inner.get(url, **kwargs)
+
+    def post(self, url: str, **kwargs) -> requests.Response:
+        return self._inner.post(url, **kwargs)
 
 
 # Global transport instance with Tor proxy for anonymity

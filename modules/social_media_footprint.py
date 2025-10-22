@@ -1,38 +1,96 @@
+from __future__ import annotations
+
+import re
+from typing import Any, Dict, List, Optional
+
 from utils.osint_utils import OSINTUtils
 
 
 class SocialMediaFootprint(OSINTUtils):
-    def __init__(self):
+    """Lightweight scraper that verifies platform markers before reporting hits."""
+
+    _PLATFORM_MARKERS = {
+        "Twitter": {
+            "positive": (
+                re.compile(r'property="og:type"\s+content="profile"', re.IGNORECASE),
+                re.compile(r'"followers_count"\s*:\s*\d+', re.IGNORECASE),
+            ),
+            "negative": (
+                re.compile(r'"error"\s*:\s*"NotFound"', re.IGNORECASE),
+                re.compile(r"account suspended", re.IGNORECASE),
+                re.compile(r"sign in to x", re.IGNORECASE),
+            ),
+        },
+        "Reddit": {
+            "positive": (
+                re.compile(r'property="og:type"\s+content="profile"', re.IGNORECASE),
+                re.compile(r'"subreddit":"u_\w+"', re.IGNORECASE),
+            ),
+            "negative": (
+                re.compile(r"this community is private", re.IGNORECASE),
+                re.compile(r"page not found", re.IGNORECASE),
+            ),
+        },
+    }
+
+    def __init__(self) -> None:
         super().__init__()
 
-    def scrape_profiles(self, name_or_handle):
-        """
-        Scrape public Twitter and Reddit profiles for a handle (no login, OPSEC safe).
-        Returns a list of found profiles and basic info.
-        """
-        profiles = []
-        # Twitter
-        twitter_url = f"https://twitter.com/{name_or_handle}"
+    def scrape_profiles(self, name_or_handle: str) -> Dict[str, Any]:
+        """Return verified public profile URLs for the provided handle."""
+
+        profiles: List[Dict[str, str]] = []
+        errors: List[Dict[str, str]] = []
+
+        checks = (
+            (
+                "Twitter",
+                f"https://twitter.com/{name_or_handle}",
+                {},
+            ),
+            (
+                "Reddit",
+                f"https://www.reddit.com/user/{name_or_handle}",
+                {"User-Agent": "Mozilla/5.0"},
+            ),
+        )
+
+        for platform, url, headers in checks:
+            result = self._fetch_profile(platform, url, headers or None)
+            if result and "url" in result:
+                profiles.append(result)
+            elif result and "error" in result:
+                errors.append({"platform": platform, "error": result["error"]})
+
+        return {"status": "success", "profiles": profiles, "errors": errors}
+
+    def _fetch_profile(
+        self, platform: str, url: str, headers: Optional[Dict[str, str]]
+    ) -> Optional[Dict[str, str]]:
+        """Fetch and validate a single platform profile."""
+
         try:
-            resp = self.request_with_fallback(
-                "get", twitter_url, timeout=15, allow_fallback=True
+            response = self.request_with_fallback(
+                "get", url, timeout=15, headers=headers, allow_fallback=True
             )
-            if resp.status_code == 200 and "profile" in resp.text:
-                profiles.append({"platform": "Twitter", "url": twitter_url})
-        except Exception as e:
-            profiles.append({"platform": "Twitter", "error": str(e)})
-        # Reddit
-        reddit_url = f"https://www.reddit.com/user/{name_or_handle}"
-        try:
-            resp = self.request_with_fallback(
-                "get",
-                reddit_url,
-                timeout=15,
-                headers={"User-Agent": "Mozilla/5.0"},
-                allow_fallback=True,
-            )
-            if resp.status_code == 200 and "Reddit" in resp.text:
-                profiles.append({"platform": "Reddit", "url": reddit_url})
-        except Exception as e:
-            profiles.append({"platform": "Reddit", "error": str(e)})
-        return {"status": "success", "profiles": profiles}
+        except Exception as exc:  # pragma: no cover - network errors vary
+            return {"error": str(exc)}
+
+        if response.status_code == 404:
+            return None
+
+        if response.status_code >= 400:
+            return {"error": f"HTTP {response.status_code}"}
+
+        body = response.text or ""
+        markers = self._PLATFORM_MARKERS.get(platform)
+        if not markers:
+            return None
+
+        if any(pattern.search(body) for pattern in markers["negative"]):
+            return None
+
+        if any(pattern.search(body) for pattern in markers["positive"]):
+            return {"platform": platform, "url": url}
+
+        return {"error": "Profile markers not detected"}

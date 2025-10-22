@@ -1,9 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import apiClient, { AUTH_TOKEN_KEY, authApi } from './api';
+import apiClient, { authApi } from './api';
+import { getAuthToken, resetAuthTokenStoreForTests, setAuthToken } from './authTokenStore';
 
 describe('authApi', () => {
   beforeEach(() => {
-    localStorage.clear();
+    resetAuthTokenStoreForTests();
   });
 
   afterEach(() => {
@@ -20,11 +21,12 @@ describe('authApi', () => {
 
     expect(postMock).toHaveBeenCalledWith('/auth/login', credentials);
     expect(response).toEqual({ access_token: 'token-123' });
-    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe('token-123');
+    expect(getAuthToken()).toBe('token-123');
   });
 
   it('clears the stored token when logout succeeds', async () => {
-    localStorage.setItem(AUTH_TOKEN_KEY, 'token-123');
+    resetAuthTokenStoreForTests();
+    setAuthToken('token-123');
     const postMock = vi
       .spyOn(apiClient.client, 'post')
       .mockResolvedValue({ data: {} });
@@ -32,11 +34,12 @@ describe('authApi', () => {
     await authApi.logout();
 
     expect(postMock).toHaveBeenCalledWith('/auth/logout');
-    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    expect(getAuthToken()).toBeNull();
   });
 
   it('clears the stored token even when logout fails', async () => {
-    localStorage.setItem(AUTH_TOKEN_KEY, 'token-123');
+    resetAuthTokenStoreForTests();
+    setAuthToken('token-123');
     const postMock = vi
       .spyOn(apiClient.client, 'post')
       .mockRejectedValue(new Error('network failure'));
@@ -44,6 +47,6 @@ describe('authApi', () => {
     await expect(authApi.logout()).rejects.toThrow('network failure');
 
     expect(postMock).toHaveBeenCalledWith('/auth/logout');
-    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    expect(getAuthToken()).toBeNull();
   });
 });

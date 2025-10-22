@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Search, Brain, Globe, Mail, Server, Building, DollarSign, Plane, Image, Network, Eye, Zap, ShieldCheck, ChartBar as BarChart3, Activity, Users, Clock, TrendingUp, Play, Pause, Settings, Hop as Home, FileSearch, Cpu, Layers as Layers3, Sparkles, ChevronRight, ExternalLink, Menu, X, Database, Target, Radar, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Loader as Loader2, Send, Download, Upload, ListFilter as Filter, Calendar, MapPin, User, Lock, Wifi, Smartphone, Monitor, HardDrive, Cloud, Code, BookOpen, Award, Briefcase, Camera, MessageSquare, Heart, Star, Zap as Lightning, RefreshCw, Plus, Minus, Maximize2, Minimize2, LogIn, LogOut } from 'lucide-react';
 import { Card } from './components/ui/Card';
@@ -7,56 +7,84 @@ import { useSelectedInvestigation } from './contexts/SelectedInvestigationContex
 import { LoginModal } from './components/auth/LoginModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { DomainInvestigationModal } from './components/modules/DomainInvestigationModal';
+import { useAuth } from './contexts/AuthContext';
+import { useVisibilityPolling } from './hooks/useVisibilityPolling';
 
 // Get API URL from environment variable with fallback
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const ModernApp = () => {
   const { selectedId: selectedInvestigationId } = useSelectedInvestigation();
+  const { token, user, setSession, clearSession } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [apiStatus, setApiStatus] = useState('checking');
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline' | 'unauthorized'>('checking');
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Check for existing auth token
-    const token = localStorage.getItem('auth_token');
-    const userInfo = localStorage.getItem('user_info');
-    if (token && userInfo) {
-      setAuthToken(token);
-      setUser(JSON.parse(userInfo));
+  const checkHealth = useCallback(async () => {
+    if (!token) {
+      setApiStatus('unauthorized');
+      return;
     }
 
-    // Check API status with proper error handling
-    const checkHealth = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/health`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (response.ok) {
-          setApiStatus('online');
-        } else {
-          setApiStatus('offline');
-        }
-      } catch (error) {
-        console.error('API health check failed:', error);
-        setApiStatus('offline');
-      }
-    };
+    try {
+      const response = await fetch(`${API_URL}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    checkHealth();
-    // Re-check every 30 seconds
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
+      if (response.status === 401) {
+        setApiStatus('unauthorized');
+        return;
+      }
+
+      setApiStatus(response.ok ? 'online' : 'offline');
+    } catch (error) {
+      console.error('API health check failed:', error);
+      setApiStatus('offline');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      setApiStatus('checking');
+      void checkHealth();
+    } else {
+      setApiStatus('unauthorized');
+    }
+  }, [token, checkHealth]);
+
+  useVisibilityPolling(checkHealth, { intervalMs: 30000, idleMs: 120000, immediate: true });
+
+  const statusLabel =
+    apiStatus === 'online'
+      ? 'API Online'
+      : apiStatus === 'unauthorized'
+        ? 'Sign in required'
+        : apiStatus === 'offline'
+          ? 'API Offline'
+          : 'Checking…';
+
+  const statusTextClass =
+    apiStatus === 'online'
+      ? 'text-[var(--accent-seafoam)]'
+      : apiStatus === 'unauthorized'
+        ? 'text-[var(--accent-gold)]'
+        : 'text-[var(--accent-silver)]';
+
+  const statusDotClass =
+    apiStatus === 'online'
+      ? 'bg-[var(--accent-seafoam)]'
+      : apiStatus === 'unauthorized'
+        ? 'bg-[var(--accent-gold)]'
+        : 'bg-[var(--accent-silver)]';
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home, color: 'text-[var(--accent-blue)]' },
@@ -161,6 +189,14 @@ const ModernApp = () => {
     setIsLoading(true);
     setSelectedModule(moduleId);
 
+    if (!token) {
+      alert('Please log in to run modules.');
+      setIsLoading(false);
+      setSelectedModule(null);
+      setIsLoginModalOpen(true);
+      return;
+    }
+
     try {
       // Map frontend module IDs to backend module names
       const moduleNameMap: Record<string, string> = {
@@ -193,7 +229,7 @@ const ModernApp = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken || localStorage.getItem('auth_token') || ''}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           module_name: moduleName,
@@ -231,16 +267,12 @@ const ModernApp = () => {
     setTimeout(() => setIsLoading(false), 1500);
   };
 
-  const handleLoginSuccess = (userData: any, token: string) => {
-    setUser(userData);
-    setAuthToken(token);
+  const handleLoginSuccess = (userData: any, nextToken: string, options?: { ttlMs?: number }) => {
+    setSession(userData, nextToken, options);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_info');
-    setUser(null);
-    setAuthToken(null);
+    clearSession();
   };
 
   return (
@@ -283,20 +315,12 @@ const ModernApp = () => {
             {/* Status and Actions */}
             <div className="flex items-center space-x-4">
               <div
-                className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm glass bg-[var(--glass-surface)]/90 border border-[var(--glass-border)]/70 shadow-[0_0_12px_rgba(45,212,191,0.25)] ${
-                  apiStatus === 'online' ? 'text-[var(--accent-seafoam)]' : 'text-[var(--accent-silver)]'
-                }`}
+                className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm glass bg-[var(--glass-surface)]/90 border border-[var(--glass-border)]/70 shadow-[0_0_12px_rgba(45,212,191,0.25)] ${statusTextClass}`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.55)] ${
-                    apiStatus === 'online'
-                      ? 'bg-[var(--accent-seafoam)]'
-                      : 'bg-[var(--accent-silver)]'
-                  }`}
+                  className={`w-2 h-2 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.55)] ${statusDotClass}`}
                 ></div>
-                <span className="font-medium tracking-wide">
-                  {apiStatus === 'online' ? 'API Online' : 'API Offline'}
-                </span>
+                <span className="font-medium tracking-wide">{statusLabel}</span>
               </div>
 
               {user ? (
