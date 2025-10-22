@@ -44,8 +44,9 @@ class FixedCrossReferenceEngine(CrossReferenceEngine):
         target_sources: Optional[List[str]] = None,
         search_mode: str = "comprehensive",
     ) -> List[CrossReferenceHit]:
-        # Call the parent implementation
-        return await self.cross_reference_search(
+        """Proxy to the parent implementation without recursion."""
+
+        return await super().cross_reference_search(
             query, target_sources=target_sources, search_mode=search_mode
         )
 
