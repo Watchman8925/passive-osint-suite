@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from collections.abc import Awaitable
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from realtime.realtime_feeds import RealTimeIntelligenceFeed
 
