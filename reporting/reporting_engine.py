@@ -15,7 +15,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from pathlib import Path
-from statistics import mean
 from typing import Any, Dict, List, Optional
 
 try:
@@ -207,7 +206,10 @@ class EnhancedReportingEngine:
         if not summary:
             return {}
 
-        findings = [asdict(finding) for finding in self.tracker.get_all_findings(investigation_id)]
+        findings = [
+            asdict(finding)
+            for finding in self.tracker.get_all_findings(investigation_id)
+        ]
         leads = [asdict(lead) for lead in self.tracker.get_all_leads(investigation_id)]
 
         dataset = {
@@ -288,15 +290,19 @@ class EnhancedReportingEngine:
             entry["avg_confidence"] = round(entry["total_confidence"] / count, 2)
             entry["sources"] = sorted(entry["sources"])
             entry["latest"] = (
-                entry["latest"].isoformat() if isinstance(entry["latest"], datetime) else None
+                entry["latest"].isoformat()
+                if isinstance(entry["latest"], datetime)
+                else None
             )
             del entry["total_confidence"]
 
         prioritized_leads = sorted(
             leads,
-            key=lambda l: ("critical", "high", "medium", "low").index(l.get("priority", "low"))
-            if l.get("priority") in {"critical", "high", "medium", "low"}
-            else 4,
+            key=lambda lead: (
+                ("critical", "high", "medium", "low").index(lead.get("priority", "low"))
+                if lead.get("priority") in {"critical", "high", "medium", "low"}
+                else 4
+            ),
         )
 
         return {
@@ -616,9 +622,7 @@ class EnhancedReportingEngine:
         ]
         if exposure_findings:
             score += len(exposure_findings) * 5
-            drivers.append(
-                f"{len(exposure_findings)} exposure indicator(s) detected"
-            )
+            drivers.append(f"{len(exposure_findings)} exposure indicator(s) detected")
 
         score = min(score, 100)
 
@@ -640,19 +644,25 @@ class EnhancedReportingEngine:
         risk = self._calculate_risk_score(data)
 
         if risk["level"] in {"critical", "high"}:
-            recommendations.append("Escalate investigation to incident response immediately.")
+            recommendations.append(
+                "Escalate investigation to incident response immediately."
+            )
             recommendations.append("Task dedicated owners for each high-priority lead.")
         elif risk["level"] == "medium":
-            recommendations.append("Schedule targeted follow-up collection on active leads.")
+            recommendations.append(
+                "Schedule targeted follow-up collection on active leads."
+            )
         else:
             recommendations.append("Maintain routine monitoring cadence.")
 
         leads = data.get("leads", [])
         sorted_leads = sorted(
             leads,
-            key=lambda l: ("critical", "high", "medium", "low").index(l.get("priority", "low"))
-            if l.get("priority") in {"critical", "high", "medium", "low"}
-            else 4,
+            key=lambda lead: (
+                ("critical", "high", "medium", "low").index(lead.get("priority", "low"))
+                if lead.get("priority") in {"critical", "high", "medium", "low"}
+                else 4
+            ),
         )
 
         for lead in sorted_leads[:5]:
@@ -663,7 +673,9 @@ class EnhancedReportingEngine:
 
         coverage = data.get("statistics", {}).get("findings_by_type", {})
         if "domain" not in coverage and "subdomain" not in coverage:
-            recommendations.append("Collect domain intelligence to map external surface.")
+            recommendations.append(
+                "Collect domain intelligence to map external surface."
+            )
         if "breach" not in coverage:
             recommendations.append("Query breach repositories for credential exposure.")
 
@@ -701,7 +713,9 @@ class EnhancedReportingEngine:
                     {
                         "timestamp": finding.get("discovered_at"),
                         "event": f"Finding recorded: {finding.get('finding_type')} {finding.get('value')}",
-                        "impact": "high" if finding.get("confidence", 0) >= 0.8 else "medium",
+                        "impact": "high"
+                        if finding.get("confidence", 0) >= 0.8
+                        else "medium",
                     }
                 )
 
@@ -791,7 +805,9 @@ class EnhancedReportingEngine:
                 vulnerabilities.append(
                     {
                         "type": ftype,
-                        "severity": "high" if finding.get("confidence", 0) >= 0.7 else "medium",
+                        "severity": "high"
+                        if finding.get("confidence", 0) >= 0.7
+                        else "medium",
                         "description": finding.get("value"),
                     }
                 )
@@ -803,12 +819,18 @@ class EnhancedReportingEngine:
         coverage = data.get("statistics", {}).get("findings_by_type", {})
 
         if coverage.get("subdomain", {}).get("count", 0) > 0:
-            recommendations.append("Deploy continuous subdomain discovery to track infrastructure growth.")
+            recommendations.append(
+                "Deploy continuous subdomain discovery to track infrastructure growth."
+            )
         if coverage.get("ip", {}).get("count", 0) > 0:
-            recommendations.append("Baseline discovered IP assets and monitor for reputation changes.")
+            recommendations.append(
+                "Baseline discovered IP assets and monitor for reputation changes."
+            )
 
         if "breach" not in coverage:
-            recommendations.append("Integrate credential breach monitoring to detect exposure early.")
+            recommendations.append(
+                "Integrate credential breach monitoring to detect exposure early."
+            )
 
         return recommendations
 
@@ -892,7 +914,9 @@ class EnhancedReportingEngine:
                 ]
             )
         else:
-            strategies.append("Maintain baseline monitoring and revisit after new findings.")
+            strategies.append(
+                "Maintain baseline monitoring and revisit after new findings."
+            )
 
         return strategies
 

@@ -14,11 +14,14 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from core.storage_config import resolve_path
 
 logger = logging.getLogger(__name__)
+
+
+_tracker_instance: Optional["InvestigationTracker"] = None
 
 
 @dataclass
@@ -62,7 +65,9 @@ class InvestigationTracker:
     """
 
     def __init__(self, storage_path: Optional[str] = None):
-        base_path = Path(storage_path) if storage_path else resolve_path("investigation")
+        base_path = (
+            Path(storage_path) if storage_path else resolve_path("investigation")
+        )
         base_path.mkdir(exist_ok=True, parents=True)
 
         self.storage_path = base_path
@@ -683,28 +688,6 @@ class InvestigationTracker:
             return str(filepath)
 
         return None
-
-
-# Singleton instance
-_tracker_instance = None
-
-
-def set_tracker_instance(instance: "InvestigationTracker") -> None:
-    """Override the singleton instance used by helper accessors.
-
-    Primarily intended for tests that need an isolated tracker pointing at
-    temporary storage without mutating module globals directly.
-    """
-
-    global _tracker_instance
-    _tracker_instance = instance
-
-
-def clear_tracker_instance() -> None:
-    """Reset the singleton tracker instance."""
-
-    global _tracker_instance
-    _tracker_instance = None
 
 
 def get_investigation_tracker() -> InvestigationTracker:

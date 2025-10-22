@@ -1002,7 +1002,7 @@ async def detailed_health_check(request: Request):
 
 
 def _tor_control_command(
-    action: Literal["enable", "disable", "new_identity"]
+    action: Literal["enable", "disable", "new_identity"],
 ) -> Tuple[bool, str, Dict[str, Any], int]:
     """Execute a Tor control port command and return status details.
 
@@ -1042,7 +1042,7 @@ def _tor_control_command(
                 controller.signal(Signal.NEWNYM)
                 message = "Requested a new Tor identity (NEWNYM signal sent)."
 
-    except Exception as exc:  # pragma: no cover - depends on local Tor configuration
+    except Exception:  # pragma: no cover - depends on local Tor configuration
         logging.exception("Tor control command '%s' failed", action)
         refreshed_status = get_tor_status()
         return (
@@ -1091,7 +1091,8 @@ async def anonymity_tor_enable():
 
     success, message, status, status_code = _tor_control_command("enable")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1101,7 +1102,8 @@ async def anonymity_tor_disable():
 
     success, message, status, status_code = _tor_control_command("disable")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1111,7 +1113,8 @@ async def anonymity_tor_new_identity():
 
     success, message, status, status_code = _tor_control_command("new_identity")
     return JSONResponse(
-        {"success": success, "message": message, "status": status}, status_code=status_code
+        {"success": success, "message": message, "status": status},
+        status_code=status_code,
     )
 
 
@@ -1450,7 +1453,7 @@ def _dedupe_links(links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     seen: Set[Tuple[float, float, float, float, Optional[str]]] = set()
     for link in sorted(
         links,
-        key=lambda l: l.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
+        key=lambda item: item.get("_ts") or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     ):
         origin = link.get("from") or {}
@@ -1475,7 +1478,9 @@ def _dedupe_links(links: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return deduped
 
 
-def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
+def _collect_geo_artifacts(
+    records: List[Dict[str, Any]],
+) -> Tuple[
     List[Dict[str, Any]],
     List[Dict[str, Any]],
     List[Dict[str, Any]],
@@ -1504,7 +1509,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             point["_ts"] = timestamp
         raw_points.append(point)
 
-    def normalize_route(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+    def normalize_route(
+        candidate: Any, fallback_ts: Optional[datetime]
+    ) -> Optional[Dict[str, Any]]:
         if not isinstance(candidate, dict):
             return None
 
@@ -1524,7 +1531,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 path.append([lat, lon])
 
         origin = _normalize_endpoint(candidate.get("from") or candidate.get("origin"))
-        destination = _normalize_endpoint(candidate.get("to") or candidate.get("destination"))
+        destination = _normalize_endpoint(
+            candidate.get("to") or candidate.get("destination")
+        )
 
         if not path and origin and destination:
             path = [
@@ -1542,9 +1551,14 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             or candidate.get("call_sign")
         )
         if not flight_id and origin and destination:
-            flight_id = f"{origin.get('label', 'origin')}→{destination.get('label', 'dest')}"
+            flight_id = (
+                f"{origin.get('label', 'origin')}→{destination.get('label', 'dest')}"
+            )
 
-        route: Dict[str, Any] = {"flight": str(flight_id or f"route-{len(path)}"), "path": path}
+        route: Dict[str, Any] = {
+            "flight": str(flight_id or f"route-{len(path)}"),
+            "path": path,
+        }
         if origin:
             route["from"] = origin
         if destination:
@@ -1563,14 +1577,18 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             route["_ts"] = ts
         return route
 
-    def normalize_link(candidate: Any, fallback_ts: Optional[datetime]) -> Optional[Dict[str, Any]]:
+    def normalize_link(
+        candidate: Any, fallback_ts: Optional[datetime]
+    ) -> Optional[Dict[str, Any]]:
         if not isinstance(candidate, dict):
             return None
         origin = _normalize_endpoint(
             candidate.get("from") or candidate.get("source") or candidate.get("origin")
         )
         destination = _normalize_endpoint(
-            candidate.get("to") or candidate.get("target") or candidate.get("destination")
+            candidate.get("to")
+            or candidate.get("target")
+            or candidate.get("destination")
         )
         if not origin or not destination:
             return None
@@ -1584,7 +1602,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
             )
 
         link: Dict[str, Any] = {"id": str(link_id), "from": origin, "to": destination}
-        relation = candidate.get("relationship") or candidate.get("type") or candidate.get("description")
+        relation = (
+            candidate.get("relationship")
+            or candidate.get("type")
+            or candidate.get("description")
+        )
         if relation:
             link["relationship"] = relation
 
@@ -1600,7 +1622,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
 
     def walk(node: Any, inherited_ts: Optional[datetime] = None) -> None:
         if isinstance(node, dict):
-            metadata = node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+            metadata = (
+                node.get("metadata") if isinstance(node.get("metadata"), dict) else {}
+            )
             current_ts = (
                 _parse_datetime(node.get("timestamp"))
                 or _parse_datetime(node.get("generated_at"))
@@ -1620,18 +1644,22 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 or node.get("asnName")
             )
             if ip_value and lat_value is not None and lon_value is not None:
-                add_point(ip_value, lat_value, lon_value, label_value, asn_value, current_ts)
+                add_point(
+                    ip_value, lat_value, lon_value, label_value, asn_value, current_ts
+                )
 
             for geo_key in ("geolocation", "geo", "ip_geolocation", "location"):
                 geo_value = node.get(geo_key)
                 if isinstance(geo_value, dict):
                     ip_candidate = _normalize_ip(
-                        geo_value.get("ip")
-                        or geo_value.get("ip_address")
-                        or ip_value
+                        geo_value.get("ip") or geo_value.get("ip_address") or ip_value
                     )
-                    lat_candidate = _coerce_float(geo_value.get("lat") or geo_value.get("latitude"))
-                    lon_candidate = _coerce_float(geo_value.get("lon") or geo_value.get("longitude"))
+                    lat_candidate = _coerce_float(
+                        geo_value.get("lat") or geo_value.get("latitude")
+                    )
+                    lon_candidate = _coerce_float(
+                        geo_value.get("lon") or geo_value.get("longitude")
+                    )
                     if lat_candidate is None or lon_candidate is None:
                         coords = geo_value.get("coordinates")
                         if isinstance(coords, (list, tuple)) and len(coords) >= 2:
@@ -1649,7 +1677,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                         or geo_value.get("autonomous_system_organization")
                         or asn_value
                     )
-                    if ip_candidate and lat_candidate is not None and lon_candidate is not None:
+                    if (
+                        ip_candidate
+                        and lat_candidate is not None
+                        and lon_candidate is not None
+                    ):
                         add_point(
                             ip_candidate,
                             lat_candidate,
@@ -1658,11 +1690,22 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                             asn_candidate,
                             current_ts,
                         )
-                elif isinstance(geo_value, (list, tuple)) and len(geo_value) >= 2 and ip_value:
+                elif (
+                    isinstance(geo_value, (list, tuple))
+                    and len(geo_value) >= 2
+                    and ip_value
+                ):
                     lat_candidate = _coerce_float(geo_value[0])
                     lon_candidate = _coerce_float(geo_value[1])
                     if lat_candidate is not None and lon_candidate is not None:
-                        add_point(ip_value, lat_candidate, lon_candidate, label_value, asn_value, current_ts)
+                        add_point(
+                            ip_value,
+                            lat_candidate,
+                            lon_candidate,
+                            label_value,
+                            asn_value,
+                            current_ts,
+                        )
 
             for map_key in ("geolocations", "locations", "ip_geolocations"):
                 geo_map = node.get(map_key)
@@ -1681,7 +1724,10 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                             )
                             if lat_candidate is None or lon_candidate is None:
                                 coords = geo_details.get("coordinates")
-                                if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                                if (
+                                    isinstance(coords, (list, tuple))
+                                    and len(coords) >= 2
+                                ):
                                     lat_candidate = _coerce_float(coords[0])
                                     lon_candidate = _coerce_float(coords[1])
                             label_candidate = (
@@ -1695,7 +1741,11 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                                 or geo_details.get("autonomous_system_organization")
                             )
                             resolved_ip = ip_override or normalized_ip
-                            if resolved_ip and lat_candidate is not None and lon_candidate is not None:
+                            if (
+                                resolved_ip
+                                and lat_candidate is not None
+                                and lon_candidate is not None
+                            ):
                                 add_point(
                                     resolved_ip,
                                     lat_candidate,
@@ -1714,9 +1764,7 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
                 or node.get("callsign")
                 or node.get("call_sign")
             ) and (
-                isinstance(node.get("path"), list)
-                or node.get("from")
-                or node.get("to")
+                isinstance(node.get("path"), list) or node.get("from") or node.get("to")
             ):
                 candidate_routes.append(node)
             for candidate in candidate_routes:
@@ -1734,7 +1782,9 @@ def _collect_geo_artifacts(records: List[Dict[str, Any]]) -> Tuple[
 
             infra_container = node.get("infrastructure")
             if isinstance(infra_container, dict):
-                maybe_links = infra_container.get("links") or infra_container.get("connections")
+                maybe_links = infra_container.get("links") or infra_container.get(
+                    "connections"
+                )
                 if isinstance(maybe_links, list):
                     for entry in maybe_links:
                         link = normalize_link(entry, current_ts)
@@ -1827,9 +1877,9 @@ async def geo_snapshot(user_id: Optional[str] = Depends(verify_token)):
     payload = {
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "ttl": GEO_CACHE_TTL_SECONDS,
-        "next_refresh": (
-            now + timedelta(seconds=GEO_CACHE_TTL_SECONDS)
-        ).isoformat().replace("+00:00", "Z"),
+        "next_refresh": (now + timedelta(seconds=GEO_CACHE_TTL_SECONDS))
+        .isoformat()
+        .replace("+00:00", "Z"),
         "ip_points": ip_points,
         "flight_routes": flight_routes,
         "infrastructure_links": infrastructure_links,
@@ -2015,9 +2065,7 @@ async def pause_investigation(
 
         paused = await manager.pause_investigation(investigation_id)
         if not paused:
-            raise HTTPException(
-                status_code=500, detail="Unable to pause investigation"
-            )
+            raise HTTPException(status_code=500, detail="Unable to pause investigation")
 
         await app.state.ws_manager.broadcast_investigation_update(
             investigation_id=investigation_id,
@@ -2134,9 +2182,7 @@ async def stop_investigation(
 
         stopped = await manager.stop_investigation(investigation_id)
         if not stopped:
-            raise HTTPException(
-                status_code=500, detail="Unable to stop investigation"
-            )
+            raise HTTPException(status_code=500, detail="Unable to stop investigation")
 
         await app.state.ws_manager.broadcast_investigation_update(
             investigation_id=investigation_id,
@@ -3673,7 +3719,9 @@ async def _get_autopivot_engine() -> Any:
 
                 fallback = DeterministicAutopivotEngine()
             except Exception as exc:  # pragma: no cover - defensive guard
-                logging.error("Failed to initialize deterministic autopivot engine: %s", exc)
+                logging.error(
+                    "Failed to initialize deterministic autopivot engine: %s", exc
+                )
                 fallback = None
             setattr(app.state, "_autopivot_engine", fallback)
 
