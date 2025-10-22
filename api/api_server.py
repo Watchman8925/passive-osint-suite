@@ -6,6 +6,7 @@ and comprehensive investigation management.
 """
 
 import asyncio
+import inspect
 import logging
 import os
 import importlib
@@ -3702,12 +3703,24 @@ async def suggest_autopivots(
 
         engine = await _get_autopivot_engine()
 
+        suggest_kwargs = {
+            "investigation_data": investigation,
+            "max_pivots": request.max_pivots,
+        }
+
+        store = getattr(app.state, "investigation_manager", None)
+        if store is not None:
+            try:
+                signature = inspect.signature(engine.suggest_autopivots)
+                if "store" in signature.parameters:
+                    suggest_kwargs["store"] = store
+            except (TypeError, ValueError):
+                # Fallback engines implemented in C extensions or with dynamic
+                # signatures might not be introspectable; ignore in that case.
+                pass
+
         # Get autopivot suggestions from AI engine or deterministic fallback
-        pivots = await engine.suggest_autopivots(
-            investigation_data=investigation,
-            max_pivots=request.max_pivots,
-            store=app.state.investigation_manager,
-        )
+        pivots = await engine.suggest_autopivots(**suggest_kwargs)
 
         return {
             "investigation_id": request.investigation_id,

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -11,26 +11,11 @@ import {
   DocumentTextIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
-
+import { saveAs } from 'file-saver';
+import toast from 'react-hot-toast';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Skeleton } from '../ui/Skeleton';
-import { Card } from '../ui/Card';
-import { ProgressBar } from '../ui/ProgressBar';
-import { investigationApi } from '../../services/api';
-import { useSelectedInvestigation } from '../../contexts/SelectedInvestigationContext';
-import { Investigation, InvestigationProgress } from '../../types/investigation';
-
-export type InvestigationResultStatus =
-  | 'completed'
-  | 'processing'
-  | 'failed'
-  | 'partial'
-  | 'running'
-  | 'pending'
-  | 'queued'
-  | 'active'
-  | string;
+import { exportService, ExportOptions } from '../../services/exportService';
 
 export interface InvestigationResult {
   id: string;
@@ -171,109 +156,63 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [investigationStatus, setInvestigationStatus] = useState<string | null>(null);
-  const [investigationName, setInvestigationName] = useState<string>('');
-  const [progress, setProgress] = useState<InvestigationProgress | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-
-  useEffect(() => {
-    setStatusFilter('all');
-    setModuleFilter('all');
-    setSearchTerm('');
-    setSelectedResult(null);
-  }, [effectiveInvestigationId]);
-
-  const loadInvestigation = useCallback(async () => {
-    if (!effectiveInvestigationId) {
-      setResults([]);
-      setInvestigationStatus(null);
-      setInvestigationName('');
-      setProgress(null);
-      setError(null);
-      setLastUpdated(null);
-      onResultsUpdate?.([]);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const details = await investigationApi.getInvestigation(effectiveInvestigationId);
-      const normalized = normalizeResults(details);
-      setResults(normalized);
-      setInvestigationStatus(details.status ?? null);
-      setInvestigationName(details.name ?? '');
-      setLastUpdated(new Date().toISOString());
-      onResultsUpdate?.(normalized);
-
-      if (shouldFetchProgress(details.status)) {
-        try {
-          const progressResponse = await investigationApi.getInvestigationProgress(effectiveInvestigationId);
-          setProgress(progressResponse);
-        } catch {
-          setProgress(null);
-        }
-      } else {
-        setProgress(null);
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Failed to load investigation results';
-      setError(message);
-      setResults([]);
-      setProgress(null);
-      onResultsUpdate?.([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [effectiveInvestigationId, onResultsUpdate]);
-
-  useEffect(() => {
-    loadInvestigation();
-  }, [loadInvestigation, refreshToken]);
-
-  const availableStatuses = useMemo(
-    () => Array.from(new Set(results.map((result) => result.status))).sort(),
-    [results]
-  );
-
-  const availableModules = useMemo(
-    () => Array.from(new Set(results.map((result) => result.module_type))).sort(),
-    [results]
-  );
-
-  const filteredResults = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return results.filter((result) => {
-      if (effectiveInvestigationId && result.investigation_id !== effectiveInvestigationId) return false;
-
-      const matchesSearch =
-        term === '' ||
-        result.investigation_name.toLowerCase().includes(term) ||
-        result.target.toLowerCase().includes(term) ||
-        result.module_type.toLowerCase().includes(term) ||
-        result.tags.some((tag) => tag.toLowerCase().includes(term));
-
-      const matchesStatus = statusFilter === 'all' || result.status === statusFilter;
-      const matchesModule = moduleFilter === 'all' || result.module_type === moduleFilter;
-
-      return matchesSearch && matchesStatus && matchesModule;
-    });
-  }, [results, effectiveInvestigationId, searchTerm, statusFilter, moduleFilter]);
 
   const totalDataSize = filteredResults.reduce((sum, result) => sum + (result.size_mb ?? 0), 0);
   const completedResults = filteredResults.filter((result) => result.status === 'completed').length;
   const initialLoading = isLoading && results.length === 0;
 
-  const handleExport = async (result: InvestigationResult, format: 'json' | 'csv' | 'pdf') => {
-    try {
-      console.log(`Exporting result ${result.id} as ${format}`);
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  };
+  const [activeExportKey, setActiveExportKey] = useState<string | null>(null);
+
+  const isExporting = useCallback(
+    (resultId: string, format: ExportOptions['format']) => activeExportKey === `${resultId}:${format}`,
+    [activeExportKey]
+  );
+
+  const handleExport = useCallback(
+    async (result: InvestigationResult, format: ExportOptions['format']) => {
+      const exportKey = `${result.id}:${format}`;
+      try {
+        setActiveExportKey(exportKey);
+        const exportResult = await exportService.exportResult(result, {
+          format,
+          includeMetadata: true,
+          includeRawData: true,
+        });
+
+        if (!exportResult.success || (!exportResult.blob && !exportResult.downloadUrl)) {
+          toast.error(exportResult.error || `Unable to export result as ${format.toUpperCase()}`);
+          return;
+        }
+
+        const filename =
+          exportResult.filename ||
+          `result_${result.id}.${format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : format}`;
+
+        if (exportResult.blob) {
+          saveAs(exportResult.blob, filename);
+        } else if (exportResult.downloadUrl) {
+          const link = document.createElement('a');
+          link.href = exportResult.downloadUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (exportResult.downloadUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(exportResult.downloadUrl);
+          }
+        }
+
+        toast.success(`Exported result as ${format.toUpperCase()}`);
+      } catch (error) {
+        console.error('Export failed:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to export result: ${message}`);
+      } finally {
+        setActiveExportKey(prev => (prev === exportKey ? null : prev));
+      }
+    },
+    [exportService, toast, saveAs]
+  );
 
   const handleVisualize = (result: InvestigationResult) => {
     console.log(`Visualizing result ${result.id}`);
@@ -514,10 +453,45 @@ const InvestigationResults: React.FC<InvestigationResultsProps> = ({
                     <DocumentArrowDownIcon className="w-4 h-4" />
                   </Button>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        )}
+              </div>
+
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedResult(result)}
+                  className="flex-1"
+                >
+                  <EyeIcon className="w-4 h-4 mr-1" />
+                  View
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleVisualize(result)}
+                >
+                  <ChartBarIcon className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleExport(result, 'json')}
+                  disabled={isExporting(result.id, 'json')}
+                  aria-label={`Export ${result.investigation_name} as JSON`}
+                >
+                  {isExporting(result.id, 'json') ? (
+                    <span className="flex items-center gap-2 text-xs">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Exporting
+                    </span>
+                  ) : (
+                    <DocumentArrowDownIcon className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       {!initialLoading && filteredResults.length === 0 && !error && (
@@ -630,15 +604,34 @@ const ResultDetailModal: React.FC<ResultDetailModalProps> = ({ result, isOpen, o
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={() => console.log('Export JSON')}>
-              Export JSON
+          {/* Export Options */}
+          <div className="flex space-x-4">
+            <Button
+              onClick={() => handleExport(result, 'json')}
+              disabled={isExporting(result.id, 'json')}
+            >
+              {isExporting(result.id, 'json') ? 'Exporting JSON…' : 'Export JSON'}
             </Button>
-            <Button variant="outline" onClick={() => console.log('Export CSV')}>
-              Export CSV
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'csv')}
+              disabled={isExporting(result.id, 'csv')}
+            >
+              {isExporting(result.id, 'csv') ? 'Exporting CSV…' : 'Export CSV'}
             </Button>
-            <Button variant="outline" onClick={() => console.log('Export PDF')}>
-              Export PDF
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'pdf')}
+              disabled={isExporting(result.id, 'pdf')}
+            >
+              {isExporting(result.id, 'pdf') ? 'Exporting PDF…' : 'Export PDF'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExport(result, 'excel')}
+              disabled={isExporting(result.id, 'excel')}
+            >
+              {isExporting(result.id, 'excel') ? 'Exporting Excel…' : 'Export Excel'}
             </Button>
             <Button variant="outline" onClick={() => console.log('Visualize')}>
               <ChartBarIcon className="w-4 h-4 mr-2" />
