@@ -80,6 +80,7 @@ class SimpleInvestigation:
     completed_at: Optional[datetime]
     ai_analysis: Dict[str, Any]
     archived: bool
+    archived_at: Optional[datetime] = None
     module_outputs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     pivot_scores: Dict[str, Any] = field(default_factory=dict)
     latest_pivots: List[Dict[str, Any]] = field(default_factory=list)
@@ -94,6 +95,7 @@ class SimpleInvestigation:
             "created_at",
             "started_at",
             "completed_at",
+            "archived_at",
             "last_evidence_at",
         ]:
             val = d.get(key)
@@ -129,6 +131,7 @@ class SimpleInvestigation:
             completed_at=parse_dt(data.get("completed_at")),
             ai_analysis=data.get("ai_analysis", {}),
             archived=data.get("archived", False),
+            archived_at=parse_dt(data.get("archived_at")),
             module_outputs=data.get("module_outputs", {}),
             pivot_scores=data.get("pivot_scores", {}),
             latest_pivots=data.get("latest_pivots", []),
