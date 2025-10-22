@@ -3,6 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Globe, Play, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface ModuleExecutionResponse {
+  status: string;
+  module_name?: string;
+  result?: unknown;
+  results?: unknown;
+  target?: string;
+  message?: string;
+  error?: string;
+  execution_time?: number;
+}
+
 interface DomainInvestigationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,8 +27,45 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
 }) => {
   const [domain, setDomain] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ModuleExecutionResponse | null>(null);
   const [error, setError] = useState('');
+
+  const getNestedResultObject = () => {
+    if (!result || typeof result.result !== 'object' || result.result === null) {
+      return undefined;
+    }
+
+    return result.result as Record<string, unknown>;
+  };
+
+  const nestedResult = getNestedResultObject();
+  const getNestedString = (key: string): string | undefined => {
+    if (!nestedResult) return undefined;
+    const value = nestedResult[key];
+    return typeof value === 'string' ? value : undefined;
+  };
+
+  const resolvedStatus = result?.status || getNestedString('status') || 'Completed';
+  const resolvedTarget = result?.target || getNestedString('target') || domain;
+  const resolvedMessage = result?.message || getNestedString('message');
+  const resolvedPayload = (() => {
+    if (result?.results) {
+      return result.results;
+    }
+
+    if (nestedResult) {
+      const nestedResults = nestedResult['results'];
+      if (nestedResults !== undefined) {
+        return nestedResults;
+      }
+
+      if (Object.keys(nestedResult).length) {
+        return nestedResult;
+      }
+    }
+
+    return undefined;
+  })();
 
   const handleRun = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,15 +80,16 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
         throw new Error('Please enter a valid domain name (e.g., example.com)');
       }
 
-      const response = await fetch(`${apiUrl}/api/modules/domain/run`, {
+      const response = await fetch(`${apiUrl}/api/modules/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify({ 
-          target: domain,
-          options: {
+          module_name: 'domain_recon',
+          parameters: {
+            target: domain,
             dns_lookup: true,
             whois_lookup: true,
             subdomain_scan: true
@@ -54,11 +103,21 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
       }
 
       const data = await response.json();
-      setResult(data);
-      toast.success('Domain investigation completed!');
+      
+      // Handle the standardized ModuleExecutionResponse format
+      if (data.status === 'success') {
+        setResult(data);
+        toast.success('Domain investigation completed!');
+      } else {
+        // Handle error response
+        const errorMsg = data.error || 'Domain investigation failed';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
     } catch (err: any) {
-      setError(err.message || 'Investigation failed. Please try again.');
-      toast.error(err.message || 'Investigation failed');
+      const errorMsg = err.message || 'Investigation failed. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsRunning(false);
     }
@@ -195,14 +254,14 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
                     <span className="font-medium text-green-900">Investigation Complete</span>
                   </div>
                   <div className="text-sm text-gray-700 space-y-2">
-                    <p><strong>Status:</strong> {result.status || 'Completed'}</p>
-                    <p><strong>Target:</strong> {result.target || domain}</p>
-                    {result.message && <p>{result.message}</p>}
+                    <p><strong>Status:</strong> {resolvedStatus}</p>
+                    <p><strong>Target:</strong> {resolvedTarget}</p>
+                    {resolvedMessage && <p>{resolvedMessage}</p>}
                   </div>
-                  {result.results && (
+                  {resolvedPayload && (
                     <div className="mt-3 p-3 bg-white rounded border border-gray-200">
                       <pre className="text-xs overflow-x-auto">
-                        {JSON.stringify(result.results, null, 2)}
+                        {JSON.stringify(resolvedPayload, null, 2)}
                       </pre>
                     </div>
                   )}
