@@ -9,8 +9,6 @@ import asyncio
 import inspect
 import logging
 import os
-import importlib
-import importlib.util
 from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 import ipaddress
@@ -82,21 +80,10 @@ _ = (
 # Optional external libraries: prefer real packages but provide lightweight fallbacks
 try:
     import jwt  # type: ignore
-except Exception:  # pragma: no cover - fallback for static analysis / dev
-
-    class _JWTStub:
-        class PyJWTError(Exception):
-            pass
-
-        @staticmethod
-        def encode(payload, key, algorithm="HS256"):
-            raise RuntimeError("jwt not available")
-
-        @staticmethod
-        def decode(token, key, algorithms=None):
-            raise RuntimeError("jwt not available")
-
-    jwt = _JWTStub  # type: ignore
+except ImportError as exc:  # pragma: no cover - enforced via tests
+    raise RuntimeError(
+        "PyJWT is required for API authentication. Install it with 'pip install pyjwt'."
+    ) from exc
 
 try:
     import redis.asyncio as redis  # type: ignore
@@ -114,148 +101,24 @@ except Exception:  # pragma: no cover - dev fallback
         async def close(self):
             pass
 
-# FastAPI/pydantic fallbacks to keep static analysis stable in environments without packages.
 
-# Use importlib to avoid a static "from fastapi import ..." that some editors/language servers
-# flag when the package isn't installed; fall back to lightweight stubs if fastapi is absent.
-_fastapi_spec = importlib.util.find_spec("fastapi")
-if _fastapi_spec is not None:
-    # fastapi is available at runtime; import the symbols we need.
-    _fastapi = importlib.import_module("fastapi")
-    Depends = getattr(_fastapi, "Depends")
-    FastAPI = getattr(_fastapi, "FastAPI")
-    HTTPException = getattr(_fastapi, "HTTPException")
-    Request = getattr(_fastapi, "Request")
-    WebSocket = getattr(_fastapi, "WebSocket")
-    WebSocketDisconnect = getattr(_fastapi, "WebSocketDisconnect")
-
-    # Try importing commonly used submodules; if any fail, provide minimal fallbacks.
-    try:
-        from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-    except Exception:
-        CORSMiddleware = None  # type: ignore
-
-    try:
-        from fastapi.middleware.gzip import GZipMiddleware  # type: ignore
-    except Exception:
-        GZipMiddleware = None  # type: ignore
-
-    try:
-        from fastapi.responses import JSONResponse, FileResponse  # type: ignore
-    except Exception:
-
-        def JSONResponse(content=None, status_code=200):
-            return {"status_code": status_code, "content": content}
-
-        class FileResponse:  # type: ignore
-            def __init__(self, *a, **k):
-                pass
-
-    try:
-        from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # type: ignore
-    except Exception:
-
-        class HTTPAuthorizationCredentials:  # type: ignore
-            credentials: str = ""
-
-        class HTTPBearer:  # type: ignore
-            def __init__(self, *a, **k):
-                pass
-else:
-    # fastapi is not available; provide minimal stubs to keep static analysis and tests happy.
-    def Depends(dependency=None):
-        return None
-
-    class HTTPBearer:
-        def __init__(self, *a, **k):
-            pass
-
-    class HTTPAuthorizationCredentials:  # type: ignore
-        credentials: str = ""
-
-    class FastAPI:  # type: ignore
-        def __init__(self, *a, **k):
-            # Create state object with all required attributes
-            class AppState:
-                def __init__(self):
-                    # Use broadly-typed attributes so static type checkers do not
-                    # infer these as None-only; these will be populated with various
-                    # runtime adapters (Redis client, ES client, Graph DB, etc.).
-                    self.redis: Any = None
-                    self.es: Any = None
-                    self.ai_engine: Any = None
-                    self.security_db: Any = None
-                    self.investigation_manager: Any = None
-                    self.reporting_engine: Any = None
-                    self.report_scheduler: Any = None
-                    self.graph_db: Any = None
-                    self.intelligence_feeds: Any = None
-                    self.ws_manager: Any = None
-                    self.execution_engine: Any = None
-
-            self.state = AppState()
-
-        def add_middleware(self, *a, **k):
-            pass
-
-        def exception_handler(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def get(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def post(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def delete(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-        def websocket(self, *a, **k):
-            def _decorator(func):
-                return func
-
-            return _decorator
-
-    class HTTPException(Exception):
-        def __init__(self, status_code=500, detail=None):
-            super().__init__(detail)
-            self.status_code = status_code
-            self.detail = detail
-
-    class Request:  # type: ignore
-        scope = {}
-        client = None
-
-    class WebSocket:  # type: ignore
-        async def accept(self):
-            pass
-
-        async def send_json(self, *a, **k):
-            pass
-
-        async def receive_json(self):
-            return {}
-
-    class WebSocketDisconnect(Exception):
-        pass
-
-    class CORSMiddleware:  # type: ignore
-        pass
-
-    class GZipMiddleware:  # type: ignore
-        pass
+try:
+    from fastapi import (
+        Depends,
+        FastAPI,
+        HTTPException,
+        Request,
+        WebSocket,
+        WebSocketDisconnect,
+    )
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.middleware.gzip import GZipMiddleware
+    from fastapi.responses import JSONResponse
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+except ImportError as exc:  # pragma: no cover - this should fail fast in tests
+    raise RuntimeError(
+        "FastAPI is required to run the API server. Install it with 'pip install fastapi uvicorn'."
+    ) from exc
 
 
 # Type-only aliases for static type checking (no runtime impact)
@@ -918,9 +781,14 @@ def rate_limit(limit: int, window_seconds: int):
 # ============================================================================
 
 
+# NOTE: The health check endpoint now requires authentication via JWT token.
+# This is a breaking change for monitoring systems and external health check tools.
+# Monitoring tools must provide a valid JWT token in the Authorization header to access this endpoint.
+# This change was made to prevent unauthenticated probing and potential abuse.
+# If your health checks start failing after deployment, ensure your monitoring configuration is updated accordingly.
 @app.get("/api/health")
 @limiter.limit("300/minute")  # Higher limit for health checks
-async def health_check(request: Request):
+async def health_check(request: Request, user_id: str = Depends(verify_token)):
     """Primary health check endpoint consumed by dashboard ribbon."""
     # Basic service status placeholders (assume connected if objects exist)
     redis_status = "connected" if getattr(app.state, "redis", None) else "unknown"
@@ -935,12 +803,13 @@ async def health_check(request: Request):
             "elasticsearch": es_status,
             "ai_engine": ai_status,
         },
+        "requested_by": user_id,
     }
 
 
 @app.get("/api/health/detailed")
 @limiter.limit("60/minute")
-async def detailed_health_check(request: Request):
+async def detailed_health_check(request: Request, user_id: str = Depends(verify_token)):
     """Detailed health check with service connectivity tests."""
     health_status = {
         "status": "healthy",
@@ -998,6 +867,7 @@ async def detailed_health_check(request: Request):
     except Exception:
         health_status["services"]["graph_db"] = {"status": "not_configured"}
 
+    health_status["requested_by"] = user_id
     return health_status
 
 
@@ -1067,16 +937,16 @@ async def tor_status():
 
 
 @app.get("/api/system/status")
-async def system_status_alias(request: Request):
+async def system_status_alias(request: Request, user_id: str = Depends(verify_token)):
     """Alias for /api/health to match frontend expectations."""
-    return await health_check(request)
+    return await health_check(request=request, user_id=user_id)
 
 
 @app.get("/health")
 @limiter.limit("300/minute")  # Higher limit for health checks
-async def health_fallback(request: Request):
+async def health_fallback(request: Request, user_id: str = Depends(verify_token)):
     """Fallback health endpoint without /api prefix for compatibility."""
-    return await health_check(request)
+    return await health_check(request=request, user_id=user_id)
 
 
 @app.get("/api/anonymity/tor/status")
