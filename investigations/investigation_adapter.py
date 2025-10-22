@@ -210,13 +210,11 @@ class PersistentInvestigationStore:
                 "Invalid encryption key provided for investigation store"
             ) from exc
 
-        if not self.key_file.exists():
-            self.key_file.parent.mkdir(parents=True, exist_ok=True)
-            self.key_file.write_bytes(key_bytes)
-            self._set_secure_permissions(self.key_file)
+
+
+
 
         return cipher
-
     @staticmethod
     def _normalise_key_bytes(raw: bytes) -> bytes:
         if not raw:
