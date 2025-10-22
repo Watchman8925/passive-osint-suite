@@ -112,6 +112,29 @@ jobs:
           echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
           echo "OSINT_SECRET_KEY=test-secret-key-for-ci-pipeline-testing-only" >> $GITHUB_ENV
 
+      - name: Generate CI health-check token
+        run: |
+          TOKEN=$(python - <<'PY'
+import os
+import time
+
+import jwt
+
+secret = os.environ["OSINT_SECRET_KEY"]
+issued_at = int(time.time())
+payload = {
+    "sub": "ci-health-check",
+    "iat": issued_at,
+    "exp": issued_at + 600,
+}
+token = jwt.encode(payload, secret, algorithm="HS256")
+if isinstance(token, bytes):
+    token = token.decode("utf-8")
+print(token)
+PY
+          )
+          echo "HEALTH_TOKEN=$TOKEN" >> $GITHUB_ENV
+
       - name: Start API server in background
         run: |
           python -m uvicorn api.api_server:app --host 0.0.0.0 --port 8000 &
@@ -121,7 +144,7 @@ jobs:
       - name: Wait for API to be ready
         run: |
           for i in {1..30}; do
-            if curl -f http://localhost:8000/api/health; then
+            if curl -f -H "Authorization: Bearer ${HEALTH_TOKEN}" http://localhost:8000/api/health; then
               echo "API is ready"
               exit 0
             fi
@@ -133,7 +156,7 @@ jobs:
 
       - name: Test health endpoint
         run: |
-          curl -f http://localhost:8000/api/health || exit 1
+          curl -f -H "Authorization: Bearer ${HEALTH_TOKEN}" http://localhost:8000/api/health || exit 1
           echo "Health check passed!"
 
       - name: Stop API server

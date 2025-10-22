@@ -7,121 +7,141 @@ Unified OSINT intelligence gathering platform with web interface,
 passive reconnaissance, and comprehensive analysis capabilities.
 """
 
-import sys
 import asyncio
 import logging
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+from importlib import import_module
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
-
-# Import core components
-from api.api_server import app
 from security.secrets_manager import secrets_manager
 from security.api_key_manager import create_api_config_manager
-from core.local_llm_engine import LocalLLMEngine
-from reporting.reporting_engine import EnhancedReportingEngine
-from reporting.report_scheduler import ReportScheduler
-from realtime.realtime_feeds import RealTimeIntelligenceFeed
 from utils.transport import get_tor_status, ProxiedTransport
 from utils.osint_utils import OSINTUtils
 
-# Import passive intelligence modules
-from modules.passive_search import PassiveSearchIntelligence
-from modules.web_scraper import WebScraper
-from modules.search_engine_dorking import SearchEngineDorking
-from modules.certificate_transparency import CertificateTransparency
-from modules.wayback_machine import WaybackMachine
-from modules.paste_site_monitor import PasteSiteMonitor
-from modules.social_media_footprint import SocialMediaFootprint
-from modules.github_search import GitHubSearch
-from modules.passive_dns_enum import PassiveDNSEnum
-from modules.whois_history import WhoisHistory
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
+PassiveModuleSpec = Tuple[str, str]
+
+_PASSIVE_MODULE_SPECS: Dict[str, PassiveModuleSpec] = {
+    "passive_search": ("modules.passive_search", "PassiveSearchIntelligence"),
+    "web_scraper": ("modules.web_scraper", "WebScraper"),
+    "search_engine_dorking": (
+        "modules.search_engine_dorking",
+        "SearchEngineDorking",
+    ),
+    "certificate_transparency": (
+        "modules.certificate_transparency",
+        "CertificateTransparency",
+    ),
+    "wayback_machine": ("modules.wayback_machine", "WaybackMachine"),
+    "paste_site_monitor": ("modules.paste_site_monitor", "PasteSiteMonitor"),
+    "social_media_footprint": (
+        "modules.social_media_footprint",
+        "SocialMediaFootprint",
+    ),
+    "github_search": ("modules.github_search", "GitHubSearch"),
+    "passive_dns_enum": ("modules.passive_dns_enum", "PassiveDNSEnum"),
+    "whois_history": ("modules.whois_history", "WhoisHistory"),
+}
 
 
 class OSINTSuite:
-    """
-    Comprehensive OSINT Suite with web interface and passive intelligence gathering.
-    """
+    """Comprehensive OSINT Suite with web interface and passive intelligence gathering."""
 
-    def __init__(self):
-        """Initialize the OSINT Suite"""
+    def __init__(
+        self,
+        passive_module_specs: Optional[Dict[str, PassiveModuleSpec]] = None,
+    ) -> None:
+        """Prepare the suite without eagerly loading optional dependencies."""
+
         self.utils = OSINTUtils()
         self.transport = ProxiedTransport()
         self.api_manager = create_api_config_manager()
 
-        # Initialize AI and reporting
-        self.llm_engine = None
-        self.reporting_engine = None
-        self.report_scheduler = None
-        self.realtime_feeds = None
+        # Initialize AI and reporting placeholders
+        self.llm_engine: Optional[Any] = None
+        self.reporting_engine: Optional[Any] = None
+        self.report_scheduler: Optional[Any] = None
+        self.realtime_feeds: Optional[Any] = None
 
-        # Initialize passive intelligence modules
-        self.passive_modules = {}
+        # Passive intelligence modules
+        self.passive_modules: Dict[str, Optional[Any]] = {}
+        self._passive_module_specs = passive_module_specs or dict(_PASSIVE_MODULE_SPECS)
 
-        # Initialize components
-        self._initialize_components()
-        self._initialize_passive_modules()
+        self._components_initialized = False
+        self._passive_modules_initialized = False
 
-        logger.info("OSINT Suite initialized successfully")
+        logger.info("OSINT Suite created; components will initialize lazily")
 
-    def _initialize_components(self):
-        """Initialize core components"""
+    def _ensure_components_initialized(self) -> None:
+        """Initialize core components on first use."""
+
+        if self._components_initialized:
+            return
+
         try:
-            # Initialize LLM engine if API key available
             openai_key = secrets_manager.get_secret("api_key_openai")
             if openai_key:
+                from core.local_llm_engine import LocalLLMEngine
+
                 self.llm_engine = LocalLLMEngine()
                 logger.info("LLM engine initialized")
             else:
-                logger.warning("No OpenAI API key found - LLM features disabled")
+                logger.info("OpenAI API key not configured; LLM features disabled")
 
-            # Initialize reporting system
+            from reporting.reporting_engine import EnhancedReportingEngine
+            from reporting.report_scheduler import ReportScheduler
+            from realtime.realtime_feeds import RealTimeIntelligenceFeed
+
             self.reporting_engine = EnhancedReportingEngine(ai_engine=self.llm_engine)
             self.report_scheduler = ReportScheduler(self.reporting_engine)
-            logger.info("Reporting system initialized")
-
-            # Initialize real-time feeds
             self.realtime_feeds = RealTimeIntelligenceFeed()
-            logger.info("Real-time intelligence feeds initialized")
+            logger.info("Reporting and realtime components initialized")
 
-        except Exception as e:
-            logger.error(f"Error initializing components: {e}")
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.exception("Error initializing components: %s", exc)
+        finally:
+            self._components_initialized = True
 
-    def _initialize_passive_modules(self):
-        """Initialize passive intelligence gathering modules"""
-        module_configs = {
-            "passive_search": PassiveSearchIntelligence,
-            "web_scraper": WebScraper,
-            "search_engine_dorking": SearchEngineDorking,
-            "certificate_transparency": CertificateTransparency,
-            "wayback_machine": WaybackMachine,
-            "paste_site_monitor": PasteSiteMonitor,
-            "social_media_footprint": SocialMediaFootprint,
-            "github_search": GitHubSearch,
-            "passive_dns_enum": PassiveDNSEnum,
-            "whois_history": WhoisHistory,
-        }
+    def _ensure_passive_modules_initialized(self) -> None:
+        """Instantiate passive intelligence gathering modules when required."""
 
-        for module_name, module_class in module_configs.items():
+        if self._passive_modules_initialized:
+            return
+
+        for module_name, (
+            module_path,
+            class_name,
+        ) in self._passive_module_specs.items():
+            try:
+                module = import_module(module_path)
+                module_class = getattr(module, class_name)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning(
+                    "Failed to import passive module %s (%s.%s): %s",
+                    module_name,
+                    module_path,
+                    class_name,
+                    exc,
+                )
+                self.passive_modules[module_name] = None
+                continue
+
             try:
                 self.passive_modules[module_name] = module_class()
-                logger.info(f"Initialized passive module: {module_name}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize {module_name}: {e}")
+                logger.info("Initialized passive module: %s", module_name)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning("Failed to initialize %s: %s", module_name, exc)
                 self.passive_modules[module_name] = None
+
+        self._passive_modules_initialized = True
 
     async def validate_system(self) -> Dict[str, Any]:
         """Validate system components and API keys"""
         logger.info("Validating OSINT Suite system...")
+
+        self._ensure_components_initialized()
+        self._ensure_passive_modules_initialized()
 
         results: Dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
@@ -211,6 +231,9 @@ class OSINTSuite:
         logger.info(
             f"Starting passive intelligence gathering for {target} ({target_type})"
         )
+
+        self._ensure_components_initialized()
+        self._ensure_passive_modules_initialized()
 
         results: Dict[str, Any] = {
             "target": target,
@@ -421,6 +444,8 @@ class OSINTSuite:
             f"Generating {report_type} report in {style} style ({length} length)"
         )
 
+        self._ensure_components_initialized()
+
         try:
             # Use the reporting engine to generate the report
             report_data: Dict[str, Any] = {
@@ -522,10 +547,12 @@ class OSINTSuite:
             f"Passive modules loaded: {sum(validation.get('passive_modules', {}).values())}"
         )
 
-        # Start the FastAPI server
+        # Start the FastAPI server without importing FastAPI app at module import time
         import uvicorn
 
-        config = uvicorn.Config(app, host=host, port=port, log_level="info")
+        from api.api_server import app as fastapi_app
+
+        config = uvicorn.Config(fastapi_app, host=host, port=port, log_level="info")
         server = uvicorn.Server(config)
 
         try:

@@ -8,9 +8,11 @@ Specialized for transnational organized crime investigations
 
 import argparse
 import json
+import logging
 import os
-import sys
 import time
+from importlib import import_module
+from typing import Any, Callable, Dict, Mapping, Optional
 from datetime import datetime
 
 from colorama import init
@@ -18,12 +20,6 @@ from rich.console import Console
 from rich.progress import track
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
-
-# Ensure project root is on path for local imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# Import the unified module system
-from modules import MODULE_REGISTRY
 
 # Import core utilities
 from utils.osint_utils import OSINTUtils
@@ -41,14 +37,42 @@ except Exception:
 # Initialize colorama and rich
 init(autoreset=True)
 console = Console()
+logger = logging.getLogger(__name__)
+
+ModuleRegistry = Mapping[str, Dict[str, Any]]
+RegistryLoader = Callable[[], ModuleRegistry]
+
+
+def _load_module_registry() -> ModuleRegistry:
+    """Load the module registry without importing heavy modules at import time."""
+
+    modules_package = import_module("modules")
+    return modules_package.MODULE_REGISTRY
+
+
+def configure_logging(level: int = logging.INFO) -> None:
+    """Configure logging once for the CLI launcher."""
+
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        return
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
 
 class OSINTSuite:
     """Unified OSINT Suite using the modular architecture"""
 
-    def __init__(self):
-        """Initialize the OSINT Suite with all available modules"""
+    def __init__(self, module_registry_loader: Optional[RegistryLoader] = None):
+        """Initialize the OSINT Suite with deferred module loading."""
+
         self.utils = OSINTUtils()
+        self._registry_loader = module_registry_loader or _load_module_registry
+        self._module_registry: Optional[ModuleRegistry] = None
+        self._modules: Dict[str, Optional[Any]] = {}
+        self._modules_loaded = False
 
         # Initialize module attributes to None for type checker recognition
         self.domain_recon = None
@@ -69,38 +93,52 @@ class OSINTSuite:
         self.whois_history = None
         self.public_breach_search = None
 
-        # Dynamically load all modules from the registry
-        self.modules = {}
-        for module_name, module_info in MODULE_REGISTRY.items():
+    def _ensure_module_registry(self) -> ModuleRegistry:
+        """Load the module registry when first needed."""
+
+        if self._module_registry is None:
+            registry = self._registry_loader()
+            self._module_registry = dict(registry)
+        return self._module_registry
+
+    def _ensure_modules_loaded(self) -> None:
+        """Instantiate modules on demand rather than during initialization."""
+
+        if self._modules_loaded:
+            return
+
+        module_registry = self._ensure_module_registry()
+        for module_name, module_info in module_registry.items():
+            module_class = module_info.get("class")
+            if module_class is None:
+                logger.warning(
+                    "Module '%s' missing class reference in registry", module_name
+                )
+                self._modules[module_name] = None
+                continue
+
             try:
-                # Special handling for modules that need dependencies
-                if module_name == "email_intel":
-                    # EmailIntel needs domain_recon, so we'll inject it after all modules are loaded
-                    self.modules[module_name] = module_info["class"]()
-                elif module_name == "company_intel":
-                    # CompanyIntel might need domain_recon too
-                    self.modules[module_name] = module_info["class"]()
-                else:
-                    self.modules[module_name] = module_info["class"]()
-                print(f"✅ Loaded module: {module_name}")
-            except Exception as e:
-                print(f"❌ Failed to load module {module_name}: {e}")
+                self._modules[module_name] = module_class()
+                logger.info("Loaded module: %s", module_name)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning("Failed to load module %s: %s", module_name, exc)
+                self._modules[module_name] = None
 
-        # Inject dependencies into modules that need them
         self._inject_dependencies()
-
-        # Keep backward compatibility by exposing modules as attributes
         self._setup_module_attributes()
+        self._modules_loaded = True
 
-    def _inject_dependencies(self):
+    def _inject_dependencies(self) -> None:
         """Inject dependencies into modules that need them"""
+        modules = self._modules
+
         # Inject domain_recon into email_intel
-        if "email_intel" in self.modules and "domain_recon" in self.modules:
-            self.modules["email_intel"].domain_recon = self.modules["domain_recon"]
+        if modules.get("email_intel") and modules.get("domain_recon"):
+            modules["email_intel"].domain_recon = modules["domain_recon"]
 
         # Inject domain_recon into company_intel if needed
-        if "company_intel" in self.modules and "domain_recon" in self.modules:
-            self.modules["company_intel"].domain_recon = self.modules["domain_recon"]
+        if modules.get("company_intel") and modules.get("domain_recon"):
+            modules["company_intel"].domain_recon = modules["domain_recon"]
 
     def _setup_module_attributes(self):
         """Set up module attributes for backward compatibility"""
@@ -127,29 +165,35 @@ class OSINTSuite:
 
         # Create instance attributes from modules
         for attr_name, module_name in module_mapping.items():
-            if module_name in self.modules:
-                setattr(self, attr_name, self.modules[module_name])
+            module_instance = self._modules.get(module_name)
+            if module_instance is not None:
+                setattr(self, attr_name, module_instance)
             else:
-                # Create empty placeholder for missing modules to avoid AttributeError
                 setattr(self, attr_name, None)
-                print(
-                    f"⚠️ Warning: Module {module_name} not loaded, {attr_name} attribute will be None"
+                logger.warning(
+                    "Module %s not loaded; %s attribute will be None",
+                    module_name,
+                    attr_name,
                 )
 
     def get_module(self, module_name):
         """Get a module instance by name"""
-        return self.modules.get(module_name)
+        self._ensure_modules_loaded()
+        return self._modules.get(module_name)
 
     def list_available_modules(self):
         """List all available modules"""
-        return list(self.modules.keys())
+        self._ensure_modules_loaded()
+        return [name for name, module in self._modules.items() if module is not None]
 
     def get_modules_by_category(self, category):
         """Get all modules in a specific category"""
+        module_registry = self._ensure_module_registry()
+        self._ensure_modules_loaded()
         return [
             name
-            for name, info in MODULE_REGISTRY.items()
-            if info["category"] == category and name in self.modules
+            for name, info in module_registry.items()
+            if info.get("category") == category and self._modules.get(name) is not None
         ]
 
     def api_key_status_menu(self):
@@ -2702,4 +2746,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_logging()
     main()

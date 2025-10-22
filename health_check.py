@@ -1,20 +1,88 @@
 #!/usr/bin/env python3
-"""
-OSINT Suite Health Check System
-Comprehensive validation of all components and dependencies
-"""
+"""OSINT Suite Health Check System."""
 
-import sys
-import os
-import importlib
-import subprocess
+from __future__ import annotations
+
+import argparse
 import json
-from pathlib import Path
-from typing import Dict, Any
+import logging
+import os
+import subprocess
+import sys
 import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import importlib
+
+# Ensure the repository root is importable when the script is invoked directly.
+REPO_ROOT = Path(__file__).resolve().parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+
+LOGGER = logging.getLogger("health_check")
+
+
+def _ensure_logger_configured(level: int = logging.INFO) -> None:
+    """Configure a simple console logger for the health check script."""
+
+    if LOGGER.handlers:
+        LOGGER.setLevel(level)
+        return
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    LOGGER.addHandler(handler)
+    LOGGER.setLevel(level)
+
+
+def generate_api_token(
+    secret: str,
+    *,
+    subject: str = "health-check",
+    ttl_seconds: int = 600,
+) -> str:
+    """Generate a short-lived JWT for accessing protected health endpoints."""
+
+    try:
+        import jwt
+    except (
+        ImportError
+    ) as exc:  # pragma: no cover - exercised in environments missing jwt
+        raise RuntimeError(
+            "PyJWT is required to generate health-check tokens. Install pyjwt and retry."
+        ) from exc
+
+    issued_at = int(time.time())
+    payload = {
+        "sub": subject,
+        "iat": issued_at,
+        "exp": issued_at + ttl_seconds,
+    }
+    token = jwt.encode(payload, secret, algorithm="HS256")
+    if isinstance(token, bytes):
+        return token.decode("utf-8")
+    return token
+
+
+def run_api_health_check(
+    url: str,
+    token: str,
+    *,
+    timeout: float = 5.0,
+) -> Dict[str, Any]:
+    """Call the API health endpoint with the provided bearer token."""
+
+    import requests
+
+    response = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 class HealthChecker:
@@ -609,22 +677,127 @@ class HealthChecker:
         print(f"📄 Report saved to {filename}")
 
 
-def main():
-    """Main health check function"""
-    checker = HealthChecker()
-    results = checker.run_all_checks()
-    checker.print_report()
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse command-line arguments for the health check script."""
 
-    # Save detailed report
-    checker.save_report()
+    parser = argparse.ArgumentParser(description="Run OSINT Suite health checks.")
+    parser.add_argument(
+        "--api-url",
+        help="Optional API health endpoint to query (requires a bearer token).",
+    )
+    parser.add_argument(
+        "--secret",
+        help="Override the OSINT_SECRET_KEY environment variable when generating the token.",
+    )
+    parser.add_argument(
+        "--token-ttl",
+        type=int,
+        default=600,
+        help="Validity period for the generated health-check token in seconds (default: 600).",
+    )
+    parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=5.0,
+        help="Timeout in seconds when calling the API health endpoint (default: 5.0).",
+    )
+    parser.add_argument(
+        "--output",
+        default="health_report.json",
+        help="Where to save the JSON health report (default: health_report.json).",
+    )
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="Skip saving the JSON report to disk.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress the formatted console report.",
+    )
+    return parser.parse_args(argv)
 
-    # Return appropriate exit code
-    if results["overall_status"] == "healthy":
-        return 0
-    elif results["overall_status"] == "warning":
-        return 1
+
+def _maybe_run_api_health_check(
+    checker: "HealthChecker",
+    *,
+    api_url: str,
+    secret: Optional[str],
+    token_ttl: int,
+    request_timeout: float,
+) -> None:
+    """Optionally execute the authenticated API health check."""
+
+    if not secret:
+        message = (
+            "OSINT_SECRET_KEY not provided; skipping authenticated API health check."
+        )
+        LOGGER.warning(message)
+        checker._add_check_result("api_health", "warning", message)
+        checker._determine_overall_status()
+        checker._generate_recommendations()
+        return
+
+    try:
+        token = generate_api_token(
+            secret, subject="health-check-cli", ttl_seconds=token_ttl
+        )
+        response = run_api_health_check(api_url, token, timeout=request_timeout)
+    except Exception as exc:  # pragma: no cover - exercised in integration tests
+        LOGGER.error("API health check failed for %s: %s", api_url, exc)
+        checker._add_check_result("api_health", "fail", f"API check failed: {exc}")
     else:
-        return 2
+        status_text = response.get("status", "unknown")
+        checker._add_check_result(
+            "api_health",
+            "pass",
+            f"API responded with status '{status_text}'",
+        )
+        checker.results["checks"]["api_health"]["details"] = response
+        LOGGER.info("API health check succeeded for %s", api_url)
+
+    checker._determine_overall_status()
+    checker._generate_recommendations()
+
+
+def _exit_code_from_status(results: Dict[str, Any]) -> int:
+    """Translate the overall status into a process exit code."""
+
+    status = results.get("overall_status")
+    if status == "healthy":
+        return 0
+    if status == "warning":
+        return 1
+    return 2
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Main health check function."""
+
+    args = parse_args(argv)
+    _ensure_logger_configured(logging.WARNING if args.quiet else logging.INFO)
+
+    checker = HealthChecker()
+    checker.run_all_checks()
+
+    if args.api_url:
+        secret = args.secret or os.environ.get("OSINT_SECRET_KEY")
+        _maybe_run_api_health_check(
+            checker,
+            api_url=args.api_url,
+            secret=secret,
+            token_ttl=args.token_ttl,
+            request_timeout=args.request_timeout,
+        )
+
+    if not args.quiet:
+        checker.print_report()
+
+    if not args.no_save:
+        checker.save_report(args.output)
+
+    return _exit_code_from_status(checker.results)
 
 
 if __name__ == "__main__":
