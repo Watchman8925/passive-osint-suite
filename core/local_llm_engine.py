@@ -20,14 +20,13 @@ Features:
 """
 
 import asyncio
-import json
 import logging
 import os
 import subprocess
 import re
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests  # type: ignore
 
@@ -1321,9 +1320,7 @@ Targets: {", ".join(targets) if targets else "None specified"}
     # Autopivot support
     # ------------------------------------------------------------------
 
-    def _normalize_investigation(
-        self, investigation_data: Any
-    ) -> Dict[str, Any]:
+    def _normalize_investigation(self, investigation_data: Any) -> Dict[str, Any]:
         """Normalize investigation structures into dictionaries."""
 
         if isinstance(investigation_data, dict):
