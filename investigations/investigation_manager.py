@@ -6,10 +6,10 @@ Advanced workflow orchestration and data organization for complex OSINT investig
 """
 
 import asyncio
+import inspect
 import json
 import logging
 import uuid
-import importlib
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
@@ -22,6 +22,7 @@ from security.audit_trail import AuditTrail
 from security.result_encryption import ResultEncryption
 
 # Import existing OSINT modules
+from modules import MODULE_REGISTRY
 from osint_suite import OSINTSuite
 from security.secrets_manager import SecretsManager
 
@@ -448,80 +449,102 @@ class InvestigationManager:
                     await asyncio.sleep(2**task.retry_count)  # Exponential backoff
                     await self._execute_task(investigation_id, task_id)
 
+    _TASK_MODULE_MAP: Dict[str, Dict[str, str]] = {
+        "domain_recon": {"module": "domain_recon", "method": "analyze_domain"},
+        "ip_intelligence": {"module": "ip_intel", "method": "analyze_ip"},
+        "email_intelligence": {"module": "email_intel", "method": "analyze_email"},
+        "company_intelligence": {
+            "module": "company_intel",
+            "method": "analyze_company",
+        },
+        "flight_intelligence": {
+            "module": "flight_intel",
+            "method": "analyze_aircraft",
+        },
+        "crypto_intelligence": {
+            "module": "crypto_intel",
+            "method": "analyze_crypto_address",
+        },
+        "passive_search": {"module": "passive_search", "method": "analyze_target"},
+    }
+
+    def _build_module_instance(self, module_class: type[Any]) -> Any:
+        """Instantiate a module, injecting the secrets manager when supported."""
+
+        try:
+            signature = inspect.signature(module_class)
+        except (TypeError, ValueError):  # pragma: no cover - defensive guard
+            signature = None
+
+        if signature:
+            parameters = signature.parameters
+            if "secrets_manager" in parameters:
+                return module_class(self.secrets_manager)
+
+            allows_no_args = all(
+                parameter.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+                or parameter.default is not inspect._empty
+                for parameter in parameters.values()
+            )
+
+            if allows_no_args:
+                return module_class()
+
+        try:
+            return module_class(self.secrets_manager)
+        except TypeError:
+            return module_class()
+
     async def _dispatch_task(self, task: InvestigationTask) -> Dict[str, Any]:
-        """Dispatch task to appropriate OSINT module"""
+        """Dispatch task to the appropriate OSINT module using canonical entry points."""
         task_type = task.task_type.lower()
+        handler = self._TASK_MODULE_MAP.get(task_type)
+
+        if not handler:
+            raise ValueError(f"Unknown task type: {task_type}")
+
+        module_name = handler["module"]
+        method_name = handler["method"]
+
+        module_info = MODULE_REGISTRY.get(module_name)
+        if not module_info or "class" not in module_info:
+            raise ValueError(f"Module '{module_name}' is not available in MODULE_REGISTRY")
+
+        module_class = module_info["class"]
+        module_instance = self._build_module_instance(module_class)
+
         targets = task.targets
         parameters = task.parameters
 
-        # Initialize result
-        result = {}
-
-        # Update progress
+        result: Dict[str, Any] = {}
         task.progress = 0.2
+        increment = 0.7 / max(len(targets), 1)
 
-        if task_type == "domain_recon":
-            DomainRecon = self._load_class("modules.domain_recon", "DomainRecon")
-            domain_recon = DomainRecon(self.secrets_manager)
-            for target in targets:
-                target_result = await domain_recon.recon_domain(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
+        module_method = getattr(module_instance, method_name, None)
+        if not module_method:
+            raise AttributeError(
+                f"Module '{module_name}' does not implement '{method_name}'"
+            )
 
-        elif task_type == "ip_intelligence":
-            IPIntel = self._load_class("modules.ip_intel", "IPIntel")
-            ip_intel = IPIntel(self.secrets_manager)
-            for target in targets:
-                target_result = await ip_intel.analyze_ip(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
+        for index, target in enumerate(targets, start=1):
+            try:
+                if asyncio.iscoroutinefunction(module_method):
+                    raw_result = await module_method(target, **parameters)
+                else:
+                    raw_result = await asyncio.to_thread(module_method, target, **parameters)
 
-        elif task_type == "email_intelligence":
-            EmailIntel = self._load_class("modules.email_intel", "EmailIntel")
-            email_intel = EmailIntel(self.secrets_manager)
-            for target in targets:
-                target_result = await email_intel.analyze_email(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-
-        elif task_type == "company_intelligence":
-            CompanyIntel = self._load_class("modules.company_intel", "CompanyIntel")
-            company_intel = CompanyIntel(self.secrets_manager)
-            for target in targets:
-                target_result = await company_intel.analyze_company(
-                    target, **parameters
+                result[target] = self._normalize_module_output(raw_result)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.error(
+                    "Module execution failed for task %s target %s: %s",
+                    task.id,
+                    target,
+                    exc,
                 )
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
+                raise
+            finally:
+                task.progress = min(0.9, 0.2 + increment * index)
 
-        elif task_type == "flight_intelligence":
-            FlightIntel = self._load_class("modules.flight_intel", "FlightIntel")
-            flight_intel = FlightIntel(self.secrets_manager)
-            for target in targets:
-                target_result = await flight_intel.analyze_flight(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-
-        elif task_type == "crypto_intelligence":
-            CryptoIntel = self._load_class("modules.crypto_intel", "CryptoIntel")
-            crypto_intel = CryptoIntel(self.secrets_manager)
-            for target in targets:
-                target_result = await crypto_intel.analyze_crypto(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-
-        elif task_type == "passive_search":
-            PassiveSearch = self._load_class("modules.passive_search", "PassiveSearch")
-            passive_search = PassiveSearch(self.secrets_manager)
-            for target in targets:
-                target_result = await passive_search.search(target, **parameters)
-                result[target] = target_result
-                task.progress = min(0.9, task.progress + (0.7 / len(targets)))
-
-        else:
-            raise ValueError(f"Unknown task type: {task_type}")
-
-        # Final progress update
         task.progress = 1.0
 
         return {
@@ -534,6 +557,18 @@ class InvestigationManager:
                 "timestamp": datetime.now().isoformat(),
             },
         }
+
+    @staticmethod
+    def _normalize_module_output(output: Any) -> Dict[str, Any]:
+        """Ensure module outputs conform to the standard status/data contract."""
+        if isinstance(output, dict):
+            if "status" in output:
+                return output
+            if "error" in output and "data" not in output:
+                return {"status": "error", **output}
+            return {"status": "success", "data": output}
+
+        return {"status": "success", "data": output}
 
     async def _complete_investigation(self, investigation_id: str):
         """Mark investigation as completed"""
@@ -889,14 +924,6 @@ class InvestigationManager:
                     await result
         except Exception as e:
             logger.error(f"Audit logging failed for {action}: {e}")
-
-    def _load_class(self, module_path: str, class_name: str):
-        """Dynamically load a class from a module path."""
-        try:
-            module = importlib.import_module(module_path)
-            return getattr(module, class_name)
-        except Exception as e:
-            raise ImportError(f"Failed to import {class_name} from {module_path}: {e}")
 
     def _serialize_datetime(self, obj: Any) -> Any:
         """Recursively serialize datetime objects to ISO format"""
