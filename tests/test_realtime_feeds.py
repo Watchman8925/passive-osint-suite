@@ -62,7 +62,6 @@ def _run(coro: Awaitable[object]) -> object:
 def test_realtime_feeds_read_operations(fake_redis: _FakeRedis) -> None:
     """Ensure status, alerts, and source metadata can be retrieved."""
 
-    _ = fake_redis  # ensure fixture executes for monkeypatching
     feed = RealTimeIntelligenceFeed(redis_url="redis://example")
 
     async def _exercise() -> None:
