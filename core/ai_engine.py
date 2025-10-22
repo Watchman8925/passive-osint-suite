@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover
     Anthropic = None  # type: ignore
 from jinja2 import Template
 
+from core.autopivot_fallback import DeterministicAutopivotEngine
 from graph import get_default_graph
 
 logger = logging.getLogger(__name__)
@@ -802,7 +803,9 @@ class OSINTAIEngine:
             logger.warning("Autopivoting is disabled")
             return []
 
-        investigation_id = investigation_data.get("id")
+        investigation_id = investigation_data.get("id") or investigation_data.get(
+            "investigation_id"
+        )
         if not investigation_id:
             logger.warning(
                 "Investigation data missing identifier for autopivot scoring; "
@@ -967,11 +970,18 @@ class OSINTAIEngine:
         # include graph entities not already captured by findings
         for key, entity in graph_entities.items():
             if key not in aggregated:
+                confidence_raw = entity["properties"].get("confidence")
+                try:
+                    confidence_value = (
+                        float(confidence_raw) if confidence_raw not in (None, "") else 0.5
+                    )
+                except (TypeError, ValueError):
+                    confidence_value = 0.5
                 aggregated[key] = {
                     "score": 0.0,
                     "finding_ids": [],
                     "source_modules": set([entity["properties"].get("source_module", "graph")]),
-                    "confidence": [float(entity["properties"].get("confidence", 0.5) or 0.5)],
+                    "confidence": [confidence_value],
                     "graph_degree": graph_degrees.get(key, 0),
                 }
 
