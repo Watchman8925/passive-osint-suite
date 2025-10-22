@@ -10,8 +10,12 @@ import os
 import json
 import base64
 import secrets
+import logging
 from typing import Dict, Any, Optional
 from cryptography.fernet import Fernet
+
+
+logger = logging.getLogger(__name__)
 
 
 class SecretsManager:
@@ -72,10 +76,9 @@ class SecretsManager:
             # Create Fernet cipher
             self._cipher = Fernet(base64.b64encode(master_key))
 
-        except Exception as e:
-            print(f"Warning: Failed to initialize encryption: {e}")
-            # Fallback to no encryption (not recommended)
-            self._cipher = None
+        except Exception as exc:
+            logger.error("Failed to initialize encryption: %s", exc)
+            raise RuntimeError("Secrets encryption could not be initialised") from exc
 
     def _load_secrets(self):
         """Load encrypted secrets from storage"""
@@ -90,8 +93,8 @@ class SecretsManager:
                 else:
                     # Fallback for unencrypted data
                     self._secrets = json.loads(encrypted_data.decode())
-        except Exception as e:
-            print(f"Warning: Could not load secrets file: {e}")
+        except Exception as exc:
+            logger.warning("Could not load secrets file: %s", exc)
             self._secrets = {}
 
     def _save_secrets(self):
@@ -113,8 +116,9 @@ class SecretsManager:
             # Set restrictive permissions
             os.chmod(self.secrets_file, 0o600)
 
-        except Exception as e:
-            print(f"Warning: Could not save secrets file: {e}")
+        except Exception as exc:
+            logger.error("Could not save secrets file: %s", exc)
+            raise RuntimeError("Failed to persist secrets") from exc
 
     def get_secret(self, key: str, default: Any = None) -> Any:
         """Get a secret value by key."""
@@ -127,11 +131,9 @@ class SecretsManager:
 
     def store_secret(self, key: str, value: Any, **kwargs) -> bool:
         """Store a secret value (alias for set_secret with return value)."""
-        try:
-            self.set_secret(key, value)
-            return True
-        except Exception:
-            return False
+
+        self.set_secret(key, value)
+        return True
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get secrets manager statistics."""
@@ -193,8 +195,8 @@ class SecretsManager:
 
             return True
 
-        except Exception as e:
-            print(f"Warning: Key rotation failed: {e}")
+        except Exception as exc:
+            logger.error("Key rotation failed: %s", exc)
             return False
 
     def get_all_secrets(self) -> Dict[str, Any]:
