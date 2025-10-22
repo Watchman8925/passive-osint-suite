@@ -17,7 +17,6 @@ const loginMock = vi.fn();
 const logoutMock = vi.fn();
 
 vi.mock('./api', () => ({
-  AUTH_TOKEN_KEY: 'auth_token',
   authApi: {
     login: (...args: unknown[]) => loginMock(...args),
     logout: (...args: unknown[]) => logoutMock(...args),
@@ -25,12 +24,13 @@ vi.mock('./api', () => ({
 }));
 
 import osintAPI from './osintAPI';
+import { getAuthToken, resetAuthTokenStoreForTests, setAuthToken } from './authTokenStore';
 
 describe('osintAPI authentication', () => {
   beforeEach(() => {
     loginMock.mockReset();
     logoutMock.mockReset();
-    localStorage.clear();
+    resetAuthTokenStoreForTests();
   });
 
   it('delegates authentication to authApi.login and returns true on success', async () => {
@@ -53,21 +53,21 @@ describe('osintAPI authentication', () => {
 
   it('delegates logout to authApi.logout', async () => {
     logoutMock.mockResolvedValue(undefined);
-    localStorage.setItem('auth_token', 'token-123');
+    setAuthToken('token-123');
 
     await osintAPI.logout();
 
     expect(logoutMock).toHaveBeenCalled();
-    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(getAuthToken()).toBeNull();
   });
 
   it('still clears local storage when logout fails', async () => {
     logoutMock.mockRejectedValue(new Error('network error'));
-    localStorage.setItem('auth_token', 'token-123');
+    setAuthToken('token-123');
 
     await osintAPI.logout();
 
     expect(logoutMock).toHaveBeenCalled();
-    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(getAuthToken()).toBeNull();
   });
 });

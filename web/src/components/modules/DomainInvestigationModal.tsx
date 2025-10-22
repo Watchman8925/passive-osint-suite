@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Globe, Play, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ModuleExecutionResponse {
   status: string;
@@ -20,11 +21,12 @@ interface DomainInvestigationModalProps {
   apiUrl?: string;
 }
 
-export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> = ({ 
-  isOpen, 
+export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> = ({
+  isOpen,
   onClose,
   apiUrl = 'http://localhost:8000'
 }) => {
+  const { token } = useAuth();
   const [domain, setDomain] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<ModuleExecutionResponse | null>(null);
@@ -74,6 +76,10 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
     setIsRunning(true);
 
     try {
+      if (!token) {
+        throw new Error('You need to sign in before running investigations.');
+      }
+
       // Validate domain format
       const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$/;
       if (!domainRegex.test(domain)) {
@@ -84,7 +90,7 @@ export const DomainInvestigationModal: React.FC<DomainInvestigationModalProps> =
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           module_name: 'domain_recon',
