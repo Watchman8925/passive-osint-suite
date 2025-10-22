@@ -210,13 +210,11 @@ class PersistentInvestigationStore:
                 "Invalid encryption key provided for investigation store"
             ) from exc
 
-        if not self.key_file.exists():
-            self.key_file.parent.mkdir(parents=True, exist_ok=True)
-            self.key_file.write_bytes(key_bytes)
-            self._set_secure_permissions(self.key_file)
+
+
+
 
         return cipher
-
     @staticmethod
     def _normalise_key_bytes(raw: bytes) -> bytes:
         if not raw:
@@ -247,12 +245,9 @@ class PersistentInvestigationStore:
         decoded_hex = None
         if len(stripped) == 64:
             try:
-                if isinstance(stripped, bytes):
-                    stripped_text = stripped.decode("utf-8")
-                else:
-                    stripped_text = stripped
+                stripped_text = stripped.decode("utf-8")
                 decoded_hex = bytes.fromhex(stripped_text)
-            except (UnicodeDecodeError, ValueError, AttributeError) as exc:
+            except (UnicodeDecodeError, ValueError) as exc:
                 raise RuntimeError(
                     "Could not decode hex-encoded encryption key"
                 ) from exc
