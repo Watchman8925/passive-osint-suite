@@ -1,46 +1,85 @@
 #!/usr/bin/env python3
-"""
-Test script for real-time intelligence feeds integration
-"""
+"""Tests for the real-time intelligence feed integration."""
+
+from __future__ import annotations
 
 import asyncio
-import os
+import json
 import sys
+from collections.abc import Awaitable
+from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from realtime.realtime_feeds import RealTimeIntelligenceFeed
 
 
-def _run(coro):
+class _FakeRedis:
+    """Minimal async Redis stub used to exercise feed read operations."""
+
+    def __init__(self, alerts: dict[str, dict[str, str]]) -> None:
+        self._alerts = {key: json.dumps(value) for key, value in alerts.items()}
+
+    async def keys(self, pattern: str) -> list[str]:
+        if pattern != "alert:*":
+            return []
+        return list(self._alerts.keys())
+
+    async def get(self, key: str) -> str | None:
+        return self._alerts.get(key)
+
+
+@pytest.fixture()
+def fake_redis(monkeypatch: pytest.MonkeyPatch) -> _FakeRedis:
+    """Provide a fake Redis client for the feed under test."""
+
+    alerts: dict[str, dict[str, str]] = {
+        "alert:1": {
+            "alert_id": "alert:1",
+            "title": "Credential leak detected",
+            "timestamp": datetime(2024, 1, 1, tzinfo=timezone.utc).isoformat(),
+        },
+        "alert:2": {
+            "alert_id": "alert:2",
+            "title": "Suspicious domain registered",
+            "timestamp": datetime(2024, 2, 1, tzinfo=timezone.utc).isoformat(),
+        },
+    }
+
+    fake_client = _FakeRedis(alerts)
+    monkeypatch.setattr(
+        "realtime.realtime_feeds.redis.from_url",
+        lambda redis_url: fake_client,
+    )
+    return fake_client
+
+
+def _run(coro: Awaitable[object]) -> object:
     """Execute an async coroutine without requiring pytest-asyncio."""
 
     return asyncio.run(coro)
 
 
-def test_realtime_feeds():
-    """Test the real-time intelligence feeds functionality"""
+def test_realtime_feeds_read_operations(fake_redis: _FakeRedis) -> None:
+    """Ensure status, alerts, and source metadata can be retrieved."""
 
-    feeds = RealTimeIntelligenceFeed(redis_url="redis://localhost:6379/0")
+    feed = RealTimeIntelligenceFeed(redis_url="redis://example")
 
-    async def _run_checks():
-        print("🧪 Testing Real-Time Intelligence Feeds...")
+    async def _exercise() -> None:
+        status = await feed.get_feeds_status()
+        assert status, "Expected default feed status entries to be returned"
 
-        status = await feeds.get_feeds_status()
-        print(f"✅ Feed status retrieved: {len(status)} feeds configured")
+        alerts = await feed.get_recent_alerts(limit=5)
+        assert [alert["alert_id"] for alert in alerts] == [
+            "alert:2",
+            "alert:1",
+        ], "Alerts should be returned in reverse chronological order"
 
-        alerts = await feeds.get_recent_alerts(10)
-        print(f"✅ Recent alerts retrieved: {len(alerts)} alerts")
+        sources = await feed.get_feed_sources()
+        assert sources, "Expected at least one feed source configuration"
+        assert all("name" in source and "feed_type" in source for source in sources)
 
-        sources = await feeds.get_feed_sources()
-        print(f"✅ Feed sources retrieved: {len(sources)} sources")
-
-        print("✅ All real-time feeds tests passed!")
-
-    _run(_run_checks())
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
+    _run(_exercise())
