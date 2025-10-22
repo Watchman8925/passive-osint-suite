@@ -20,7 +20,7 @@ import {
 	RefreshCw,
 	MessageSquare
 } from 'lucide-react';
-import apiClient from '../../services/api';
+import apiClient, { AUTH_TOKEN_KEY } from '../../services/api';
 
 type ConversationSummary = {
 	id: string;
@@ -208,17 +208,15 @@ function buildHttpClient(apiUrl?: string): AxiosInstance {
 		return apiClient.client;
 	}
 
-	const instance = axios.create({
-		baseURL: apiUrl,
-		timeout: 45000,
-		headers: { 'Content-Type': 'application/json' },
-	});
+        const instance = axios.create({
+                baseURL: apiUrl,
+                timeout: 45000,
+                headers: { 'Content-Type': 'application/json' },
+        });
 
-	instance.interceptors.request.use((config) => {
-		const token =
-			localStorage.getItem('auth_token') ||
-			localStorage.getItem('osint_auth_token');
-		if (token) {
+        instance.interceptors.request.use((config) => {
+                const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                if (token) {
 									const headers = (config.headers ?? {}) as AxiosRequestHeaders;
 									headers.Authorization = `Bearer ${token}`;
 									config.headers = headers;
@@ -226,16 +224,15 @@ function buildHttpClient(apiUrl?: string): AxiosInstance {
 		return config;
 	});
 
-	instance.interceptors.response.use(
-		(response) => response,
-		(error) => {
-			if (axios.isAxiosError(error) && error.response?.status === 401) {
-				localStorage.removeItem('auth_token');
-				localStorage.removeItem('osint_auth_token');
-			}
-			return Promise.reject(error);
-		}
-	);
+        instance.interceptors.response.use(
+                (response) => response,
+                (error) => {
+                        if (axios.isAxiosError(error) && error.response?.status === 401) {
+                                localStorage.removeItem(AUTH_TOKEN_KEY);
+                        }
+                        return Promise.reject(error);
+                }
+        );
 
 	return instance;
 }

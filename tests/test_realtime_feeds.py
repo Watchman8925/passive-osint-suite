@@ -21,10 +21,9 @@ def _run(coro):
 
 def test_realtime_feeds():
     """Test the real-time intelligence feeds functionality"""
-    print("🧪 Testing Real-Time Intelligence Feeds...")
 
-    # Initialize feeds with mock Redis URL (won't connect but won't fail)
-    feeds = RealTimeIntelligenceFeed("redis://localhost:6379")
+    async def _run_checks():
+        print("🧪 Testing Real-Time Intelligence Feeds...")
 
     # Test feed status
     status = _run(feeds.get_feeds_status())
@@ -38,7 +37,13 @@ def test_realtime_feeds():
     sources = _run(feeds.get_feed_sources())
     print(f"✅ Feed sources retrieved: {len(sources)} sources")
 
-    print("✅ All real-time feeds tests passed!")
+        # Test feed sources
+        sources = await feeds.get_feed_sources()
+        print(f"✅ Feed sources retrieved: {len(sources)} sources")
+
+        print("✅ All real-time feeds tests passed!")
+
+    asyncio.run(_run_checks())
 
 
 if __name__ == "__main__":

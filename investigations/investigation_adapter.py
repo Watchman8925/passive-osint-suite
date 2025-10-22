@@ -26,7 +26,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -58,6 +58,7 @@ class SimpleStatus(str, Enum):
     running = "running"
     completed = "completed"
     failed = "failed"
+    archived = "archived"
 
 
 @dataclass
@@ -79,11 +80,22 @@ class SimpleInvestigation:
     completed_at: Optional[datetime]
     ai_analysis: Dict[str, Any]
     archived: bool
+    module_outputs: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    pivot_scores: Dict[str, Any] = field(default_factory=dict)
+    latest_pivots: List[Dict[str, Any]] = field(default_factory=list)
+    pending_pivot_rescore: bool = False
+    last_evidence_at: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         # Serialize datetimes
-        for key in ["scheduled_start", "created_at", "started_at", "completed_at"]:
+        for key in [
+            "scheduled_start",
+            "created_at",
+            "started_at",
+            "completed_at",
+            "last_evidence_at",
+        ]:
             val = d.get(key)
             if isinstance(val, datetime):
                 d[key] = val.isoformat()
@@ -117,6 +129,11 @@ class SimpleInvestigation:
             completed_at=parse_dt(data.get("completed_at")),
             ai_analysis=data.get("ai_analysis", {}),
             archived=data.get("archived", False),
+            module_outputs=data.get("module_outputs", {}),
+            pivot_scores=data.get("pivot_scores", {}),
+            latest_pivots=data.get("latest_pivots", []),
+            pending_pivot_rescore=data.get("pending_pivot_rescore", False),
+            last_evidence_at=parse_dt(data.get("last_evidence_at")),
         )
 
 
@@ -206,6 +223,7 @@ class PersistentInvestigationStore:
                 completed_at=None,
                 ai_analysis={},
                 archived=False,
+                archived_at=None,
             )
             # Bridge: create advanced investigation if manager attached
             if self.advanced_manager:
@@ -244,6 +262,13 @@ class PersistentInvestigationStore:
                     logger.error(f"Failed to create advanced investigation mirror: {e}")
             self._items[inv_id] = inv
             await self._flush()
+            try:
+                from core.investigation_tracker import get_investigation_tracker
+
+                tracker = get_investigation_tracker()
+                tracker.create_investigation(inv_id, name)
+            except Exception as e:
+                logger.debug(f"Investigation tracker unavailable during creation: {e}")
             return inv_id
 
     async def list_investigations(
@@ -353,6 +378,62 @@ class PersistentInvestigationStore:
                 raise ValueError("Investigation not found")
             inv.ai_analysis[analysis_type] = result
         await self._flush()  # Moved outside lock
+
+    async def record_task_output(
+        self,
+        investigation_id: str,
+        capability_id: str,
+        task_id: str,
+        *,
+        success: bool,
+        produced_entities: List[Dict[str, Any]],
+        produced_relationships: List[Dict[str, Any]],
+        evidence_ids: List[str],
+        findings: Optional[List[str]] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        entry = {
+            "task_id": task_id,
+            "capability_id": capability_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "success": success,
+            "entities": produced_entities,
+            "relationships": produced_relationships,
+            "evidence_ids": evidence_ids,
+            "findings": findings or [],
+        }
+        if error:
+            entry["error"] = error
+        async with self._lock:
+            inv = self._items.get(investigation_id)
+            if not inv:
+                raise ValueError("Investigation not found")
+            outputs = inv.module_outputs.setdefault(capability_id, [])
+            outputs.append(entry)
+            # keep most recent 50 entries per capability to avoid unbounded growth
+            if len(outputs) > 50:
+                inv.module_outputs[capability_id] = outputs[-50:]
+            inv.last_evidence_at = datetime.now(timezone.utc)
+            inv.pending_pivot_rescore = True
+        await self._flush()
+
+    async def update_pivot_scores(
+        self,
+        investigation_id: str,
+        pivot_scores: Dict[str, Any],
+        pivots: List[Dict[str, Any]],
+    ) -> None:
+        scored_at = datetime.now(timezone.utc).isoformat()
+        snapshot = dict(pivot_scores)
+        snapshot["_last_scored_at"] = scored_at
+        async with self._lock:
+            inv = self._items.get(investigation_id)
+            if not inv:
+                return
+            inv.pivot_scores = snapshot
+            inv.latest_pivots = pivots[:50]
+            inv.pending_pivot_rescore = False
+        await self._flush()
 
     async def get_progress(
         self, investigation_id: str, owner_id: str
@@ -566,16 +647,36 @@ class PersistentInvestigationStore:
     # ------------------------------------------------------------------
     # Soft delete / archive
     # ------------------------------------------------------------------
-    async def archive(self, investigation_id: str, owner_id: str) -> bool:
+    async def archive(
+        self, investigation_id: str, owner_id: str
+    ) -> Optional[Dict[str, Any]]:
         async with self._lock:
             inv = self._items.get(investigation_id)
             if not inv or inv.owner_id != owner_id:
-                return False
+                return None
+
+            if inv.archived:
+                return inv.to_dict()
+
             inv.archived = True
-            if inv.status == SimpleStatus.running:
-                inv.status = SimpleStatus.completed
+            inv.status = SimpleStatus.archived
+            # Only set completed_at if investigation is not already completed
+            if inv.completed_at is None and inv.status not in (SimpleStatus.completed, SimpleStatus.failed):
+                inv.completed_at = datetime.now(timezone.utc)
+            inv.archived_at = datetime.now(timezone.utc)
+
+            result = inv.to_dict()
+
         await self._flush()  # Moved outside lock
-        return True
+        return result
+
+    async def archive_investigation(
+        self, investigation_id: str, owner_id: str
+    ) -> Dict[str, Any]:
+        result = await self.archive(investigation_id, owner_id)
+        if not result:
+            raise ValueError("Investigation not found or unauthorized")
+        return result
 
     # ------------------------------------------------------------------
     # Demo Helpers (no-advanced-manager synthetic tasks)

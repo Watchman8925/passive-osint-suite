@@ -1,6 +1,7 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import toast from 'react-hot-toast';
 import { startProgress, finishProgress } from '../utils/progress';
+import { AUTH_TOKEN_KEY, authApi } from './api';
 
 interface TorProxyConfig {
   enabled: boolean;
@@ -65,7 +66,7 @@ class OSINTAPIClient {
         startProgress();
 
         // Add auth token if available
-        const token = localStorage.getItem('osint_auth_token');
+        const token = this.getToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -104,7 +105,7 @@ class OSINTAPIClient {
 
         if (error.response?.status === 401) {
           toast.error('Authentication required');
-          localStorage.removeItem('osint_auth_token');
+          this.clearToken();
         } else if (error.response?.status === 403) {
           toast.error('Access denied - check your permissions');
         } else if (error.response?.status >= 500) {
@@ -121,6 +122,14 @@ class OSINTAPIClient {
 
   private generateRequestId(): string {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getToken(): string | null {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  }
+
+  private clearToken(): void {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
   }
 
   // Anonymity Control Methods
@@ -237,25 +246,33 @@ class OSINTAPIClient {
     }
   }
 
-  async pauseInvestigation(id: string): Promise<boolean> {
+  async pauseInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      await this.client.post(`/api/investigations/${id}/pause`);
-      toast.success('⏸️ Investigation paused');
-      return true;
-    } catch (error) {
-      toast.error('Failed to pause investigation');
-      return false;
+      const response = await this.client.post(`/api/investigations/${id}/pause`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to pause investigation';
+      return { success: false, error: message };
     }
   }
 
-  async stopInvestigation(id: string): Promise<boolean> {
+  async resumeInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      await this.client.post(`/api/investigations/${id}/stop`);
-      toast.success('⏹️ Investigation stopped');
-      return true;
-    } catch (error) {
-      toast.error('Failed to stop investigation');
-      return false;
+      const response = await this.client.post(`/api/investigations/${id}/resume`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to resume investigation';
+      return { success: false, error: message };
+    }
+  }
+
+  async stopInvestigation(id: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await this.client.post(`/api/investigations/${id}/stop`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || error?.message || 'Failed to stop investigation';
+      return { success: false, error: message };
     }
   }
 
@@ -263,7 +280,7 @@ class OSINTAPIClient {
   async domainRecon(domain: string, options?: any): Promise<any> {
     try {
       toast.loading(`🔍 Analyzing domain: ${domain}`, { id: 'domain-recon' });
-      const response = await this.client.post('/api/modules/execute', { 
+      const response = await this.client.post('/api/modules/execute', {
         module_name: 'domain_analyzer',
         parameters: { 
           domain,
@@ -299,17 +316,36 @@ class OSINTAPIClient {
   async ipAnalysis(ip: string, options?: any): Promise<any> {
     try {
       toast.loading(`🌐 Analyzing IP: ${ip}`, { id: 'ip-analysis' });
-      const response = await this.client.post('/api/modules/execute', { 
+      const response = await this.client.post('/api/modules/execute', {
         module_name: 'ip_analyzer',
-        parameters: { 
+        parameters: {
           ip,
           ...options
-        } 
+        }
       });
       toast.success('IP analysis completed', { id: 'ip-analysis' });
       return response.data;
     } catch (error) {
       toast.error('IP analysis failed', { id: 'ip-analysis' });
+      throw error;
+    }
+  }
+
+  async executeModule(moduleName: string, parameters: Record<string, any>): Promise<any> {
+    const toastId = `module-exec-${moduleName}`;
+    try {
+      toast.loading(`🚀 Executing ${moduleName.replace(/[-_]/g, ' ')} module`, { id: toastId });
+      const response = await this.client.post('/api/modules/execute', {
+        module_name: moduleName,
+        parameters: {
+          ...parameters,
+          anonymity: this.anonymityConfig
+        }
+      });
+      toast.success('Module execution completed', { id: toastId });
+      return response.data;
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Module execution failed', { id: toastId });
       throw error;
     }
   }
@@ -355,9 +391,12 @@ class OSINTAPIClient {
   // Authentication
   async authenticate(credentials: { username: string; password: string }): Promise<boolean> {
     try {
-      const response = await this.client.post('/api/auth/login', credentials);
-      const { token } = response.data;
-      localStorage.setItem('osint_auth_token', token);
+      const response = await authApi.login(credentials);
+      const { access_token } = response ?? {};
+      if (!access_token) {
+        toast.error('Authentication failed: missing access token');
+        return false;
+      }
       toast.success('🔐 Authentication successful');
       return true;
     } catch (error) {
@@ -368,11 +407,11 @@ class OSINTAPIClient {
 
   async logout(): Promise<void> {
     try {
-      await this.client.post('/api/auth/logout');
+      await authApi.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('osint_auth_token');
+      this.clearToken();
       toast.success('Logged out successfully');
     }
   }

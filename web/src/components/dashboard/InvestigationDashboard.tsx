@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { Investigation, InvestigationStatus, Priority } from '../../types/investigation';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { investigationApi } from '../../services/api';
+import { osintAPI } from '../../services/osintAPI';
 import { generatedClient } from '../../services/apiClientGenerated';
 import InvestigationCard from './InvestigationCard';
 import CreateInvestigationModal from './CreateInvestigationModal';
@@ -126,6 +127,20 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
     }
   });
 
+  const archiveInvestigationMutation = useMutation({
+    mutationFn: investigationApi.archiveInvestigation,
+    onSuccess: (data, investigationId) => {
+      queryClient.invalidateQueries({ queryKey: ['investigations'] });
+      queryClient.invalidateQueries({ queryKey: ['investigation', investigationId] });
+      queryClient.invalidateQueries({ queryKey: ['investigation-progress', investigationId] });
+      toast.success(data?.message ?? 'Investigation archived successfully');
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail ?? error?.message ?? 'Unknown error';
+      toast.error(`Failed to archive investigation: ${detail}`);
+    }
+  });
+
   // pause/delete not supported in backend currently
   const pauseInvestigationMutation = { isPending: false, mutateAsync: async (_: string) => { toast.error('Pause not implemented'); } } as any;
   const deleteInvestigationMutation = { isPending: false, mutateAsync: async (_: string) => { toast.error('Delete not implemented'); } } as any;
@@ -176,17 +191,26 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
     failed: investigations.filter(inv => inv.status === InvestigationStatus.FAILED).length
   };
 
-  const handleInvestigationAction = async (investigationId: string, action: 'start' | 'pause' | 'delete') => {
+  const handleInvestigationAction = async (
+    investigationId: string,
+    action: 'start' | 'pause' | 'delete' | 'archive'
+  ) => {
     try {
       switch (action) {
         case 'start':
           await startInvestigationMutation.mutateAsync(investigationId);
           break;
+        case 'resume':
+          await resumeInvestigationMutation.mutateAsync(investigationId);
+          break;
         case 'pause':
           await pauseInvestigationMutation.mutateAsync(investigationId);
           break;
         case 'delete':
-          await deleteInvestigationMutation.mutateAsync(investigationId);
+          await stopInvestigationMutation.mutateAsync(investigationId);
+          break;
+        case 'archive':
+          await archiveInvestigationMutation.mutateAsync(investigationId);
           break;
       }
     } catch (error) {
@@ -412,13 +436,22 @@ export default function InvestigationDashboard({ className = '' }: DashboardProp
                   <InvestigationCard
                     investigation={investigation}
                     onView={() => setSelectedInvestigation(investigation.id)}
-                    onStart={() => handleInvestigationAction(investigation.id, 'start')}
+                    onStart={() =>
+                      handleInvestigationAction(
+                        investigation.id,
+                        investigation.status === InvestigationStatus.PAUSED
+                          ? 'resume'
+                          : 'start'
+                      )
+                    }
                     onPause={() => handleInvestigationAction(investigation.id, 'pause')}
                     onDelete={() => handleInvestigationAction(investigation.id, 'delete')}
+                    onArchive={() => handleInvestigationAction(investigation.id, 'archive')}
                     isLoading={
                       startInvestigationMutation.isPending ||
                       pauseInvestigationMutation.isPending ||
-                      deleteInvestigationMutation.isPending
+                      deleteInvestigationMutation.isPending ||
+                      archiveInvestigationMutation.isPending
                     }
                   />
                 </motion.div>
