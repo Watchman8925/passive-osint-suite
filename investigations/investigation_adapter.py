@@ -247,9 +247,12 @@ class PersistentInvestigationStore:
         decoded_hex = None
         if len(stripped) == 64:
             try:
-                stripped_text = stripped.decode("utf-8")
+                if isinstance(stripped, bytes):
+                    stripped_text = stripped.decode("utf-8")
+                else:
+                    stripped_text = stripped
                 decoded_hex = bytes.fromhex(stripped_text)
-            except (UnicodeDecodeError, ValueError) as exc:
+            except (UnicodeDecodeError, ValueError, AttributeError) as exc:
                 raise RuntimeError(
                     "Could not decode hex-encoded encryption key"
                 ) from exc
