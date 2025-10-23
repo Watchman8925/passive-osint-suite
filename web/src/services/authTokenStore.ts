@@ -31,7 +31,11 @@ const scheduleExpiry = (ttlMs: number) => {
 export const setAuthToken = (token: string, options?: { ttlMs?: number }) => {
   const ttlMs = options?.ttlMs ?? DEFAULT_TOKEN_TTL_MS;
   inMemoryToken = token;
-  expiryTimestamp = ttlMs === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : Date.now() + ttlMs;
+  const calculatedExpiryTimestamp =
+    ttlMs === Number.POSITIVE_INFINITY
+      ? Number.POSITIVE_INFINITY
+      : Date.now() + ttlMs;
+  expiryTimestamp = calculatedExpiryTimestamp;
 
   if (Number.isFinite(expiryTimestamp)) {
     scheduleExpiry(ttlMs);

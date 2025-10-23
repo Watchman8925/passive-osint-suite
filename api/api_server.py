@@ -37,7 +37,7 @@ from utils.transport import get_tor_status
 # Minimal pydantic BaseModel/Field import
 from pydantic import BaseModel, Field  # type: ignore
 
-from database.graph_database import GraphDatabaseAdapter
+from database.graph_database import GraphDatabaseAdapter, INSECURE_NEO4J_PASSWORDS
 
 # OSINT Module Registry
 from modules import (
@@ -490,15 +490,7 @@ async def lifespan(app: FastAPI):
         graph_user = os.getenv("NEO4J_USER", "neo4j")
         graph_password = os.getenv("NEO4J_PASSWORD")
 
-        insecure_passwords = {
-            "password",
-            "neo4j",
-            "change-this-default-password",
-            "changeme",
-            "",
-        }
-
-        if not graph_password or graph_password in insecure_passwords:
+        if not graph_password or graph_password in INSECURE_NEO4J_PASSWORDS:
             if AppConfig.ENVIRONMENT == "development":
                 logging.warning(
                     "NEO4J_PASSWORD not set or insecure; skipping graph database initialization"

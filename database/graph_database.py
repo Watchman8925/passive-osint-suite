@@ -58,7 +58,7 @@ class GraphQuery:
     return_type: str = "entities"  # entities, relationships, paths, stats
 
 
-_INSECURE_PASSWORDS = {
+INSECURE_NEO4J_PASSWORDS = {
     "password",
     "neo4j",
     "change-this-default-password",
@@ -79,7 +79,7 @@ class GraphDatabaseAdapter:
         user: str = "neo4j",
         password: Optional[str] = None,
     ):
-        if password is None or password in _INSECURE_PASSWORDS:
+        if password is None or password in INSECURE_NEO4J_PASSWORDS:
             raise ValueError(
                 "A secure Neo4j password must be provided via the NEO4J_PASSWORD "
                 "environment variable."
