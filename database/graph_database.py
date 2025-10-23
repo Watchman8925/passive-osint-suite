@@ -58,6 +58,15 @@ class GraphQuery:
     return_type: str = "entities"  # entities, relationships, paths, stats
 
 
+_INSECURE_PASSWORDS = {
+    "password",
+    "neo4j",
+    "change-this-default-password",
+    "changeme",
+    "",
+}
+
+
 class GraphDatabaseAdapter:
     """
     Neo4j adapter for advanced relationship mapping and entity resolution.
@@ -68,8 +77,14 @@ class GraphDatabaseAdapter:
         self,
         uri: str = "bolt://localhost:7687",
         user: str = "neo4j",
-        password: str = "password",
+        password: Optional[str] = None,
     ):
+        if password is None or password in _INSECURE_PASSWORDS:
+            raise ValueError(
+                "A secure Neo4j password must be provided via the NEO4J_PASSWORD "
+                "environment variable."
+            )
+
         if not NEO4J_AVAILABLE:
             raise ImportError(
                 "neo4j driver is required. Install with: pip install neo4j"

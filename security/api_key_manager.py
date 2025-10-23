@@ -77,16 +77,21 @@ class APIConfigurationManager:
     optimally for intelligence gathering operations.
     """
 
-    def __init__(self):
+    def __init__(self, config_dir: Optional[Path] = None):
         self.services = {}
         self.secrets_manager = SecretsManager()
         self.transport = ProxiedTransport()
-        self.config_file = Path(
-            "/workspaces/passive-osint-suite/config/api_config.json"
+
+        default_root = Path(__file__).resolve().parents[1]
+        configured_dir = (
+            Path(config_dir)
+            if config_dir is not None
+            else Path(os.getenv("OSINT_CONFIG_DIR", str(default_root / "config")))
         )
-        self.status_file = Path(
-            "/workspaces/passive-osint-suite/config/api_status.json"
-        )
+        self.config_dir = configured_dir
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.config_file = self.config_dir / "api_config.json"
+        self.status_file = self.config_dir / "api_status.json"
 
         # Initialize configuration
         self._initialize_services()
@@ -1135,9 +1140,11 @@ class APIConfigurationManager:
 
 
 # Factory function
-def create_api_config_manager() -> APIConfigurationManager:
+def create_api_config_manager(
+    config_dir: Optional[Path] = None,
+) -> APIConfigurationManager:
     """Create and initialize API configuration manager."""
-    return APIConfigurationManager()
+    return APIConfigurationManager(config_dir=config_dir)
 
 
 # CLI interface for API management

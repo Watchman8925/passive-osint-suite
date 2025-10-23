@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: any, token: string) => void;
+  onLoginSuccess: (user: any, token: string, options?: { ttlMs?: number }) => void;
   apiUrl?: string;
 }
 
@@ -41,15 +41,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       }
 
       const data = await response.json();
-      
-      // Store token and user info
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('user_info', JSON.stringify(data.user));
-      
-      toast.success(`Welcome back, ${data.user.username}!`);
-      onLoginSuccess(data.user, data.access_token);
+      const { access_token: accessToken, user: userInfo, expires_in: expiresIn } = data;
+
+      if (!accessToken || !userInfo) {
+        throw new Error('Authentication response did not include user details');
+      }
+
+      toast.success(`Welcome back, ${userInfo.username}!`);
+      onLoginSuccess(userInfo, accessToken, expiresIn ? { ttlMs: expiresIn * 1000 } : undefined);
       onClose();
-      
+
       // Reset form
       setUsername('');
       setPassword('');
