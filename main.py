@@ -128,6 +128,11 @@ class OSINTSuite:
         self._setup_module_attributes()
         self._modules_loaded = True
 
+    def load_modules(self) -> None:
+        """Eagerly load modules so public attributes are available."""
+
+        self._ensure_modules_loaded()
+
     def _inject_dependencies(self) -> None:
         """Inject dependencies into modules that need them"""
         modules = self._modules
@@ -2651,6 +2656,8 @@ def main():
         )
 
     suite = OSINTSuite()
+    # Ensure modules are available before dereferencing suite attributes in CLI mode
+    suite.load_modules()
 
     # Set verbosity
     if args.quiet:

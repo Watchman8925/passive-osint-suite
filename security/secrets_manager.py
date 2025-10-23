@@ -78,7 +78,7 @@ class SecretsManager:
 
         except Exception as exc:
             logger.error("Failed to initialize encryption: %s", exc)
-            raise RuntimeError("Secrets encryption could not be initialized") from exc
+            raise RuntimeError("Secrets encryption could not be initialised") from exc
 
     def _load_secrets(self):
         """Load encrypted secrets from storage"""

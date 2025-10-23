@@ -7,7 +7,7 @@ from investigations.investigation_adapter import PersistentInvestigationStore
 
 
 @pytest.mark.asyncio
-async def test_investigation_store_encrypts_records_on_disk(tmp_path: Path):
+async def test_investigation_store_encrypts_records_on_disk(tmp_path):
     store = PersistentInvestigationStore(storage_dir=str(tmp_path))
     inv_id = await store.create_investigation(
         name="Sample",
@@ -37,7 +37,7 @@ async def test_investigation_store_encrypts_records_on_disk(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_investigation_store_uses_background_thread_when_aiofiles_missing(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch, tmp_path
 ):
     import investigations.investigation_adapter as adapter
 

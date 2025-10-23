@@ -43,7 +43,7 @@ def test_secrets_manager_failures_raise(
     secrets_file = tmp_path / "secrets.enc"
     manager = SecretsManager(str(key_file), str(secrets_file))
 
-    def _broken_open(*args: object, **kwargs: object):
+    def _broken_open(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
         raise OSError("disk full")
 
     monkeypatch.setattr("builtins.open", _broken_open)

@@ -1,7 +1,9 @@
-"""Transport helpers with rate limiting and safe defaults."""
+"""Transport helpers with rate limiting, retries, and Tor fallbacks."""
 
 from __future__ import annotations
 
+import os
+import socket
 import threading
 import time
 from typing import Any, Dict, Optional
@@ -52,8 +54,6 @@ def get_tor_status() -> Dict[str, Any]:
     """Get Tor network status"""
     try:
         # Try to connect to Tor control port
-        import socket
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
         result = sock.connect_ex(("127.0.0.1", 9051))
@@ -88,7 +88,7 @@ def get_tor_status() -> Dict[str, Any]:
 
 
 class Transport:
-    """Main transport class for requests"""
+    """Main transport class for requests."""
 
     def __init__(
         self,
@@ -100,6 +100,7 @@ class Transport:
     ) -> None:
         self.default_timeout = float(default_timeout)
         self._rate_limiter = _RateLimiter(min_interval=min_interval)
+        self.proxy_url = proxy_url
 
         session = requests.Session()
         retry = Retry(
@@ -120,14 +121,16 @@ class Transport:
         self.transport: requests.Session = session
 
     def get(self, url: str, **kwargs) -> requests.Response:
-        """GET request"""
+        """Perform a rate-limited ``GET`` request with a sane timeout."""
+
         timeout = kwargs.pop("timeout", self.default_timeout)
         host = urlparse(url).netloc or url
         self._rate_limiter.wait(host)
         return self.transport.get(url, timeout=timeout, **kwargs)
 
     def post(self, url: str, **kwargs) -> requests.Response:
-        """POST request"""
+        """Perform a rate-limited ``POST`` request with a sane timeout."""
+
         timeout = kwargs.pop("timeout", self.default_timeout)
         host = urlparse(url).netloc or url
         self._rate_limiter.wait(host)
@@ -137,8 +140,31 @@ class Transport:
 class ProxiedTransport:
     """Backward-compatible proxy transport wrapper."""
 
-    def __init__(self, proxy_url: str = "socks5h://127.0.0.1:9050") -> None:
-        self._inner = Transport(proxy_url=proxy_url)
+    def __init__(
+        self,
+        proxy_url: str = "socks5h://127.0.0.1:9050",
+        *,
+        require_proxy: Optional[bool] = None,
+        default_timeout: float = 15.0,
+        min_interval: float = 1.0,
+        retries: int = 3,
+    ) -> None:
+        self.proxy_url = proxy_url
+        self._require_proxy = self._should_require_proxy(require_proxy)
+        self._proxy_available = self._is_proxy_available(proxy_url)
+
+        if not self._proxy_available and self._require_proxy:
+            raise RuntimeError(
+                "Tor proxy is required but not available. Set OSINT_REQUIRE_TOR=false to allow direct connections."
+            )
+
+        effective_proxy = proxy_url if self._proxy_available else None
+        self._inner = Transport(
+            proxy_url=effective_proxy,
+            default_timeout=default_timeout,
+            min_interval=min_interval,
+            retries=retries,
+        )
         self.session = self._inner.transport
 
     def get(self, url: str, **kwargs) -> requests.Response:
@@ -147,9 +173,37 @@ class ProxiedTransport:
     def post(self, url: str, **kwargs) -> requests.Response:
         return self._inner.post(url, **kwargs)
 
+    @property
+    def using_proxy(self) -> bool:
+        """Return ``True`` when requests are routed through the proxy."""
+
+        return self._inner.proxy_url is not None
+
+    @staticmethod
+    def _should_require_proxy(require_proxy: Optional[bool]) -> bool:
+        if require_proxy is not None:
+            return require_proxy
+        return os.getenv("OSINT_REQUIRE_TOR", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+
+    @staticmethod
+    def _is_proxy_available(proxy_url: str) -> bool:
+        parsed = urlparse(proxy_url)
+        if not parsed.hostname or not parsed.port:
+            return False
+
+        try:
+            with socket.create_connection((parsed.hostname, parsed.port), timeout=1.0):
+                return True
+        except OSError:
+            return False
+
 
 # Global transport instance with Tor proxy for anonymity
-_transport = Transport(proxy_url="socks5h://127.0.0.1:9050")
+_transport = ProxiedTransport()
 
 # Export transport instance for DoH client compatibility
 transport = _transport

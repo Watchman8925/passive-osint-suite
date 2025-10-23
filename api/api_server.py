@@ -37,14 +37,6 @@ from utils.transport import get_tor_status
 # Minimal pydantic BaseModel/Field import
 from pydantic import BaseModel, Field  # type: ignore
 
-try:
-    from investigations.investigation_manager import (  # type: ignore
-        InvestigationManager,
-        InvestigationStatus,
-    )
-except Exception:  # pragma: no cover - optional advanced manager
-    InvestigationManager = None
-    InvestigationStatus = None  # type: ignore
 from database.graph_database import GraphDatabaseAdapter
 
 # OSINT Module Registry
@@ -76,6 +68,17 @@ _ = (
     RealTimeIntelligenceFeed,
     setup_security_routes,
 )
+
+logger = logging.getLogger(__name__)
+
+try:
+    from investigations.investigation_manager import (  # type: ignore
+        InvestigationManager,
+        InvestigationStatus,
+    )
+except Exception:  # pragma: no cover - optional advanced manager
+    InvestigationManager = None
+    InvestigationStatus = None  # type: ignore
 
 # Optional external libraries: prefer real packages but provide lightweight fallbacks
 try:
@@ -146,9 +149,19 @@ class AppConfig:
 
     # Database configuration with secure defaults only for local dev
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL", "postgresql://user:pass@localhost/osint_db"
-    )
+    _raw_database_url = os.getenv("DATABASE_URL")
+    if not _raw_database_url:
+        if ENVIRONMENT == "development":
+            _raw_database_url = "postgresql://localhost/osint_db"
+            logger.warning(
+                "DATABASE_URL not set; using development default %s", _raw_database_url
+            )
+        else:
+            raise ValueError(
+                "DATABASE_URL environment variable must be set for non-development environments."
+            )
+
+    DATABASE_URL = _raw_database_url
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
 
