@@ -37,7 +37,7 @@ from utils.transport import get_tor_status
 # Minimal pydantic BaseModel/Field import
 from pydantic import BaseModel, Field  # type: ignore
 
-from database.graph_database import GraphDatabaseAdapter
+from database.graph_database import GraphDatabaseAdapter, INSECURE_NEO4J_PASSWORDS
 
 # OSINT Module Registry
 from modules import (
@@ -488,16 +488,29 @@ async def lifespan(app: FastAPI):
     try:
         graph_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
         graph_user = os.getenv("NEO4J_USER", "neo4j")
-        graph_password = os.getenv("NEO4J_PASSWORD", "change-this-default-password")
+        graph_password = os.getenv("NEO4J_PASSWORD")
 
-        app.state.graph_db = GraphDatabaseAdapter(graph_uri, graph_user, graph_password)
-        graph_connected = await app.state.graph_db.connect()
-        if graph_connected:
-            logging.info("✅ Graph database connected")
+        if not graph_password or graph_password in INSECURE_NEO4J_PASSWORDS:
+            if AppConfig.ENVIRONMENT == "development":
+                logging.warning(
+                    "NEO4J_PASSWORD not set or insecure; skipping graph database initialization"
+                )
+                app.state.graph_db = None
+            else:
+                raise ValueError(
+                    "NEO4J_PASSWORD must be set to a secure value in non-development environments"
+                )
         else:
-            logging.warning(
-                "⚠️  Graph database not available - relationship mapping disabled"
+            app.state.graph_db = GraphDatabaseAdapter(
+                graph_uri, graph_user, graph_password
             )
+            graph_connected = await app.state.graph_db.connect()
+            if graph_connected:
+                logging.info("✅ Graph database connected")
+            else:
+                logging.warning(
+                    "⚠️  Graph database not available - relationship mapping disabled"
+                )
     except Exception:
         logging.warning("⚠️  Graph database not available")
         app.state.graph_db = None

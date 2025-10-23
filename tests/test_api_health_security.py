@@ -24,6 +24,7 @@ def api_module(monkeypatch):
     monkeypatch.setenv("OSINT_USE_KEYRING", "false")
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/osint_db")
     monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("NEO4J_PASSWORD", "test-secure-password-123")
     monkeypatch.delenv("SECRET_KEY", raising=False)
 
     import api.api_server as api_server

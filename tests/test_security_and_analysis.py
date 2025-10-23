@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import base64
+import sys
 from pathlib import Path
 from typing import List
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from analysis.conspiracy_analyzer import FixedCrossReferenceEngine
 from analysis.cross_reference_engine import CrossReferenceEngine
