@@ -815,6 +815,11 @@ def rate_limit(limit: int, window_seconds: int):
 # ============================================================================
 
 
+# NOTE: The health check endpoint now requires authentication via JWT token.
+# This is a breaking change for monitoring systems and external health check tools.
+# Monitoring tools must provide a valid JWT token in the Authorization header to access this endpoint.
+# This change was made to prevent unauthenticated probing and potential abuse.
+# If your health checks start failing after deployment, ensure your monitoring configuration is updated accordingly.
 @app.get("/api/health")
 @limiter.limit("300/minute")  # Higher limit for health checks
 async def health_check(request: Request, user_id: str = Depends(verify_token)):
