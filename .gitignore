@@ -56,6 +56,8 @@ __pycache__/
 env/
 pip-log.txt
 pip-delete-this-directory.txt
+# Ignore accidental installer output files (e.g., '=2.8.0')
+=*
 .tox/
 .coverage.*
 .cache

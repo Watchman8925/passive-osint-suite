@@ -27,6 +27,14 @@ class AlertSeverity(Enum):
     CRITICAL = "critical"
 
 
+SEVERITY_RANK = {
+    AlertSeverity.LOW: 0,
+    AlertSeverity.MEDIUM: 1,
+    AlertSeverity.HIGH: 2,
+    AlertSeverity.CRITICAL: 3,
+}
+
+
 class FeedType(Enum):
     """Types of intelligence feeds"""
 
@@ -720,7 +728,8 @@ class RealTimeIntelligenceFeed:
             if (
                 subscription.feed_type == alert.feed_type
                 and subscription.enabled
-                and alert.severity.value >= subscription.alert_severity_threshold.value
+                and SEVERITY_RANK[alert.severity]
+                >= SEVERITY_RANK[subscription.alert_severity_threshold]
                 and (not subscription.targets or alert.target in subscription.targets)
             ):
                 # Send webhook notification

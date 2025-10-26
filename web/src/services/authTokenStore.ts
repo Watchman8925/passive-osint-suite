@@ -6,6 +6,38 @@ let inMemoryToken: string | null = null;
 let expiryTimestamp = 0;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 const subscribers = new Set<Subscriber>();
+const TOKEN_STORAGE_KEY = 'passive-osint-auth-token';
+const EXPIRY_STORAGE_KEY = 'passive-osint-auth-expiry';
+
+const getStorage = (): Storage | undefined => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return undefined;
+  }
+  return window.localStorage;
+};
+
+const hydrateFromStorage = () => {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  const storedToken = storage.getItem(TOKEN_STORAGE_KEY);
+  const storedExpiry = storage.getItem(EXPIRY_STORAGE_KEY);
+  if (!storedToken) {
+    return;
+  }
+
+  inMemoryToken = storedToken;
+  const parsedExpiry = storedExpiry ? Number(storedExpiry) : 0;
+  expiryTimestamp = Number.isNaN(parsedExpiry) ? 0 : parsedExpiry;
+
+  if (Number.isFinite(expiryTimestamp) && expiryTimestamp > Date.now()) {
+    scheduleExpiry(expiryTimestamp - Date.now());
+  } else if (expiryTimestamp && expiryTimestamp !== Number.POSITIVE_INFINITY) {
+    clearAuthToken();
+  }
+};
 
 const notifySubscribers = () => {
   const currentToken = getAuthToken();
@@ -44,6 +76,12 @@ export const setAuthToken = (token: string, options?: { ttlMs?: number }) => {
     expiryTimer = undefined;
   }
 
+  const storage = getStorage();
+  if (storage) {
+    storage.setItem(TOKEN_STORAGE_KEY, token);
+    storage.setItem(EXPIRY_STORAGE_KEY, String(expiryTimestamp));
+  }
+
   notifySubscribers();
 };
 
@@ -67,6 +105,11 @@ export const clearAuthToken = () => {
     clearTimeout(expiryTimer);
     expiryTimer = undefined;
   }
+  const storage = getStorage();
+  if (storage) {
+    storage.removeItem(TOKEN_STORAGE_KEY);
+    storage.removeItem(EXPIRY_STORAGE_KEY);
+  }
   notifySubscribers();
 };
 
@@ -85,4 +128,11 @@ export const resetAuthTokenStoreForTests = () => {
     clearTimeout(expiryTimer);
     expiryTimer = undefined;
   }
+  const storage = getStorage();
+  if (storage) {
+    storage.removeItem(TOKEN_STORAGE_KEY);
+    storage.removeItem(EXPIRY_STORAGE_KEY);
+  }
 };
+
+hydrateFromStorage();

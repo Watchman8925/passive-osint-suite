@@ -6,7 +6,7 @@ target-version = "py312"
 [tool.mypy]
 exclude = [
     # Exclude root-level Python files that conflict with package modules
-    ".*/[^/]+\\.py$",
+    "^[^/]+\\.py$",
     # Exclude common non-source directories
     "osint_env/",
     "theHarvester/",
