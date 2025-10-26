@@ -5,10 +5,14 @@ import json
 import os
 import time
 import uuid
+from pathlib import Path
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Iterable, Optional
 
-DEFAULT_DIR = os.path.join(os.getcwd(), "output", "evidence")
+DEFAULT_DIR = os.environ.get(
+    "PASSIVE_OSINT_EVIDENCE_DIR",
+    str(Path.home() / ".passive_osint" / "evidence"),
+)
 
 
 @dataclass
@@ -32,7 +36,7 @@ class EvidenceRecord:
 
 class EvidenceStore:
     def __init__(self, base_dir: str = DEFAULT_DIR):
-        self.base_dir = base_dir
+        self.base_dir = str(base_dir)
         os.makedirs(self.base_dir, exist_ok=True)
 
     def _write_file(self, rel_path: str, data: bytes) -> None:
