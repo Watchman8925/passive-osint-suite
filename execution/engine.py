@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import json
 import logging
@@ -103,7 +104,8 @@ class ExecutionEngine:
                 serialized = repr(sorted(entity.items()))
             except Exception:
                 serialized = repr(entity)
-        return str(hash(serialized))
+        digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        return digest
 
     async def run_next_task(self, investigation_id: str) -> Optional[ExecutionResult]:
         plan = self._load_plan(investigation_id)
@@ -219,7 +221,9 @@ class ExecutionEngine:
                     ):
                         rel_props = dict(rel.get("properties", {}))
                         rel_props.setdefault("investigation_id", investigation_id)
-                        self.graph.link(tuple(source), tuple(target), rel_type, rel_props)
+                        self.graph.link(
+                            tuple(source), tuple(target), rel_type, rel_props
+                        )
                 except Exception as e:  # pragma: no cover
                     logger.warning(f"Relationship add failed: {e}")
             task.status = "completed" if result.success else "failed"
@@ -250,7 +254,9 @@ class ExecutionEngine:
                         findings=tracker_finding_ids,
                         error=result.error,
                     )
-                except Exception as store_error:  # pragma: no cover - persistence best effort
+                except (
+                    Exception
+                ) as store_error:  # pragma: no cover - persistence best effort
                     logger.error(f"Failed to persist task output: {store_error}")
             return exec_result
         except Exception as e:

@@ -112,6 +112,9 @@ cd passive-osint-suite
 pip3 install -r requirements.txt
 cd web && npm ci && cd ..
 
+> The React `node_modules` directory is intentionally not committed. Run `npm ci`
+> after pulling new changes so local dependencies stay in sync.
+
 # 3. Start full stack (backend + frontend)
 ./start_full_stack.sh
 
@@ -127,6 +130,13 @@ npm run dev
 
 # 5. Access at http://localhost:3000
 ```
+
+### Evidence storage directory
+
+- Backend evidence artifacts are now written to `~/.passive_osint/evidence` by default,
+  ensuring the service runs even when the process starts from a read-only directory.
+- Override the location by setting the `PASSIVE_OSINT_EVIDENCE_DIR` environment variable
+  before launching the backend.
 
 ## 📦 What's Included
 

@@ -527,9 +527,12 @@ async def lifespan(app: FastAPI):
 
     # Initialize execution engine
     try:
-        app.state.execution_engine = ExecutionEngine(
-            store=app.state.investigation_manager
-        )
+        store = getattr(app.state, "investigation_manager", None)
+        if store is None:
+            app.state.execution_engine = None
+            logging.warning("Execution engine unavailable (no persistence store)")
+        else:
+            app.state.execution_engine = ExecutionEngine(store=store)
     except Exception:
         app.state.execution_engine = None
         logging.warning("Execution engine unavailable")
@@ -601,6 +604,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+class NoOpLimiter:
+    """Fallback limiter used when slowapi is unavailable."""
+
+    def limit(self, *args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+
 # Initialize Rate Limiting
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -613,14 +627,6 @@ try:
     logging.info("✅ Rate limiting initialized")
 except ImportError:
     logging.warning("⚠️  slowapi not installed - rate limiting disabled")
-
-    # Create a no-op limiter for compatibility
-    class NoOpLimiter:
-        def limit(self, *args, **kwargs):
-            def decorator(func):
-                return func
-
-            return decorator
 
     limiter = NoOpLimiter()  # type: ignore
     app.state.limiter = limiter
@@ -702,7 +708,7 @@ async def require_authentication(current_user=Depends(get_current_user)):
     return current_user
 
 
-async def require_permission(resource: str, action: str):
+def require_permission(resource: str, action: str):
     """Create permission requirement decorator"""
 
     async def permission_checker(current_user=Depends(get_current_user)):
@@ -717,6 +723,16 @@ async def require_permission(resource: str, action: str):
         return current_user
 
     return permission_checker
+
+
+def _require_investigation_manager() -> "InvestigationManager":
+    manager = getattr(app.state, "investigation_manager", None)
+    if manager is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Investigation persistence is temporarily unavailable.",
+        )
+    return cast("InvestigationManager", manager)
 
 
 async def verify_token(
@@ -952,14 +968,21 @@ def _tor_control_command(
     return True, message, refreshed_status, 200
 
 
-@app.get("/tor/status")
-async def tor_status():
-    """Expose Tor proxy status (no external network calls)."""
+def _tor_status_payload() -> Dict[str, Any]:
     status = get_tor_status()
     proxy_reachable = status.get("active", False)
     status["proxy_reachable"] = proxy_reachable
     status["timestamp"] = datetime.now().isoformat()
     return status
+
+
+@app.get("/tor/status")
+async def tor_status(
+    user_id: str = Depends(require_permission("anonymity", "view")),
+) -> Dict[str, Any]:
+    """Expose Tor proxy status (no external network calls)."""
+    _ = user_id
+    return _tor_status_payload()
 
 
 @app.get("/api/system/status")
@@ -976,15 +999,21 @@ async def health_fallback(request: Request, user_id: str = Depends(verify_token)
 
 
 @app.get("/api/anonymity/tor/status")
-async def anonymity_tor_status():
+async def anonymity_tor_status(
+    user_id: str = Depends(require_permission("anonymity", "view")),
+) -> Dict[str, Any]:
     """Alias for /tor/status under /api/anonymity path."""
-    return await tor_status()
+    _ = user_id
+    return _tor_status_payload()
 
 
 @app.post("/api/anonymity/tor/enable")
-async def anonymity_tor_enable():
+async def anonymity_tor_enable(
+    user_id: str = Depends(require_permission("anonymity", "control")),
+):
     """Enable Tor networking via the control port."""
 
+    _ = user_id
     success, message, status, status_code = _tor_control_command("enable")
     return JSONResponse(
         {"success": success, "message": message, "status": status},
@@ -993,9 +1022,12 @@ async def anonymity_tor_enable():
 
 
 @app.post("/api/anonymity/tor/disable")
-async def anonymity_tor_disable():
+async def anonymity_tor_disable(
+    user_id: str = Depends(require_permission("anonymity", "control")),
+):
     """Disable Tor networking via the control port."""
 
+    _ = user_id
     success, message, status, status_code = _tor_control_command("disable")
     return JSONResponse(
         {"success": success, "message": message, "status": status},
@@ -1004,9 +1036,12 @@ async def anonymity_tor_disable():
 
 
 @app.post("/api/anonymity/tor/new-identity")
-async def anonymity_tor_new_identity():
+async def anonymity_tor_new_identity(
+    user_id: str = Depends(require_permission("anonymity", "control")),
+):
     """Request a new Tor identity using the NEWNYM signal."""
 
+    _ = user_id
     success, message, status, status_code = _tor_control_command("new_identity")
     return JSONResponse(
         {"success": success, "message": message, "status": status},
@@ -1042,7 +1077,7 @@ async def get_investigation_plan(
     investigation_id: str, user_id: Optional[str] = Depends(verify_token)
 ):
     """Return (build if absent) the plan for an investigation."""
-    store = app.state.investigation_manager
+    store = _require_investigation_manager()
     # Load investigation to verify ownership
     inv = await store.get_investigation(investigation_id, owner_id=user_id)
     if not inv:
@@ -1138,12 +1173,17 @@ async def get_investigation_plan(
 async def execute_all_tasks(
     investigation_id: str, user_id: Optional[str] = Depends(verify_token)
 ):
-    inv = await app.state.investigation_manager.get_investigation(
-        investigation_id, owner_id=user_id
-    )
+    manager = _require_investigation_manager()
+    inv = await manager.get_investigation(investigation_id, owner_id=user_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
-    await app.state.execution_engine.run_all(investigation_id)
+    engine = getattr(app.state, "execution_engine", None)
+    if engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Execution engine is unavailable while persistence is offline.",
+        )
+    await engine.run_all(investigation_id)
     return {"message": "Execution complete"}
 
 
@@ -1151,9 +1191,8 @@ async def execute_all_tasks(
 async def investigation_provenance(
     investigation_id: str, user_id: Optional[str] = Depends(verify_token)
 ):
-    inv = await app.state.investigation_manager.get_investigation(
-        investigation_id, owner_id=user_id
-    )
+    manager = _require_investigation_manager()
+    inv = await manager.get_investigation(investigation_id, owner_id=user_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
     from evidence.store import get_default_store
@@ -1816,7 +1855,8 @@ async def create_investigation(
                 )
 
         # Create investigation
-        investigation_id = await app.state.investigation_manager.create_investigation(
+        manager = _require_investigation_manager()
+        investigation_id = await manager.create_investigation(
             name=investigation.name,
             description=investigation.description,
             targets=investigation.targets,
@@ -1869,7 +1909,8 @@ async def list_investigations(
       include_meta: if true wrap items with {items:[], meta:{total,skip,limit}}
     """
     try:
-        result = await app.state.investigation_manager.list_investigations(
+        manager = _require_investigation_manager()
+        result = await manager.list_investigations(
             owner_id=user_id,
             skip=skip,
             limit=limit,
@@ -1889,7 +1930,8 @@ async def get_investigation(
 ):
     """Get investigation details with results"""
     try:
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=investigation_id, owner_id=user_id
         )
         if not investigation:
@@ -1909,7 +1951,8 @@ async def start_investigation(
     """Start OSINT investigation execution"""
     try:
         # Start investigation
-        await app.state.investigation_manager.start_investigation(
+        manager = _require_investigation_manager()
+        await manager.start_investigation(
             investigation_id=investigation_id, owner_id=user_id
         )
 
@@ -1937,11 +1980,7 @@ async def pause_investigation(
 ):
     """Pause an active investigation"""
     try:
-        manager = getattr(app.state, "investigation_manager", None)
-        if not manager:
-            raise HTTPException(
-                status_code=503, detail="Investigation manager unavailable"
-            )
+        manager = _require_investigation_manager()
 
         investigation = await manager.get_investigation(investigation_id)
         if not investigation:
@@ -1992,11 +2031,7 @@ async def resume_investigation(
 ):
     """Resume a paused investigation"""
     try:
-        manager = getattr(app.state, "investigation_manager", None)
-        if not manager:
-            raise HTTPException(
-                status_code=503, detail="Investigation manager unavailable"
-            )
+        manager = _require_investigation_manager()
 
         investigation = await manager.get_investigation(investigation_id)
         if not investigation:
@@ -2121,7 +2156,8 @@ async def investigation_tasks(
       include_meta: if true include metadata
     """
     try:
-        tasks = await app.state.investigation_manager.list_tasks(
+        manager = _require_investigation_manager()
+        tasks = await manager.list_tasks(
             owner_id=user_id,
             investigation_id=investigation_id,
             skip=skip,
@@ -2372,7 +2408,8 @@ async def ai_analysis(
     """Request AI analysis of investigation data"""
     try:
         # Get investigation data
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=request.investigation_id, owner_id=user_id
         )
 
@@ -2388,7 +2425,7 @@ async def ai_analysis(
         )
 
         # Store analysis result
-        await app.state.investigation_manager.store_ai_analysis(
+        await manager.store_ai_analysis(
             investigation_id=request.investigation_id,
             analysis_type=request.analysis_type,
             result=analysis_result,
@@ -2412,7 +2449,8 @@ async def generate_report(
     """Generate investigation report with enhanced features"""
     try:
         # Get investigation
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=investigation_id, owner_id=user_id
         )
 
@@ -3132,7 +3170,8 @@ async def import_investigation_to_graph(
     """Import investigation data into the graph database"""
     try:
         # Get investigation data
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=investigation_id, owner_id=user_id
         )
 
@@ -3439,7 +3478,8 @@ async def seed_demo_tasks(
     user to rely on real tasks instead.
     """
     try:
-        result = await app.state.investigation_manager.seed_demo_tasks(
+        manager = _require_investigation_manager()
+        result = await manager.seed_demo_tasks(
             investigation_id=investigation_id, owner_id=user_id
         )
         return result
@@ -3638,7 +3678,8 @@ async def suggest_autopivots(
     """Get AI-powered pivot suggestions for an investigation"""
     try:
         # Get investigation data
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=request.investigation_id, owner_id=user_id
         )
 
@@ -3652,7 +3693,7 @@ async def suggest_autopivots(
             "max_pivots": request.max_pivots,
         }
 
-        store = getattr(app.state, "investigation_manager", None)
+        store = manager
         if store is not None:
             try:
                 signature = inspect.signature(engine.suggest_autopivots)
@@ -3764,7 +3805,8 @@ async def enhanced_offline_analysis(
         from core.investigation_tracker import get_investigation_tracker
 
         # Get investigation data
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=request.investigation_id, owner_id=user_id
         )
 
@@ -3979,7 +4021,8 @@ async def generate_user_friendly_report(
         from core.offline_llm_engine import get_offline_llm_engine
 
         # Get investigation data
-        investigation = await app.state.investigation_manager.get_investigation(
+        manager = _require_investigation_manager()
+        investigation = await manager.get_investigation(
             investigation_id=request.investigation_id, owner_id=user_id
         )
 

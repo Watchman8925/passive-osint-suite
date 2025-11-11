@@ -188,19 +188,14 @@ class ReportScheduler:
                 msg.attach(part)
 
             # Send email
-            if self.email_config["use_tls"]:
-                server = aiosmtplib.SMTP(
-                    hostname=self.email_config["smtp_server"],
-                    port=self.email_config["smtp_port"],
-                    use_tls=True,
-                )
-            else:
-                server = aiosmtplib.SMTP(
-                    hostname=self.email_config["smtp_server"],
-                    port=self.email_config["smtp_port"],
-                )
+            server = aiosmtplib.SMTP(
+                hostname=self.email_config["smtp_server"],
+                port=self.email_config["smtp_port"],
+            )
 
             await server.connect()
+            if self.email_config["use_tls"]:
+                await server.starttls()
             await server.login(
                 self.email_config["sender_email"], self.email_config["sender_password"]
             )

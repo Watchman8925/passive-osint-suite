@@ -29,8 +29,16 @@ class CodeAnalysisEngine:
     def _get_tool_env(self) -> Dict[str, str]:
         """Get environment with proper PATH for tools"""
         env = os.environ.copy()
+        extra_paths = [
+            os.path.expanduser("~/go/bin"),
+            os.path.expanduser("~/bin"),
+            os.path.join(os.getcwd(), "theHarvester", "bin"),
+        ]
+        original_path = env.get("PATH", "")
         env["PATH"] = (
-            f"{os.path.expanduser('~/go/bin')}:{os.path.expanduser('~/bin')}:{os.path.join(os.getcwd(), 'theHarvester', 'bin')}:{env.get('PATH', '')}"
+            ":".join([*extra_paths, original_path])
+            if original_path
+            else ":".join(extra_paths)
         )
         return env
 
